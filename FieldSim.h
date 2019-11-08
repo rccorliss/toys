@@ -1,0 +1,97 @@
+class FieldSim{
+  int nx,ny,nz; //dimensions of internal grid
+  float omegatau; //gas propagation constant
+  const float k=8.987e13;//gas electric permeability N*cm^2/C^2 in a vacuum.
+
+  
+  MultiArray<TVector3> *Efield; //electric field for given configuration of charge AND external field.
+  MultiArray<TVector3> *Epartial; //electric field for unit charge in given cell.
+  MultiArray<TVector3> *Eexternal; //externally applied electric field
+  MultiArray<TVector3> *Bfield; //magnetic field for system.
+  MultiArray<float> *q; //space charge
+
+
+ public:
+  FieldSim(int x,int y, int z, float omtau);
+  void setScaleFactorB(float x);
+  void setScaleFactorE(float x);
+void  populate_lookup(TVector3 *field,int fx,int fy,int fz,int ox,int oy,int oz, TVector3 dim);
+void populate_fieldmap(TVector3 *field,TVector3* partial,float *q,int nx, int ny, int nz);
+TVector3 sum_field_at(TVector3 *partial,float *q,int x,int y, int z,int nx, int ny,int nz);
+TVector3 calc_unit_field(TVector3 at, TVector3 from);
+TVector3 fieldIntegral(float zdest,TVector3 start, TVector3 *field,int fx, int fy, int fz, TVector3 dim);
+TVector3 swimTo(float zdest,TVector3 start, int q, TVector3 *field,int fx, int fy, int fz, TVector3 dim);
+ 
+ private:
+  
+};
+
+template <class T>
+class MultiArray{
+   //class to hold an up-to-six dimensional array of whatever T is.  Any indices not used are flattened.
+   static const int MAX_DIM;
+   int dim;
+   int n[6];
+   int length;
+   T *field;
+
+   MultiArray(int a=0, int b=0, int c=0, int d=0, int e=0, int f=0){
+     int n_[6];
+     n_[0]=a; n_[1]=b; n_[2]=c; n_[3]=d; n_[4]=e; n_[5]=f;
+     length=1;
+     dim=MAX_DIM;
+     for (int i=0;i<dim;i++){
+       if (n_[i]<1) {
+	 dim=i;
+	 break;
+       }
+       n[i]=n_[i];
+       length*=n[i];
+     }
+     field=malloc(length*sizeof(T));
+     //for (int i=0;i<length;i++) field[i].SetXYZ(0,0,0);
+   }
+   T Get(int a=0, int b=0, int c=0, int d=0, int e=0, int f=0){
+     int n_[6];
+     n_[0]=a; n_[1]=b; n_[2]=c; n_[3]=d; n_[4]=e; n_[5]=f;
+     int index=0;
+     for (int i=0;i<dim;i++){
+       if (n[i]<=n_[i] || n_[i]<0){//check bounds
+	 printf("asking for el %d %d %d %d %d %d.  %dth element is outside of bounds 0<x<%d\n"
+		,n_[0],n_[1],n_[2],n_[3],n_[4],n_[5],n_[i],n[i]);
+	 assert(false);
+       }
+       index=(index*n[i])+n_[i];
+     }
+     return field[index];
+   }
+   T* GetPtr(int a=0, int b=0, int c=0, int d=0, int e=0, int f=0){ //faster for repeated access.
+     int n_[6];
+     n_[0]=a; n_[1]=b; n_[2]=c; n_[3]=d; n_[4]=e; n_[5]=f;
+     int index=n_0;
+     for (int i=1;i<dim;i++){
+       index=(index*n[i])+n_[i];
+     }
+     return *(field[index]);
+   }
+
+   T* GetFlat(int a=0){
+     if (a>=length) assert(false); //check bounds
+     return *(field[a]);
+   }
+
+   int GetLength(){
+     return length;
+   }
+     
+   void Set(int a, int b, int c, int d, int e, int f, T in){
+     int n_[6];
+     n_[0]=a; n_[1]=b; n_[2]=c; n_[3]=d; n_[4]=e; n_[5]=f;
+     int index=n_0;
+     for (int i=1;i<dim;i++){
+       index=(index*n[i])+n_[i];
+     }
+     field[index]=in;
+     return; 
+   }
+ }

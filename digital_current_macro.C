@@ -7,7 +7,7 @@ TVector3 swimTo(float zdest,TVector3 start, int q, int fx, int fy, int fz, TVect
 
 #define in6(a,b,c,d,e,f,na,nb,nc,nd,ne,nf) (a*nb*nc*nd*ne*nf + b*nc*nd*ne*nf + c*nd*ne*nf + d*ne*nf + e*nf + f)
 #define in3(a,b,c,na,nb,nc) (a*nb*nc+b*nc+c)
-
+ 
 double Bmain;
 double Emain;
 

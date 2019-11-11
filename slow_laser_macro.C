@@ -88,7 +88,7 @@ void slow_laser_macro(){
  TH2F *hPhotonAtSurface=new TH2F("hPhotonAtSurface","hPhotonAtSurface",40,-80,80,40,-80,80);
  TH2F *hPhotonAngle=new TH2F("hPhotonAngle","hPhotonAngle;#theta (x);#phi (y)",50,0,2,50,0,6.5);
  TH2F *hPhotonDirection=new TH2F("hPhotonDirection","hPhotonDirection; (x); (y)",50,-2,2,50,-2,2);
- TH1F *hPhoton=new TH1F("hPhoton","hPhoton",100,0,TMath::Pi());
+  TH1F *hPhoton=new TH1F("hPhoton","hPhoton",100,0,TMath::Pi());
  
  int nPhotons=4000000;
  for (int i=0; i<nPhotons;i++)  {

@@ -1,8 +1,15 @@
+template <class T> class MultiArray;
 class FieldSim{
   int nx,ny,nz; //dimensions of internal grid
-  float omegatau; //gas propagation constant
-  const float k=8.987e13;//gas electric permeability N*cm^2/C^2 in a vacuum.
+  TVector3 step; //step size in each direction.
+  double vdrift; //gas drift speed.
+  //double omegatau; //gas propagation constant depends on field and vdrift
+  float Bscale;
+  float Escale;
 
+  
+  static const float k=8.987e13;//gas electric permeability N*cm^2/C^2 in a vacuum.
+   TVector3 dim;//dimensions of simulated region, in cm
   
   MultiArray<TVector3> *Efield; //electric field for given configuration of charge AND external field.
   MultiArray<TVector3> *Epartial; //electric field for unit charge in given cell.
@@ -12,15 +19,16 @@ class FieldSim{
 
 
  public:
-  FieldSim(int x,int y, int z, float omtau);
-  void setScaleFactorB(float x);
-  void setScaleFactorE(float x);
-void  populate_lookup(TVector3 *field,int fx,int fy,int fz,int ox,int oy,int oz, TVector3 dim);
-void populate_fieldmap(TVector3 *field,TVector3* partial,float *q,int nx, int ny, int nz);
-TVector3 sum_field_at(TVector3 *partial,float *q,int x,int y, int z,int nx, int ny,int nz);
-TVector3 calc_unit_field(TVector3 at, TVector3 from);
-TVector3 fieldIntegral(float zdest,TVector3 start, TVector3 *field,int fx, int fy, int fz, TVector3 dim);
-TVector3 swimTo(float zdest,TVector3 start, int q, TVector3 *field,int fx, int fy, int fz, TVector3 dim);
+  FieldSim(float dx,float dy, float dz,int x,int y, int z, float omtau);
+  void setScaleFactorB(float x){Bscale=x;return;};
+  void setScaleFactorE(float x){Escale=x;return;};
+
+  TVector3 calc_unit_field(TVector3 at, TVector3 from);
+  TVector3 fieldIntegral(float zdest,TVector3 start);
+  void populate_fieldmap();
+  void  populate_lookup();
+  TVector3 sum_field_at(int x,int y, int z);
+  TVector3 swimTo(float zdest,TVector3 start);
  
  private:
   

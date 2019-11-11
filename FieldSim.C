@@ -4,7 +4,7 @@
 FieldSim::FieldSim(float dx, float dy, float dz,int nx, int ny, int nz, float omtau){
   Escale=1; Bscale=1;
 
-  dim->SetXYZ(dx,dy,dz);
+  dim.SetXYZ(dx,dy,dz);
   
   //create a grid with the specified dimensions
   Efield=new MultiArray<TVector3>(nx,ny,nz);
@@ -31,7 +31,7 @@ FieldSim::FieldSim(float dx, float dy, float dz,int nx, int ny, int nz, float om
   for (int i=0;i<q->GetLength();i++)
     *(q->GetFlat(i))=0;
 
-  step.SetXYZ(dim.X()/nx,dim.Y()/ny,dim.Z/nz);
+  step.SetXYZ(dim.X()/nx,dim.Y()/ny,dim.Z()/nz);
 
   return;
 }
@@ -144,7 +144,7 @@ TVector3 FieldSim::sum_field_at(int x,int y, int z){
       for (int iz=0;iz<nz;iz++){
 	//sum+=*partial[x][y][z][ix][iy][iz] * *q[ix][iy][iz];
 	if (x==ix && y==iy && z==iz) continue;
-	sum+=Epartial->Get((x,y,z,ix,iy,iz)]*q->Get(ix,iy,iz);
+	sum+=Epartial->Get(x,y,z,ix,iy,iz)*q->Get(ix,iy,iz);
       }
     }
   }
@@ -164,7 +164,12 @@ TVector3 FieldSim::swimTo(float zdest,TVector3 start){
   int zi=start.Z()/step.Z();
   float zdist=zdest-start.Z();
 
-  double mu=vdrift/E.Z();//cm^2/(V*s);
+
+  TVector3 fieldInt=fieldIntegral(zdest,start);
+  //float fieldz=field_[in3(x,y,0,fx,fy,fz)].Z()+E.Z();// *field[x][y][zi].Z();
+  float fieldz=fieldInt.Z()/zdist;// average field over the path.
+  
+  double mu=vdrift/fieldz;//cm^2/(V*s);
   double omegatau=1*mu*B.Z();//mu*Q_e*B, units cm^2/m^2
   //originally the above was q*mu*B, but 'q' is really about flipping the direction of time.  if we do this, we negate both vdrift and q, so in the end we have no charge dependence -- we 'see' the charge by noting that we're asking to drift against the overall field.
   omegatau=omegatau*1e-4;//1m/100cm * 1m/100cm to get proper unitless.
@@ -173,9 +178,6 @@ TVector3 FieldSim::swimTo(float zdest,TVector3 start){
   double c1=c0*omegatau;
   double c2=c1*omegatau;
 
-  TVector3 fieldInt=fieldIntegral(zdest,start);
-  //float fieldz=field_[in3(x,y,0,fx,fy,fz)].Z()+E.Z();// *field[x][y][zi].Z();
-  float fieldz=fieldInt.Z()/zdist;// average field over the path.
   //really this should be the integral of the ratio, not the ratio of the integrals.
   //and should be integrals over the B field, btu for now that's fixed and constant across the region, so not necessary
   float deltaX=c0*fieldInt.X()/fieldz+c1*fieldInt.Y()/fieldz-c1*B.Y()/B.Z()*zdist+c2*B.X()/B.Z()*zdist;

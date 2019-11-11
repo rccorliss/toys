@@ -1,3 +1,5 @@
+#include "assert.h"
+
 template <class T> class MultiArray;
 class FieldSim{
   int nx,ny,nz; //dimensions of internal grid
@@ -8,7 +10,7 @@ class FieldSim{
   float Escale;
 
   
-  static const float k=8.987e13;//gas electric permeability N*cm^2/C^2 in a vacuum.
+  static constexpr float k=8.987e13;//gas electric permeability N*cm^2/C^2 in a vacuum.
    TVector3 dim;//dimensions of simulated region, in cm
   
   MultiArray<TVector3> *Efield; //electric field for given configuration of charge AND external field.
@@ -37,6 +39,7 @@ class FieldSim{
 template <class T>
 class MultiArray{
    //class to hold an up-to-six dimensional array of whatever T is.  Any indices not used are flattened.
+ public:
    static const int MAX_DIM;
    int dim;
    int n[6];
@@ -56,7 +59,8 @@ class MultiArray{
        n[i]=n_[i];
        length*=n[i];
      }
-     field=malloc(length*sizeof(T));
+     field=static_cast<T*>( malloc(length*sizeof(T) ));
+     //field=(T)( malloc(length*sizeof(T) ));
      //for (int i=0;i<length;i++) field[i].SetXYZ(0,0,0);
    }
    T Get(int a=0, int b=0, int c=0, int d=0, int e=0, int f=0){
@@ -76,30 +80,34 @@ class MultiArray{
    T* GetPtr(int a=0, int b=0, int c=0, int d=0, int e=0, int f=0){ //faster for repeated access.
      int n_[6];
      n_[0]=a; n_[1]=b; n_[2]=c; n_[3]=d; n_[4]=e; n_[5]=f;
-     int index=n_0;
+     int index=n_[0];
      for (int i=1;i<dim;i++){
        index=(index*n[i])+n_[i];
      }
-     return *(field[index]);
+     return &(field[index]);
    }
 
    T* GetFlat(int a=0){
      if (a>=length) assert(false); //check bounds
-     return *(field[a]);
+     return &(field[a]);
    }
 
    int GetLength(){
      return length;
    }
-     
+
+   void Set(int a, int b, int c, T in){
+     Set(a,b,c,0,0,0,in);
+     return;
+   };
    void Set(int a, int b, int c, int d, int e, int f, T in){
      int n_[6];
      n_[0]=a; n_[1]=b; n_[2]=c; n_[3]=d; n_[4]=e; n_[5]=f;
-     int index=n_0;
+     int index=n_[0];
      for (int i=1;i<dim;i++){
        index=(index*n[i])+n_[i];
      }
      field[index]=in;
      return; 
    }
- }
+};

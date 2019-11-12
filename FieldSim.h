@@ -1,7 +1,9 @@
 #include "assert.h"
+#include "TVector3.h"
 
 template <class T> class MultiArray;
 class FieldSim{
+ public: //bad form to leave this all exposed, I know.
   int nx,ny,nz; //dimensions of internal grid
   TVector3 step; //step size in each direction.
   double vdrift; //gas drift speed.
@@ -21,9 +23,10 @@ class FieldSim{
 
 
  public:
-  FieldSim(float dx,float dy, float dz,int x,int y, int z, float omtau);
+  FieldSim(float dx,float dy, float dz,int x,int y, int z, float vdr);
   void setScaleFactorB(float x){Bscale=x;return;};
   void setScaleFactorE(float x){Escale=x;return;};
+  void setFlatFields(float B, float E);
 
   TVector3 calc_unit_field(TVector3 at, TVector3 from);
   TVector3 fieldIntegral(float zdest,TVector3 start);
@@ -40,7 +43,7 @@ template <class T>
 class MultiArray{
    //class to hold an up-to-six dimensional array of whatever T is.  Any indices not used are flattened.
  public:
-   static const int MAX_DIM;
+   static const int MAX_DIM=6;
    int dim;
    int n[6];
    int length;
@@ -92,7 +95,7 @@ class MultiArray{
      return &(field[a]);
    }
 
-   int GetLength(){
+   int Length(){
      return length;
    }
 

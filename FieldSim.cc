@@ -1,38 +1,42 @@
 #include "TVector3.h"
 #include "FieldSim.h"
 
-FieldSim::FieldSim(float dx, float dy, float dz,int nx, int ny, int nz, float omtau){
+FieldSim::FieldSim(float dx, float dy, float dz,int x, int y, int z, float vdr){
   Escale=1; Bscale=1;
-
+  vdrift=vdr;
   dim.SetXYZ(dx,dy,dz);
+  nx=x;ny=y;nz=z;
   
   //create a grid with the specified dimensions
   Efield=new MultiArray<TVector3>(nx,ny,nz);
-  for (int i=0;i<Efield->GetLength();i++)
+  for (int i=0;i<Efield->Length();i++)
     Efield->GetFlat(i)->SetXYZ(0,0,0);
 
   //and a grid to compute the impact form each cell on each cell.
   Epartial=new MultiArray<TVector3>(nx,ny,nz,nx,ny,nz);
-  for (int i=0;i<Epartial->GetLength();i++)
+  for (int i=0;i<Epartial->Length();i++)
     Epartial->GetFlat(i)->SetXYZ(0,0,0);
 
   //and to hold the external fieldmap
   Eexternal=new MultiArray<TVector3>(nx,ny,nz);
-  for (int i=0;i<Eexternal->GetLength();i++)
+  for (int i=0;i<Eexternal->Length();i++)
     Eexternal->GetFlat(i)->SetXYZ(0,0,0);
 
   //ditto the external magnetic fieldmap
   Bfield=new MultiArray<TVector3>(nx,ny,nz);
-  for (int i=0;i<Bfield->GetLength();i++)
+  for (int i=0;i<Bfield->Length();i++)
     Bfield->GetFlat(i)->SetXYZ(0,0,0);
 
   //and a grid of charges in those volumes.
   q=new MultiArray<float>(nx,ny,nz);
-  for (int i=0;i<q->GetLength();i++)
+  for (int i=0;i<q->Length();i++)
     *(q->GetFlat(i))=0;
 
+  //define the step:
   step.SetXYZ(dim.X()/nx,dim.Y()/ny,dim.Z()/nz);
 
+  //define the external fields:
+  setFlatFields(1.4/*tesla*/,200/*V/cm*/);
   return;
 }
 
@@ -49,7 +53,7 @@ TVector3 FieldSim::calc_unit_field(TVector3 at, TVector3 from){
   } else{
     field.SetMag(k*1/(delr*delr));//scalar product on the bottom.
   }
-  // printf("calc_unit_field at (%2.2f,%2.2f,%2.2f) from  (%2.2f,%2.2f,%2.2f).  Mag=%2.4fe-9\n",at.x(),at.Y(),at.Z(),from.X(),from.Y(),from.Z(),field.Mag()*1e9);
+  //printf("calc_unit_field at (%2.2f,%2.2f,%2.2f) from  (%2.2f,%2.2f,%2.2f).  Mag=%2.4fe-9\n",at.x(),at.Y(),at.Z(),from.X(),from.Y(),from.Z(),field.Mag()*1e9);
   
   return field;
 }
@@ -89,6 +93,7 @@ TVector3 FieldSim::fieldIntegral(float zdest,TVector3 start){
 void FieldSim::populate_fieldmap(){
 //sum the E field at every point in the nx by ny by nz grid of field points.
 //could also do this 'flat', but doesn't save any time
+  //printf("in pop_fieldmap, n=(%d,%d,%d)\n",nx,ny,nz);
   for (int ix=0;ix<nx;ix++){
     for (int iy=0;iy<ny;iy++){
       for (int iz=0;iz<nz;iz++){
@@ -96,7 +101,7 @@ void FieldSim::populate_fieldmap(){
 	TVector3 localF=sum_field_at(ix,iy,iz);
 	Efield->Set(ix,iy,iz,localF);
 	//if (localf.Mag()>1e-9)
-	//	  printf("fieldmap@ (%d,%d,%d) mag=%f\n",ix,iy,iz,localf.Mag());
+	//printf("fieldmap@ (%d,%d,%d) mag=%f\n",ix,iy,iz,localF.Mag());
       }
     }
   }
@@ -125,7 +130,7 @@ void  FieldSim::populate_lookup(){
 	      from.SetZ(step.Z()*(ioz+0.5));
 	      //*f[ifx][ify][ifz][iox][ioy][ioz]=cacl_unit_field(at,from);
 	      //printf("calc_unit_field...\n");
-	      *(Efield->GetPtr(ifx,ify,ifz,iox,ioy,ioz))=calc_unit_field(at,from);
+	      Epartial->Set(ifx,ify,ifz,iox,ioy,ioz,calc_unit_field(at,from));
 	    }
 	  }
 	}
@@ -134,6 +139,15 @@ void  FieldSim::populate_lookup(){
   }
   return;
 
+}
+
+void FieldSim::setFlatFields(float B, float E){
+  printf("FieldSim::setFlatFields(B=%f,E=%f)\n",B,E);
+  for (int i=0;i<Eexternal->Length();i++)
+    Eexternal->GetFlat(i)->SetXYZ(0,0,E);
+  for (int i=0;i<Bfield->Length();i++)
+    Bfield->GetFlat(i)->SetXYZ(0,0,B);
+  return;
 }
 
 TVector3 FieldSim::sum_field_at(int x,int y, int z){
@@ -148,7 +162,9 @@ TVector3 FieldSim::sum_field_at(int x,int y, int z){
       }
     }
   }
-  return sum+Escale*Eexternal->Get(x,y,z);
+  sum+=Escale*Eexternal->Get(x,y,z);
+  //printf("summed field at (%d,%d,%d)=(%f,%f,%f)\n",x,y,z,sum.X(),sum.Y(),sum.Z());
+  return sum;
 }
 
 TVector3 FieldSim::swimTo(float zdest,TVector3 start){
@@ -159,32 +175,32 @@ TVector3 FieldSim::swimTo(float zdest,TVector3 start){
   //set the direction of the external fields.
   TVector3 B=Bfield->Get(0,0,0)*Bscale;//static field in tesla T=Vs/m^2
   
-  int x=start.X()/step.X();
-  int y=start.Y()/step.Y();
-  int zi=start.Z()/step.Z();
-  float zdist=zdest-start.Z();
+  //int x=start.X()/step.X();
+  //int y=start.Y()/step.Y();
+  //int zi=start.Z()/step.Z();
+  double zdist=zdest-start.Z();
 
 
   TVector3 fieldInt=fieldIntegral(zdest,start);
   //float fieldz=field_[in3(x,y,0,fx,fy,fz)].Z()+E.Z();// *field[x][y][zi].Z();
-  float fieldz=fieldInt.Z()/zdist;// average field over the path.
+  double fieldz=fieldInt.Z()/zdist;// average field over the path.
   
   double mu=vdrift/fieldz;//cm^2/(V*s);
   double omegatau=1*mu*B.Z();//mu*Q_e*B, units cm^2/m^2
   //originally the above was q*mu*B, but 'q' is really about flipping the direction of time.  if we do this, we negate both vdrift and q, so in the end we have no charge dependence -- we 'see' the charge by noting that we're asking to drift against the overall field.
   omegatau=omegatau*1e-4;//1m/100cm * 1m/100cm to get proper unitless.
-  printf("omegatau=%f\n",omegatau);
+  //printf("omegatau=%f\n",omegatau);
   double c0=1/(1+omegatau*omegatau);
   double c1=c0*omegatau;
   double c2=c1*omegatau;
 
   //really this should be the integral of the ratio, not the ratio of the integrals.
   //and should be integrals over the B field, btu for now that's fixed and constant across the region, so not necessary
-  float deltaX=c0*fieldInt.X()/fieldz+c1*fieldInt.Y()/fieldz-c1*B.Y()/B.Z()*zdist+c2*B.X()/B.Z()*zdist;
-  float deltaY=c0*fieldInt.Y()/fieldz-c1*fieldInt.X()/fieldz+c1*B.X()/B.Z()*zdist+c2*B.Y()/B.Z()*zdist;
-  float deltaZ=0; //not correct, but small?  different E leads to different drift velocity.  see linked paper.  fix eventually.
+  double deltaX=c0*fieldInt.X()/fieldz+c1*fieldInt.Y()/fieldz-c1*B.Y()/B.Z()*zdist+c2*B.X()/B.Z()*zdist;
+  double deltaY=c0*fieldInt.Y()/fieldz-c1*fieldInt.X()/fieldz+c1*B.X()/B.Z()*zdist+c2*B.Y()/B.Z()*zdist;
+  double deltaZ=0; //not correct, but small?  different E leads to different drift velocity.  see linked paper.  fix eventually.
 
-  printf("swimTo: (%2.4f,%2.4f,%2.4f) (cell %d,%d,%d) to z=%2.4f\n",start.X(),start.Y(), start.Z(),x,y,zi,zdest);
+  //printf("swimTo: (%2.4f,%2.4f,%2.4f) (cell %d,%d,%d) to z=%2.4f\n",start.X(),start.Y(), start.Z(),x,y,zi,zdest);
   printf("swimTo: fieldInt=(%2.4f,%2.4f,%2.4f)\n",fieldInt.X(),fieldInt.Y(),fieldInt.Z());
   
   TVector3 dest(start.X()+deltaX,start.Y()+deltaY,zdest+deltaZ);

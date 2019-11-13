@@ -29,11 +29,12 @@ class FieldSim{
   void setFlatFields(float B, float E);
 
   TVector3 calc_unit_field(TVector3 at, TVector3 from);
+  TVector3 interpolatedFieldIntegral(float zdest,TVector3 start);
   TVector3 fieldIntegral(float zdest,TVector3 start);
   void populate_fieldmap();
   void  populate_lookup();
   TVector3 sum_field_at(int x,int y, int z);
-  TVector3 swimTo(float zdest,TVector3 start);
+  TVector3 swimTo(float zdest,TVector3 start, bool interpolate);
  
  private:
   

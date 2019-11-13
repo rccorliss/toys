@@ -90,6 +90,69 @@ TVector3 FieldSim::fieldIntegral(float zdest,TVector3 start){
   return dir*fieldInt;
 }
 
+TVector3 FieldSim::interpolatedFieldIntegral(float zdest,TVector3 start){
+  int dir=(start.Z()>zdest?-1:1);//+1 if going to larger z, -1 if going to smaller;
+
+  float x0=start.X()/step.X();
+  float y0=start.Y()/step.Y();
+  int zi,zf;
+  double startz,endz;
+
+  //make sure 'zi' is always the smaller of the two numbers, for handling the partial-steps.
+  if (dir>0){
+    zi=start.Z()/step.Z(); //highest cell with lower bound less than position of particle
+    zf=zdest/step.Z(); //highest cell with lower bound less than target position of particle
+    startz=start.Z();
+    endz=zdest;
+  } else{
+    zf=start.Z()/step.Z(); //highest cell with lower bound less than position of particle
+    zi=zdest/step.Z(); //highest cell with lower bound less than target position of particle
+    startz=zdest;
+    endz=start.Z();
+  } 
+  //we can always interpolate between four positions.
+  //wherever x is, only one of (x+dx/2, x-dx/2) will be in a different cell, where dx is the cell size.
+  //the same logic applies to y.
+  //so the four cells we want to interpolate with are the ones containing:
+  //(x-dx/2,y-dy/2), (x-dx/2,y-dy/2), (x+dx/2,y-dy/2), (x+dx/2,y-dy/2),
+  //where x is the nominal coordinate.
+  //and the coefficients ought to be (1-|x-dx/2|/dx)(1-|y-dy/2|/dy), where x and y are the nominal coordinate measured wrt the lower corner of the box.
+  //which is 1 if we're in the exact center, and 0.5 if we're on the edge in one direction, or 0.25 in the corner.
+  float xf[4],yf[4]; //integer=what cell we're in.  fraction=how far into the cell we are
+  xf[0]=xf[1]=(x0-0.5);
+  xf[2]=xf[3]=(x0+0.5);
+  yf[0]=yf[2]=(y0-0.5);
+  yf[1]=yf[3]=(y0+0.5);
+  float coef[4];
+  int x[4], y[4];
+
+  
+  for (int i=0;i<4;i++){
+    x[i]=xf[i]; //get integer portion of float
+    y[i]=yf[i]; 
+    //  coef[i]=(1-abs( ( (start.X()-x[i]*step.X())-step.X()/2.0 )/step.X() )  ... can simplifiy:
+    float xrel=x0-x[i]; //fractional x position of point in ith cell, from -0.5 to +1.5
+    float yrel=y0-y[i];
+    coef[i]=(1-abs( xrel - 0.5))*(1-abs( yrel - 0.5));
+  }
+  
+  TVector3 fieldInt(0,0,0);
+  TVector3 partialInt(0,0,0);
+  for (int c=0;c<4;c++){
+    partialInt.SetXYZ(0,0,0);
+    for(int i=zi;i<zf;i++){ //count the whole cell of the lower end, and skip the whole cell of the high end.
+      
+      partialInt+=Efield->Get(x[c],y[c],i)*step.Z();
+    }
+  
+    partialInt-=Efield->Get(x[c],y[c],zi)*(startz-zi*step.Z());//remove the part of the low end cell we didn't travel through
+    partialInt+=Efield->Get(x[c],y[c],zf)*(endz-zf*step.Z());//add the part of the high end cell we did travel through
+    fieldInt+=coef[c]*partialInt;
+  }
+    
+  return dir*fieldInt;
+}
+
 void FieldSim::populate_fieldmap(){
 //sum the E field at every point in the nx by ny by nz grid of field points.
 //could also do this 'flat', but doesn't save any time
@@ -167,7 +230,7 @@ TVector3 FieldSim::sum_field_at(int x,int y, int z){
   return sum;
 }
 
-TVector3 FieldSim::swimTo(float zdest,TVector3 start){
+TVector3 FieldSim::swimTo(float zdest,TVector3 start, bool interpolate=false){
 
  //using second order langevin expansion from http://skipper.physics.sunysb.edu/~prakhar/tpc/Papers/ALICE-INT-2010-016.pdf
   //TVector3 (*field)[nx][ny][nz]=field_;
@@ -181,7 +244,12 @@ TVector3 FieldSim::swimTo(float zdest,TVector3 start){
   double zdist=zdest-start.Z();
 
 
-  TVector3 fieldInt=fieldIntegral(zdest,start);
+  TVector3 fieldInt;
+  if (interpolate){
+    fieldInt=interpolatedFieldIntegral(zdest,start);
+  }else{
+    fieldInt=fieldIntegral(zdest,start);
+  }
   //float fieldz=field_[in3(x,y,0,fx,fy,fz)].Z()+E.Z();// *field[x][y][zi].Z();
   double fieldz=fieldInt.Z()/zdist;// average field over the path.
   

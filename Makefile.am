@@ -35,9 +35,9 @@ else
     FieldSim_Dict.cc 
 endif
 
+# the below previously also had: # ROOT5_DICTS with a trailing slash
 libfieldsim_la_SOURCES = \
   $(ROOTDICTS) \
-  $(ROOT5_DICTS) \
   FieldSim.cc 
 
 pkginclude_HEADERS = \

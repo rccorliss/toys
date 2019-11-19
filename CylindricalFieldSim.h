@@ -6,6 +6,7 @@ class CylindricalFieldSim{
  public: //bad form to leave this all exposed, I know.
   int nr,nphi,nz; //dimensions of internal grid
   TVector3 step; //step size in each direction.
+  float phispan;//agular span of the area in the phi direction, since TVector3 is too smart.
   double vdrift; //gas drift speed.
   //double omegatau; //gas propagation constant depends on field and vdrift
   float Bscale;
@@ -40,6 +41,8 @@ class CylindricalFieldSim{
   
 };
 
+#ifndef MULTIARRAY
+#define MULTIARRAY
 template <class T>
 class MultiArray{
    //class to hold an up-to-six dimensional array of whatever T is.  Any indices not used are flattened.
@@ -115,3 +118,4 @@ class MultiArray{
      return; 
    }
 };
+#endif //MULTIARRAY

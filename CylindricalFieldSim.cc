@@ -4,11 +4,13 @@
 CylindricalFieldSim::CylindricalFieldSim(float dr, float dphi, float dz,int r, int phi, int z, float vdr){
   Escale=1; Bscale=1;
   vdrift=vdr;
-  dim.SetXYZ(0,0,0);
+  dim.SetXYZ(1,0,0);
   dim.SetPerp(dr);
   dim.SetPhi(dphi);
+  phispan=dphi;
   dim.SetZ(dz);
   nr=r;nphi=phi;nz=z;
+
   
   //create a grid with the specified dimensions
   Efield=new MultiArray<TVector3>(nr,nphi,nz);
@@ -36,10 +38,12 @@ CylindricalFieldSim::CylindricalFieldSim(float dr, float dphi, float dz,int r, i
     *(q->GetFlat(i))=0;
 
   //define the step:
-  step.SetXYZ(0,0,0);
+  step.SetXYZ(1,0,0);
   step.SetPerp(dim.Perp()/nr);
-  step.SetPhi(dim.Phi()/nphi);
+  step.SetPhi(phispan/nphi);
   step.SetZ(dim.Z()/nz);
+  // printf("stepsize:  r=%f,phi=%f, wanted %f,%f\n",step.Perp(),step.Phi(),dr/r,dphi/phi);
+
 
   //define the external fields:
   setFlatFields(1.4/*tesla*/,200/*V/cm*/);
@@ -103,6 +107,7 @@ TVector3 CylindricalFieldSim::interpolatedFieldIntegral(float zdest,TVector3 sta
   float phi0=start.Phi()/step.Phi();
   int zi,zf;
   double startz,endz;
+  // printf("interpolating fieldInt at  r=%f,phi=%f\n",r0,phi0);
 
   //make sure 'zi' is always the smaller of the two numbers, for handling the partial-steps.
   if (dir>0){
@@ -134,8 +139,19 @@ TVector3 CylindricalFieldSim::interpolatedFieldIntegral(float zdest,TVector3 sta
 
   
   for (int i=0;i<4;i++){
+    if (rf[i]>=nphi){//handle wrap-around:
+      rf[i]-=nphi;
+      phif[i]-=2*TMath::Pi();
+    }
+    if (rf[i]<0){//handle wrap-around:
+      rf[i]+=nphi;
+      phif[i]+=2*TMath::Pi();
+    }
+    
     r[i]=rf[i]; //get integer portion of float
-    phi[i]=phif[i]; 
+    phi[i]=phif[i];
+ 
+
     //  coef[i]=(1-abs( ( (start.X()-x[i]*step.X())-step.X()/2.0 )/step.X() )  ... can simplifiy:
     float rrel=r0-r[i]; //fractional r position of point in ith cell, from -0.5 to +1.5
     float phirel=phi0-phi[i];
@@ -146,6 +162,7 @@ TVector3 CylindricalFieldSim::interpolatedFieldIntegral(float zdest,TVector3 sta
   TVector3 partialInt(0,0,0);
   for (int c=0;c<4;c++){
     partialInt.SetXYZ(0,0,0);
+    //printf("looking for element r=%d,phi=%d\n",r[c],phi[c]);
     for(int i=zi;i<zf;i++){ //count the whole cell of the lower end, and skip the whole cell of the high end.
       
       partialInt+=Efield->Get(r[c],phi[c],i)*step.Z();
@@ -169,8 +186,8 @@ void CylindricalFieldSim::populate_fieldmap(){
 	//*f[ix][iy][iz]=sum_field_at(nr,ny,nz,partial_,q_,ix,iy,iz);
 	TVector3 localF=sum_field_at(ir,iphi,iz);
 	Efield->Set(ir,iphi,iz,localF);
-	//if (localf.Mag()>1e-9)
-	//printf("fieldmap@ (%d,%d,%d) mag=%f\n",ix,iy,iz,localF.Mag());
+	//if (localF.Mag()>1e-9)
+	//printf("fieldmap@ (%d,%d,%d) mag=%f\n",ir,iphi,iz,localF.Mag());
       }
     }
   }
@@ -182,8 +199,8 @@ void  CylindricalFieldSim::populate_lookup(){
 
   //  TVector3 (*f)[fx][fy][fz][ox][oy][oz]=field_;
   //printf("populating lookup for (%dx%dx%d)x(%dx%dx%d) grid\n",fx,fy,fz,ox,oy,oz);
-  TVector3 at(0,0,0);
-  TVector3 from(0,0,0);
+  TVector3 at(1,0,0);
+  TVector3 from(1,0,0);
 
   for (int ifr=0;ifr<nr;ifr++){
     at.SetPerp(step.Perp()*(ifr+0.5));
@@ -211,7 +228,7 @@ void  CylindricalFieldSim::populate_lookup(){
 }
 
 void CylindricalFieldSim::setFlatFields(float B, float E){
-  printf("CylindricalFieldSim::setFlatFields(B=%f,E=%f)\n",B,E);
+  //printf("CylindricalFieldSim::setFlatFields(B=%f,E=%f)\n",B,E);
   for (int i=0;i<Eexternal->Length();i++)
     Eexternal->GetFlat(i)->SetXYZ(0,0,E);
   for (int i=0;i<Bfield->Length();i++)
@@ -275,7 +292,7 @@ TVector3 CylindricalFieldSim::swimTo(float zdest,TVector3 start, bool interpolat
   double deltaY=c0*fieldInt.Y()/fieldz-c1*fieldInt.X()/fieldz+c1*B.X()/B.Z()*zdist+c2*B.Y()/B.Z()*zdist;
   double deltaZ=0; //not correct, but small?  different E leads to different drift velocity.  see linked paper.  fix eventually.
 
-  //printf("swimTo: (%2.4f,%2.4f,%2.4f) (cell %d,%d,%d) to z=%2.4f\n",start.X(),start.Y(), start.Z(),x,y,zi,zdest);
+  printf("swimTo: (%2.4f,%2.4f,%2.4f) to z=%2.4f\n",start.X(),start.Y(), start.Z(),zdest);
   printf("swimTo: fieldInt=(%2.4f,%2.4f,%2.4f)\n",fieldInt.X(),fieldInt.Y(),fieldInt.Z());
   
   TVector3 dest(start.X()+deltaX,start.Y()+deltaY,zdest+deltaZ);

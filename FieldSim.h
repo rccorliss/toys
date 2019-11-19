@@ -39,7 +39,8 @@ class FieldSim{
  private:
   
 };
-
+#ifndef MULTIARRAY
+#define MULTIARRAY
 template <class T>
 class MultiArray{
    //class to hold an up-to-six dimensional array of whatever T is.  Any indices not used are flattened.
@@ -115,3 +116,4 @@ class MultiArray{
      return; 
    }
 };
+#endif //MULTIARRAY

@@ -1,8 +1,146 @@
 #include "FieldSim.h"
+#include "CylindricalFieldSim.h"
 R__LOAD_LIBRARY(.libs/libfieldsim)
 
 void digital_current_macro_v2(){
   printf("hello\n");
+  TTime now;
+  now=gSystem->Now();
+  printf("the time is %lu\n",(unsigned long)now);
+
+  CylindricalFieldSim *test;
+  CylindricalFieldSim *testgen;
+  const TVector3 cyl(60,0,100);
+  TVector3 ptemp(12.005,45.005,75.99);
+  TVector3 ftemp,btemp;
+  TTime t[10];
+  Int_t isteps=5;
+  int imin=5;//can't do interpolation without at least some divisions, otherwise we necessarily go out of bounds.
+  int imax=imin+isteps;
+  Int_t tCreate[isteps];
+  Int_t tSetField[isteps];
+  Int_t tLookup[isteps];
+  Int_t tGenMap[isteps];
+  Int_t tSwim1k[isteps];
+  Int_t steps[isteps];
+  float rdiff[isteps];
+  float rphidiff[isteps];
+  
+  testgen=new CylindricalFieldSim(cyl.Perp(),2*TMath::Pi(),cyl.Z(),isteps+imin,isteps+imin,isteps+imin,100.0/12e-6);
+  testgen->setFlatFields(1.4,200);
+  testgen->populate_lookup();//2-3
+  testgen->q->Set(isteps+imin-1,0,0,1e-13);///that's 10^6 protons in that box.
+  testgen->populate_fieldmap();
+  ftemp=testgen->swimTo(0,ptemp,true);
+  for (int i=0;i<isteps;i++){
+    printf("create %d\n",i);
+    t[0]=gSystem->Now();
+    test=new CylindricalFieldSim(cyl.Perp(),2*TMath::Pi(),cyl.Z(),i+imin,i+imin,i+imin,100.0/12e-6);
+    t[1]=gSystem->Now();
+    printf("setFlat %d\n",i);
+    test->setFlatFields(1.4,200);
+    t[2]=gSystem->Now();
+    printf("populate %d\n",i);
+    test->populate_lookup();//2-3
+    t[3]=gSystem->Now();
+    printf("setQ %d\n",i);
+    test->q->Set(i+imin-1,0,0,1e-13);///that's 10^6 protons in that box.
+    t[4]=gSystem->Now();
+    printf("make fieldmap %d\n",i);
+   test->populate_fieldmap();
+    t[5]=gSystem->Now();
+    printf("swim %d\n",i);
+    btemp=ftemp;
+    for (int j=0;j<i+imin;j++){
+      btemp=test->swimTo(ptemp.Z()*((j+1)*1.0/(1.0*(i+imin))),btemp,true);
+    }
+    t[6]=gSystem->Now();
+    tCreate[i]=(long)(t[1]-t[0]);
+    tSetField[i]=(long)(t[2]-t[1]);
+    tLookup[i]=(long)(t[3]-t[2]);
+    tGenMap[i]=(long)(t[5]-t[4]);
+    tSwim1k[i]=(long)(t[6]-t[5]);
+    steps[i]=i+imin;
+    rdiff[i]=(ftemp.Perp()-ptemp.Perp())*1e9;
+    rphidiff[i]=(btemp.Perp()*btemp.Phi());//-ptemp.Perp()*ptemp.Phi())*1e4;
+
+  }
+
+  int i=0;
+
+  TGraph *rPhiDiff[3];
+  TMultiGraph *rphi=new TMultiGraph();
+  rphi->SetTitle("r and r*phi offset for varying reco grid sizes;r(um);rphi(um)");
+  rPhiDiff[i]=new TGraph(isteps,rdiff,rphidiff);
+  rPhiDiff[i]->SetTitle("rphi diff;size;t(ms)");
+  rPhiDiff[i]->SetMarkerColor(kBlack);
+  rPhiDiff[i]->SetMarkerStyle(kStar);
+  rphi->Add(rPhiDiff[i]);
+  i++;
+  rPhiDiff[i]=new TGraph(1,rdiff,rphidiff);
+  rPhiDiff[i]->SetTitle(Form("rphi diff %d^3 grid;size;t(ms)",steps[0]));
+  rPhiDiff[i]->SetMarkerColor(i);
+  rPhiDiff[i]->SetMarkerStyle(kStar);
+  //rphi->Add(rPhiDiff[i]);
+  i++;
+  rPhiDiff[i]=new TGraph(1,rdiff+isteps-1,rphidiff+isteps-1);
+  rPhiDiff[i]->SetTitle(Form("rphi diff %d^3 grid;size;t(ms)",steps[isteps-1]));
+  rPhiDiff[i]->SetMarkerColor(i);
+  rPhiDiff[i]->SetMarkerStyle(kStar);
+  //rphi->Add(rPhiDiff[i]);
+  i++;
+  rphi->Draw("AC*");
+
+return;
+  
+ 
+
+
+
+
+ i=0;
+  
+  TMultiGraph *multi=new TMultiGraph();
+  multi->SetTitle("timing for various simulation steps;size;t(ms)");
+  TGraph *graph[10];
+  graph[i]=new TGraph(isteps,steps,tCreate);
+  graph[i]->SetTitle("FieldSim::FieldSim;size;t(ms)");
+  graph[i]->SetMarkerStyle(kStar);
+  graph[i]->SetMarkerColor(i+1);
+  multi->Add(graph[i]);
+  i++;
+  graph[i]=new TGraph(isteps,steps,tSetField);
+  graph[i]->SetTitle("FieldSim::SetField;size;t(ms)");
+  graph[i]->SetMarkerStyle(kStar);
+  graph[i]->SetMarkerColor(i+1);
+  multi->Add(graph[i]);
+  i++;
+  graph[i]=new TGraph(isteps,steps,tLookup);
+  graph[i]->SetTitle("FieldSim::GenLookupTable;size;t(ms)");
+  graph[i]->SetMarkerStyle(kStar);
+  graph[i]->SetMarkerColor(i+1);
+  multi->Add(graph[i]);
+  i++;
+   graph[i]=new TGraph(isteps,steps,tGenMap);
+  graph[i]->SetTitle("FieldSim::GenFieldMap;size;t(ms)");
+  graph[i]->SetMarkerStyle(kStar);
+  graph[i]->SetMarkerColor(i+1);
+  multi->Add(graph[i]);
+  i++;
+   graph[i]=new TGraph(isteps,steps,tSwim1k);
+  graph[i]->SetTitle("FieldSim::Swim*1k;size;t(ms)");
+  graph[i]->SetMarkerStyle(kStar);
+  graph[i]->SetMarkerColor(i+1);
+  multi->Add(graph[i]);
+  i++;
+  multi->Draw("AC*");  
+
+
+
+  
+  
+    
+  return;
   //gSystem->Load("./libs/libfieldsim");
   //all dimensions in cm, Coulomb.
   //define a detector box.  Propagation is along z to z=0.

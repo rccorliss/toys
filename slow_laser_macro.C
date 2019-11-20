@@ -84,7 +84,8 @@ void slow_laser_macro(){
  // )
  //conceptually, point backward from the intersection point in the negative laser direction until we hit the plane defined by the laser direction and the laser position. This tells us the 
  
-
+    //when in doubt, google "root [class]" like "root TH2F"
+    // TH2F(name, title and axes, number of bins, minimum coordinate, maximum, number of y bins, minimum, maximum)
  TH2F *hPhotonAtSurface=new TH2F("hPhotonAtSurface","hPhotonAtSurface",40,-80,80,40,-80,80);
  TH2F *hPhotonAngle=new TH2F("hPhotonAngle","hPhotonAngle;#theta (x);#phi (y)",50,0,2,50,0,6.5);
  TH2F *hPhotonDirection=new TH2F("hPhotonDirection","hPhotonDirection; (x); (y)",50,-2,2,50,-2,2);
@@ -104,8 +105,13 @@ void slow_laser_macro(){
      //float photon_theta=laser_theta->GetRandom();
      float photon_phi=laser_phi->GetRandom();
      float photon_r=laser_r->GetRandom();
+
+     //for Nikhil:
+     //float photon_theta=something to do with photon_r
      
      TVector3 photon_direction=laser_nominal[L];
+     //for Nikhil:  photon_direction.Rotate(something to do with photon_theta)
+     
      TVector3 photon_position=laser_position[L];
      TVector3 photon_offset=laser_transverse[L]*photon_r;
      photon_offset.Rotate(photon_phi,laser_nominal[L]);

@@ -14,8 +14,8 @@ void digital_current_macro_v2(){
   TVector3 ptemp(12.005,45.005,75.99);
   TVector3 ftemp,btemp;
   TTime t[10];
-  Int_t isteps=5;
-  int imin=5;//can't do interpolation without at least some divisions, otherwise we necessarily go out of bounds.
+  Int_t isteps=22;
+  int imin=8;//can't do interpolation without at least some divisions, otherwise we necessarily go out of bounds.
   int imax=imin+isteps;
   Int_t tCreate[isteps];
   Int_t tSetField[isteps];
@@ -26,12 +26,15 @@ void digital_current_macro_v2(){
   float rdiff[isteps];
   float rphidiff[isteps];
   
-  testgen=new CylindricalFieldSim(cyl.Perp(),2*TMath::Pi(),cyl.Z(),isteps+imin,isteps+imin,isteps+imin,100.0/12e-6);
+  testgen=new CylindricalFieldSim(cyl.Perp(),2*TMath::Pi(),cyl.Z(),isteps+imin-1,isteps+imin-1,isteps+imin-1,100.0/12e-6);
   testgen->setFlatFields(1.4,200);
   testgen->populate_lookup();//2-3
-  testgen->q->Set(isteps+imin-1,0,0,1e-13);///that's 10^6 protons in that box.
+  testgen->q->Set(isteps+imin-2,0,0,1e-12);///that's 10^7 protons in that box.
   testgen->populate_fieldmap();
-  ftemp=testgen->swimTo(0,ptemp,true);
+  ftemp=ptemp;
+  for (int j=0;j<isteps+imin;j++){
+    ftemp=testgen->swimTo(ptemp.Z()*(isteps+imin-1-j)/(isteps+imin),ftemp,true);
+  }  
   for (int i=0;i<isteps;i++){
     printf("create %d\n",i);
     t[0]=gSystem->Now();
@@ -44,15 +47,17 @@ void digital_current_macro_v2(){
     test->populate_lookup();//2-3
     t[3]=gSystem->Now();
     printf("setQ %d\n",i);
-    test->q->Set(i+imin-1,0,0,1e-13);///that's 10^6 protons in that box.
+    test->q->Set(i+imin-1,0,0,1e-12);///that's 10^7 protons in that box.
     t[4]=gSystem->Now();
     printf("make fieldmap %d\n",i);
    test->populate_fieldmap();
     t[5]=gSystem->Now();
     printf("swim %d\n",i);
+    for (int n=0;n<1000;n++){
     btemp=ftemp;
     for (int j=0;j<i+imin;j++){
       btemp=test->swimTo(ptemp.Z()*((j+1)*1.0/(1.0*(i+imin))),btemp,true);
+    }
     }
     t[6]=gSystem->Now();
     tCreate[i]=(long)(t[1]-t[0]);
@@ -61,8 +66,8 @@ void digital_current_macro_v2(){
     tGenMap[i]=(long)(t[5]-t[4]);
     tSwim1k[i]=(long)(t[6]-t[5]);
     steps[i]=i+imin;
-    rdiff[i]=(ftemp.Perp()-ptemp.Perp())*1e9;
-    rphidiff[i]=(btemp.Perp()*btemp.Phi());//-ptemp.Perp()*ptemp.Phi())*1e4;
+    rdiff[i]=(btemp.Perp()-ptemp.Perp())*1e4;
+    rphidiff[i]=(btemp.Perp()*btemp.Phi()-ptemp.Perp()*ptemp.Phi())*1e4;
 
   }
 
@@ -79,19 +84,17 @@ void digital_current_macro_v2(){
   i++;
   rPhiDiff[i]=new TGraph(1,rdiff,rphidiff);
   rPhiDiff[i]->SetTitle(Form("rphi diff %d^3 grid;size;t(ms)",steps[0]));
-  rPhiDiff[i]->SetMarkerColor(i);
+  rPhiDiff[i]->SetMarkerColor(kRed);
   rPhiDiff[i]->SetMarkerStyle(kStar);
-  //rphi->Add(rPhiDiff[i]);
+  rphi->Add(rPhiDiff[i]);
   i++;
   rPhiDiff[i]=new TGraph(1,rdiff+isteps-1,rphidiff+isteps-1);
   rPhiDiff[i]->SetTitle(Form("rphi diff %d^3 grid;size;t(ms)",steps[isteps-1]));
-  rPhiDiff[i]->SetMarkerColor(i);
+  rPhiDiff[i]->SetMarkerColor(kGreen);
   rPhiDiff[i]->SetMarkerStyle(kStar);
-  //rphi->Add(rPhiDiff[i]);
+  rphi->Add(rPhiDiff[i]);
   i++;
   rphi->Draw("AC*");
-
-return;
   
  
 

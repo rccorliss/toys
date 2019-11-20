@@ -292,11 +292,36 @@ TVector3 CylindricalFieldSim::swimTo(float zdest,TVector3 start, bool interpolat
   double deltaY=c0*fieldInt.Y()/fieldz-c1*fieldInt.X()/fieldz+c1*B.X()/B.Z()*zdist+c2*B.Y()/B.Z()*zdist;
   double deltaZ=0; //not correct, but small?  different E leads to different drift velocity.  see linked paper.  fix eventually.
 
-  printf("swimTo: (%2.4f,%2.4f,%2.4f) to z=%2.4f\n",start.X(),start.Y(), start.Z(),zdest);
-  printf("swimTo: fieldInt=(%2.4f,%2.4f,%2.4f)\n",fieldInt.X(),fieldInt.Y(),fieldInt.Z());
+  //printf("swimTo: (%2.4f,%2.4f,%2.4f) to z=%2.4f\n",start.X(),start.Y(), start.Z(),zdest);
+  //printf("swimTo: fieldInt=(%2.4f,%2.4f,%2.4f)\n",fieldInt.X(),fieldInt.Y(),fieldInt.Z());
   
   TVector3 dest(start.X()+deltaX,start.Y()+deltaY,zdest+deltaZ);
   
   return dest;
   
+}
+
+
+CylindricalFieldSim::RosseggerEterm(int m, int n, TVector3 at, TVector3 from){
+  //from eqn 5.68 in Rossegger thesis, p 111.
+  //cylindrical cavity from r=a to r=b, z=0 to z=L
+  double L;
+  double betaMN; // comes from solution to 5.12.
+  double Esubz;
+  int deltaM0;
+  double eps0;
+  double phi1;
+  double phi;
+  double r1;
+  double r;
+  double z1;
+  double z;
+  double dz;
+  double dr;
+  double dphi;
+  
+  
+
+  
+  return 0;
 }

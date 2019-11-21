@@ -302,9 +302,10 @@ TVector3 CylindricalFieldSim::swimTo(float zdest,TVector3 start, bool interpolat
 }
 
 
-CylindricalFieldSim::RosseggerEterm(int m, int n, TVector3 at, TVector3 from){
+float CylindricalFieldSim::RosseggerEterm(int m, int n, TVector3 at, TVector3 from){
   //from eqn 5.68 in Rossegger thesis, p 111.
   //cylindrical cavity from r=a to r=b, z=0 to z=L
+  /*
   double L;
   double betaMN; // comes from solution to 5.12.
   double Esubz;
@@ -321,7 +322,7 @@ CylindricalFieldSim::RosseggerEterm(int m, int n, TVector3 at, TVector3 from){
   double dphi;
   
   
-
+  */
   
   return 0;
 }

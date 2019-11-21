@@ -20,6 +20,7 @@ AM_LDFLAGS = -L$(libdir) -L$(OFFLINE_MAIN)/lib
 # let me know
 ROOTDICTS = \
   FieldSim_Dict.cc \
+  AnnularFieldSim_Dict.cc \
   CylindricalFieldSim_Dict.cc 
 # for root6 we need pcm and dictionaries but only for
 # i/o classes. For root5 we need only dictionaries but
@@ -31,10 +32,12 @@ if MAKEROOT6
 pcmdir = $(libdir)
 nobase_dist_pcm_DATA = \
   FieldSim_rdict.pcm \
+  AnnularFieldSim_rdict.pcm \
   CylindricalFieldSim_rdict.pcm 
 else
   ROOT5_DICTS = \
     FieldSim_Dict.cc  \
+    AnnularFieldSim_Dict.cc  \
     CylindricalFieldSim_Dict.cc 
 endif
 
@@ -46,6 +49,7 @@ libfieldsim_la_SOURCES = \
 
 pkginclude_HEADERS = \
   FieldSim.h  \
+  AnnularFieldSim.h  \
   CylindricalFieldSim.h
 
 BUILT_SOURCES = \

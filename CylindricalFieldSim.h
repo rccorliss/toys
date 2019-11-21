@@ -38,7 +38,8 @@ class CylindricalFieldSim{
   TVector3 swimTo(float zdest,TVector3 start, bool interpolate);
  
  private:
-  
+  float RosseggerEterm(int m, int n, TVector3 at, TVector3 from);
+
 };
 
 #ifndef MULTIARRAY

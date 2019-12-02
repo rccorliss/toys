@@ -3,32 +3,56 @@
 
 (*"mirror 1 position and home orientation"*)
 homeN1={1,0,0};
-(*true value:  M1={2.53,1.03,4.19};*)
-(*for testing: *)M1={5.03,0,3.97};
+(*true value:*)  M1={2.53,1.03,4.19};
+(*for testing: M1={5.03,0,3.97};*)
 (*"mirror 2 home position and orientation"*)
 homeN2={0,1,0};
 homeM2={5.03,7.97,3.97};
 (*"light pipe position"*)
-(*true: P={4.87,8.13,4.19};*)
-(*for testing:*) P=homeM2+{0,0,2.5};
+(*true: *)P={4.87,8.13,4.19};
+(*for testing: P={4.87,8.13,4.19};*)
 (*"incoming laser direction:"*)
 L0={-1,0,0};
 
 
+(*position of the mirror to reflect the "in" beam 
+direction to the "out" beam direction:*)
 mirrorNorm[in_,out_]:=Normalize[-in+out]
+
+(*beam direction when the "in" beam is reflected 
+around a mirror pointed in the "norm" direction:*)
 reflectBeam[in_,norm_]:=in-2(in.norm)norm
-rotatedNorm[\[Alpha]_,\[Beta]_,\[Gamma]_,norm0_]:=RotationMatrix[\[Beta],{0,0,1}].RotationTransform[\[Alpha],{1,0,0}].RotationTransform[\[Gamma]{0,1,0}].norm0
+
+(*norm of a mirror that started in "norm0" 
+direction, and is rotated by \[Gamma] around the y axis, 
+then \[Alpha] around the x axis, then \[Beta] around the z axis:*)
+rotatedNorm[\[Alpha]_,\[Gamma]_,\[Beta]_,norm0_]:=RotationMatrix[\[Beta],{0,0,1}].RotationTransform[\[Alpha],{1,0,0}].RotationTransform[\[Gamma]{0,1,0}].norm0
+
+(*position at which a line of the form 
+"position=vector*t+start", where t is a distance
+along the line, intersects a specific z position:*)
 positionAtZ[vector_,start_,z_]:=start+(z-start[[3]])/vector[[3]]*vector
+
+(*Angle wrt the z axis of normalized vector "L":*)
 \[Theta]ofBeam[L_]:=ArcCos[L[[3]]]
+
+(*Angle in the xy plane, wrt the x axis, of 
+normalized vector "L", with differentiable 
+form and a 'safe' version:*)
 \[Phi]ofBeam[L_]:=ArcTan[L[[1]],L[[2]]](*note that the args are denom, numerator, not the other way around!*)
-safe\[Phi]ofBeam[L_]:=If[L[[1]]==0,If[L[[2]]==0,0,\[Pi]/2],\[Phi]ofBeam[L]]
+safe\[Phi]ofBeam[L_]:=If[L[[1]]==0,If[L[[2]]==0,0,\[Pi]/2],\[Phi]ofBeam[L]](*avoids the singularity if we are going purely in z*)
+
+(*angle wrt the xy plane of normalized vector "N":*)
 pitchOfMirror[N_]:=ArcSin[N[[3]]]
+
+(*angle in the xy plane, wrt Nhome, of 
+normalized vector "N":*)
 \[Beta]ofMirror[N_,Nhome_]:=ArcCos[Normalize[N-{0,0,N[[3]]}].Nhome]
 
 
 (*"forward derivation:"*)
 forwardN1[\[Gamma]_,\[Beta]_]:=rotatedNorm[0,\[Gamma],\[Beta],homeN1]
-forwardN2[\[Alpha]_,\[Beta]_]:=rotatedNorm[\[Alpha],\[Gamma],\[Beta],homeN2]
+forwardN2[\[Alpha]_,\[Beta]_]:=rotatedNorm[\[Alpha],0,\[Beta],homeN2]
 forwardL1[N1_]:=reflectBeam[L0,N1]
 forwardL1c[\[Gamma]_,\[Beta]_]:=forwardL1[forwardN1[\[Gamma],\[Beta]]]
 forwardM2[L1_]:=positionAtZ[L1,M1,homeM2[[3]]]
@@ -54,7 +78,7 @@ backwardN1c[\[Theta]_,\[Phi]_]:=backwardN1[L0,backwardL1c[\[Theta],\[Phi]]]
 
 backward\[Beta]1[\[Theta]_,\[Phi]_]:=\[Beta]ofMirror[backwardN1c[\[Theta],\[Phi]],homeN1]
 backward\[Gamma]1[\[Theta]_,\[Phi]_]:=pitchOfMirror[backwardN1c[\[Theta],\[Phi]]]
-backward\[Beta]2[\[Theta]_,\[Phi]_]:=\[Beta]ofMirror[backwardN1c[\[Theta],\[Phi]],homeN2]
+backward\[Beta]2[\[Theta]_,\[Phi]_]:=\[Beta]ofMirror[backwardN2c[\[Theta],\[Phi]],homeN2]
 backward\[Alpha]2[\[Theta]_,\[Phi]_]:=pitchOfMirror[backwardN2c[\[Theta],\[Phi]]]
 
 
@@ -119,3 +143,6 @@ backwardM2c[\[Theta]ymax,\[Phi]xmax]-homeM2
 
 
 
+
+
+(*Unit tests*)

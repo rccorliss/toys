@@ -139,13 +139,19 @@ TVector3 CylindricalFieldSim::interpolatedFieldIntegral(float zdest,TVector3 sta
 
   
   for (int i=0;i<4;i++){
-    if (rf[i]>=nphi){//handle wrap-around:
-      rf[i]-=nphi;
-      phif[i]-=2*TMath::Pi();
+    if (phif[i]>=nphi){//handle phi wrap-around:
+      phif[i]-=nphi;
+      //phif[i]-=2*TMath::Pi();
     }
-    if (rf[i]<0){//handle wrap-around:
-      rf[i]+=nphi;
-      phif[i]+=2*TMath::Pi();
+    if (phif[i]<0){//handle phi wrap-around:
+      phif[i]+=nphi;
+      //phif[i]+=2*TMath::Pi();
+    }
+    if (rf[i]>=nr){
+      rf[i]-=1; //if we go outside the upper bound, just sample one cell lower -- it's where the particle is, and will get sampled twice
+    }
+    if (rf[i]<0){
+      rf[i]+=1; //if we go outside the lower bound, just sample one cell higher -- it's where the particle is, and will get sampled twice
     }
     
     r[i]=rf[i]; //get integer portion of float
@@ -155,7 +161,7 @@ TVector3 CylindricalFieldSim::interpolatedFieldIntegral(float zdest,TVector3 sta
     //  coef[i]=(1-abs( ( (start.X()-x[i]*step.X())-step.X()/2.0 )/step.X() )  ... can simplifiy:
     float rrel=r0-r[i]; //fractional r position of point in ith cell, from -0.5 to +1.5
     float phirel=phi0-phi[i];
-    coef[i]=(1-abs( rrel - 0.5))*(1-abs( phirel - 0.5));
+    coef[i]=(1-abs( rrel + 0.5))*(1-abs( phirel + 0.5));
   }
   
   TVector3 fieldInt(0,0,0);

@@ -26,7 +26,7 @@ reflectBeam[in_,norm_]:=in-2(in.norm)norm
 (*norm of a mirror that started in "norm0" 
 direction, and is rotated by \[Gamma] around the y axis, 
 then \[Alpha] around the x axis, then \[Beta] around the z axis:*)
-rotatedNorm[\[Alpha]_,\[Gamma]_,\[Beta]_,norm0_]:=RotationMatrix[\[Beta],{0,0,1}].RotationTransform[\[Alpha],{1,0,0}].RotationTransform[\[Gamma]{0,1,0}].norm0
+rotatedNorm[\[Alpha]_,\[Gamma]_,\[Beta]_,norm0_]:=RotationMatrix[\[Beta],{0,0,1}].RotationMatrix[\[Alpha],{1,0,0}].RotationMatrix[\[Gamma],{0,1,0}].norm0
 
 (*position at which a line of the form 
 "position=vector*t+start", where t is a distance
@@ -34,7 +34,8 @@ along the line, intersects a specific z position:*)
 positionAtZ[vector_,start_,z_]:=start+(z-start[[3]])/vector[[3]]*vector
 
 (*Angle wrt the z axis of normalized vector "L":*)
-\[Theta]ofBeam[L_]:=ArcCos[L[[3]]]
+(*old: \[Theta]ofBeam[L_]:=ArcCos[L[[3]]] *)
+\[Theta]ofBeam[L_]:=ArcTan[L[[3]],Sqrt[L[[1]]^2+L[[2]]^2]]
 
 (*Angle in the xy plane, wrt the x axis, of 
 normalized vector "L", with differentiable 
@@ -43,7 +44,8 @@ form and a 'safe' version:*)
 safe\[Phi]ofBeam[L_]:=If[L[[1]]==0,If[L[[2]]==0,0,\[Pi]/2],\[Phi]ofBeam[L]](*avoids the singularity if we are going purely in z*)
 
 (*angle wrt the xy plane of normalized vector "N":*)
-pitchOfMirror[N_]:=ArcSin[N[[3]]]
+(*old:  pitchOfMirror[N_]:=ArcSin[N[[3]]] *)
+pitchOfMirror[N_]:=ArcTan[Sqrt[N[[1]]^2+N[[2]]^2],N[[3]]]
 
 (*angle in the xy plane, wrt Nhome, of 
 normalized vector "N":*)
@@ -106,8 +108,8 @@ positionAtZ[L2ymax,P,homeM2[[3]]]-homeM2;
 \[Theta]ymax*180/\[Pi]"\[Degree]=\[Theta]"
 \[Phi]ymax=\[Phi]ofBeam[L2ymax];
 \[Phi]ymax*180/\[Pi]"\[Degree]=\[Phi]"
-"M2-homeM2="
-backwardM2c[\[Theta]ymax,\[Phi]ymax]-homeM2
+"M2-M1="
+backwardM2c[\[Theta]ymax,\[Phi]ymax]-M1
 "\[Degree]=\[Beta]1"backward\[Beta]1[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]
 "\[Degree]=\[Gamma]1"backward\[Gamma]1[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]
 "\[Degree]=\[Beta]2"backward\[Beta]2[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]
@@ -120,8 +122,22 @@ L2xymax=Normalize[P-(homeM2+{-2.50,+2.50,0})];
 \[Theta]xymax*180/\[Pi]"\[Degree]=\[Theta]"
 \[Phi]xymax=\[Phi]ofBeam[L2xymax];
 \[Phi]xymax*180/\[Pi]"\[Degree]=\[Phi]"
-"M2-homeM2="
-backwardM2c[\[Theta]xymax,\[Phi]xymax]-homeM2
+"M2-M1="
+backwardM2c[\[Theta]xymax,\[Phi]xymax]-M1
+"Laser1="
+laserdir=backwardL1c[\[Theta]xymax,\[Phi]xymax]
+"Laser tilt="
+"\[Degree]=from z"\[Theta]ofBeam[laserdir]*180/\[Pi]
+"\[Degree]=from x"\[Phi]ofBeam[laserdir]*180/\[Pi]
+"mirror M1 norm="
+m1temp=mirrorNorm[homeN1,laserdir]
+"pitchOfMirror:"
+pitchOfMirror[m1temp]*180/\[Pi]
+"manual mirror tilt:"
+ArcTan[m1temp[[3]],Sqrt[m1temp[[2]]^2+m1temp[[1]]^2]]*180/\[Pi]
+"reflected beam using those tilts:"
+reflectBeam[L0,m1temp]
+"\[Degree]=in z"backward\[Beta]1[\[Theta]xymax,\[Phi]xymax]*180/\[Pi]
 "\[Degree]=\[Beta]1"backward\[Beta]1[\[Theta]xymax,\[Phi]xymax]*180/\[Pi]
 "\[Degree]=\[Gamma]1"backward\[Gamma]1[\[Theta]xymax,\[Phi]xymax]*180/\[Pi]
 "\[Degree]=\[Beta]2"backward\[Beta]2[\[Theta]xymax,\[Phi]xymax]*180/\[Pi]
@@ -146,3 +162,22 @@ backwardM2c[\[Theta]ymax,\[Phi]xmax]-homeM2
 
 
 (*Unit tests*)
+(* for Y Max:
+9.436 in Y
+-0.217 in Z
+0.00 in X *)
+homeM2-M1
+
+
+Plot[Evaluate[
+Table[\[Phi]ofBeam[forwardL1c[gamma*\[Pi]/180,beta*\[Pi]/180]]*180/\[Pi],{beta,0,90,5}]
+],{gamma,0,45},AxesLabel->{"tilt of mirror","\[Phi] of beam"}]
+
+
+Plot[Evaluate[
+Table[90-\[Theta]ofBeam[forwardL1c[gamma*\[Pi]/180,beta*\[Pi]/180]]*180/\[Pi],{beta,0,90,5}]
+],{gamma,0,45},AxesLabel->{"tilt of mirror","\[Theta] of beam"}]
+
+
+ContourPlot[90-\[Theta]ofBeam[forwardL1c[gamma*\[Pi]/180,beta*\[Pi]/180]]*180/\[Pi],
+{beta,0,90},{gamma,0,45},PlotLegends->Automatic, FrameLabel->{"\[Degree]\[Beta] rotation","\[Degree]tilt"},PlotLabel->"\[Degree]\[Theta] of beam"]

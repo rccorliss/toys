@@ -170,14 +170,17 @@ homeM2-M1
 
 
 Plot[Evaluate[
-Table[\[Phi]ofBeam[forwardL1c[gamma*\[Pi]/180,beta*\[Pi]/180]]*180/\[Pi],{beta,0,90,5}]
-],{gamma,0,45},AxesLabel->{"tilt of mirror","\[Phi] of beam"}]
+Table[\[Phi]ofBeam[forwardL1c[gamma*\[Pi]/180,beta*\[Pi]/180]]*180/\[Pi],{beta,0,90,15}]
+],{gamma,0,45},AxesLabel->{"tilt of mirror","\[Phi] of beam"},
+PlotLegends->{Table[beta "\[Degree]\[Beta]",{beta,0,90,15}]}]
 
 
 Plot[Evaluate[
-Table[90-\[Theta]ofBeam[forwardL1c[gamma*\[Pi]/180,beta*\[Pi]/180]]*180/\[Pi],{beta,0,90,5}]
-],{gamma,0,45},AxesLabel->{"tilt of mirror","\[Theta] of beam"}]
+Table[90-\[Theta]ofBeam[forwardL1c[gamma*\[Pi]/180,beta*\[Pi]/180]]*180/\[Pi],{beta,0,90,15}]
+],{gamma,0,45},AxesLabel->{"tilt of mirror","\[Theta] of beam"},
+PlotLegends->{Table[beta "\[Degree]\[Beta]",{beta,0,90,15}]}]
 
 
 ContourPlot[90-\[Theta]ofBeam[forwardL1c[gamma*\[Pi]/180,beta*\[Pi]/180]]*180/\[Pi],
-{beta,0,90},{gamma,0,45},PlotLegends->Automatic, FrameLabel->{"\[Degree]\[Beta] rotation","\[Degree]tilt"},PlotLabel->"\[Degree]\[Theta] of beam"]
+{beta,0,90},{gamma,0,45},PlotLegends->Automatic, FrameLabel->{"\[Degree]\[Beta] rotation","\[Degree]tilt"},
+PlotLabel->"\[Degree]\[Theta] of beam"]

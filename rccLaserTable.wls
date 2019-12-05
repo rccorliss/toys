@@ -6,7 +6,7 @@ homeN1={1,0,0};
 (*true value:*)  M1={2.53,1.03,4.19};
 (*for testing: M1={5.03,0,3.97};*)
 (*"mirror 2 home position and orientation"*)
-homeN2={0,1,0};
+homeN2={0,-1,0};
 homeM2={5.03,7.97,3.97};
 (*"light pipe position"*)
 (*true: *)P={4.87,8.13,4.19};
@@ -94,10 +94,10 @@ positionAtZ[L2ymax,P,homeM2[[3]]]-homeM2;
 \[Phi]ymax*180/\[Pi]"\[Degree]=\[Phi]"
 "M2-homeM2="
 backwardM2c[\[Theta]ymax,\[Phi]ymax]-homeM2
-"\[Degree]=\[Beta]1"backward\[Beta]1[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]
-"\[Degree]=\[Gamma]1"backward\[Gamma]1[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]
-"\[Degree]=\[Beta]2"backward\[Beta]2[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]
-"\[Degree]=\[Alpha]2"backward\[Alpha]2[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]
+Print[Column[{"\[Degree]=\[Beta]1"," "backward\[Beta]1[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]}],
+Column[{"\[Degree]=\[Gamma]1"," "backward\[Gamma]1[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]}],
+Column[{"\[Degree]=\[Beta]2"," "backward\[Beta]2[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]}],
+Column[{"\[Degree]=\[Alpha]2"," "backward\[Alpha]2[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]}]]
 
 
 "calculations for YMax:"
@@ -110,10 +110,10 @@ positionAtZ[L2ymax,P,homeM2[[3]]]-homeM2;
 \[Phi]ymax*180/\[Pi]"\[Degree]=\[Phi]"
 "M2-M1="
 backwardM2c[\[Theta]ymax,\[Phi]ymax]-M1
-"\[Degree]=\[Beta]1"backward\[Beta]1[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]
-"\[Degree]=\[Gamma]1"backward\[Gamma]1[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]
-"\[Degree]=\[Beta]2"backward\[Beta]2[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]
-"\[Degree]=\[Alpha]2"backward\[Alpha]2[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]
+Print[Column[{"\[Degree]=\[Beta]1"," "backward\[Beta]1[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]}],
+Column[{"\[Degree]=\[Gamma]1"," "backward\[Gamma]1[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]}],
+Column[{"\[Degree]=\[Beta]2"," "backward\[Beta]2[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]}],
+Column[{"\[Degree]=\[Alpha]2"," "backward\[Alpha]2[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]}]]
 
 
 "calculations for XYMax:"
@@ -137,11 +137,10 @@ pitchOfMirror[m1temp]*180/\[Pi]
 ArcTan[m1temp[[3]],Sqrt[m1temp[[2]]^2+m1temp[[1]]^2]]*180/\[Pi]
 "reflected beam using those tilts:"
 reflectBeam[L0,m1temp]
-"\[Degree]=in z"backward\[Beta]1[\[Theta]xymax,\[Phi]xymax]*180/\[Pi]
-"\[Degree]=\[Beta]1"backward\[Beta]1[\[Theta]xymax,\[Phi]xymax]*180/\[Pi]
-"\[Degree]=\[Gamma]1"backward\[Gamma]1[\[Theta]xymax,\[Phi]xymax]*180/\[Pi]
-"\[Degree]=\[Beta]2"backward\[Beta]2[\[Theta]xymax,\[Phi]xymax]*180/\[Pi]
-"\[Degree]=\[Alpha]2"backward\[Alpha]2[\[Theta]xymax,\[Phi]xymax]*180/\[Pi]
+Print[Column[{"\[Degree]=\[Beta]1"," "backward\[Beta]1[\[Theta]xymax,\[Phi]xymax]*180/\[Pi]}],
+Column[{"\[Degree]=\[Gamma]1"," "backward\[Gamma]1[\[Theta]xymax,\[Phi]xymax]*180/\[Pi]}],
+Column[{"\[Degree]=\[Beta]2"," "backward\[Beta]2[\[Theta]xymax,\[Phi]xymax]*180/\[Pi]}],
+Column[{"\[Degree]=\[Alpha]2"," "backward\[Alpha]2[\[Theta]xymax,\[Phi]xymax]*180/\[Pi]}]]
 
 
 "calculations for XMax:"
@@ -152,13 +151,10 @@ L2xmax=Normalize[P-(homeM2+{-2.50,0,0})];
 \[Phi]xmax*180/\[Pi]"\[Degree]=\[Phi]"
 "M2-homeM2="
 backwardM2c[\[Theta]ymax,\[Phi]xmax]-homeM2
-"\[Degree]=\[Beta]1"backward\[Beta]1[\[Theta]xmax,\[Phi]xmax]*180/\[Pi]
-"\[Degree]=\[Gamma]1"backward\[Gamma]1[\[Theta]xmax,\[Phi]xmax]*180/\[Pi]
-"\[Degree]=\[Beta]2"backward\[Beta]2[\[Theta]xmax,\[Phi]xmax]*180/\[Pi]
-"\[Degree]=\[Alpha]2"backward\[Alpha]2[\[Theta]xmax,\[Phi]xmax]*180/\[Pi]
-
-
-
+Print[Column[{"\[Degree]=\[Beta]1"," "backward\[Beta]1[\[Theta]xmax,\[Phi]xmax]*180/\[Pi]}],
+Column[{"\[Degree]=\[Gamma]1"," "backward\[Gamma]1[\[Theta]xmax,\[Phi]xmax]*180/\[Pi]}],
+Column[{"\[Degree]=\[Beta]2"," "backward\[Beta]2[\[Theta]xmax,\[Phi]xmax]*180/\[Pi]}],
+Column[{"\[Degree]=\[Alpha]2"," "backward\[Alpha]2[\[Theta]xymax,\[Phi]xmax]*180/\[Pi]}]]
 
 
 (*Unit tests*)

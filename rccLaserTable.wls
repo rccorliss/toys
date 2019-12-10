@@ -49,12 +49,13 @@ pitchOfMirror[N_]:=ArcTan[Sqrt[N[[1]]^2+N[[2]]^2],N[[3]]]
 
 (*angle in the xy plane, wrt Nhome, of 
 normalized vector "N":*)
-\[Beta]ofMirror[N_,Nhome_]:=ArcCos[Normalize[N-{0,0,N[[3]]}].Nhome]
+(*old: \[Beta]ofMirror[N_,Nhome_]:=ArcCos[Normalize[N-{0,0,N[[3]]}].Nhome] *)
+\[Beta]ofMirror[N_,Nhome_]:=ArcTan[N[[1]],N[[2]]]-ArcTan[Nhome[[1]],Nhome[[2]]]
 
 
 (*"forward derivation:"*)
 forwardN1[\[Gamma]_,\[Beta]_]:=rotatedNorm[0,\[Gamma],\[Beta],homeN1]
-forwardN2[\[Alpha]_,\[Beta]_]:=rotatedNorm[\[Alpha],0,-\[Beta],homeN2]
+forwardN2[\[Alpha]_,\[Beta]_]:=rotatedNorm[\[Alpha],0,\[Beta],homeN2]
 forwardL1[N1_]:=reflectBeam[L0,N1]
 forwardL1c[\[Gamma]_,\[Beta]_]:=forwardL1[forwardN1[\[Gamma],\[Beta]]]
 forwardM2[L1_]:=positionAtZ[L1,M1,homeM2[[3]]]
@@ -248,3 +249,9 @@ PlotLegends->{Table[beta "\[Degree]\[Beta]",{beta,0,90,15}]}]
 ContourPlot[90-\[Theta]ofBeam[forwardL1c[gamma*\[Pi]/180,beta*\[Pi]/180]]*180/\[Pi],
 {beta,0,90},{gamma,0,45},PlotLegends->Automatic, FrameLabel->{"\[Degree]\[Beta] rotation","\[Degree]tilt"},
 PlotLabel->"\[Degree]\[Theta] of beam"]
+
+
+Plot[\[Beta]ofMirror[rotatedNorm[0,0,\[Beta]*\[Pi]/180,homeN2],homeN2]*180/\[Pi],{\[Beta],-360,360}]
+
+
+\[AliasDelimiter]

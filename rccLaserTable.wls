@@ -26,7 +26,7 @@ reflectBeam[in_,norm_]:=in-2(in.norm)norm
 (*norm of a mirror that started in "norm0" 
 direction, and is rotated by \[Gamma] around the y axis, 
 then \[Alpha] around the x axis, then \[Beta] around the z axis:*)
-rotatedNorm[\[Alpha]_,\[Gamma]_,\[Beta]_,norm0_]:=RotationMatrix[\[Beta],{0,0,1}].RotationMatrix[\[Alpha],{1,0,0}].RotationMatrix[\[Gamma],{0,1,0}].norm0
+rotatedNorm[\[Alpha]_,\[Gamma]_,\[Beta]_,norm0_]:=RotationMatrix[\[Beta],{0,0,1}].RotationMatrix[-\[Alpha],{1,0,0}].RotationMatrix[-\[Gamma],{0,1,0}].norm0
 
 (*position at which a line of the form 
 "position=vector*t+start", where t is a distance
@@ -54,7 +54,7 @@ normalized vector "N":*)
 
 (*"forward derivation:"*)
 forwardN1[\[Gamma]_,\[Beta]_]:=rotatedNorm[0,\[Gamma],\[Beta],homeN1]
-forwardN2[\[Alpha]_,\[Beta]_]:=rotatedNorm[\[Alpha],0,\[Beta],homeN2]
+forwardN2[\[Alpha]_,\[Beta]_]:=rotatedNorm[\[Alpha],0,-\[Beta],homeN2]
 forwardL1[N1_]:=reflectBeam[L0,N1]
 forwardL1c[\[Gamma]_,\[Beta]_]:=forwardL1[forwardN1[\[Gamma],\[Beta]]]
 forwardM2[L1_]:=positionAtZ[L1,M1,homeM2[[3]]]
@@ -65,6 +65,32 @@ forwardL2c[\[Gamma]1_,\[Beta]1_,\[Alpha]2_,\[Beta]2_]:=forwardL2[forwardL1c[\[Ga
 forward\[Theta][\[Gamma]1_,\[Beta]1_,\[Alpha]2_,\[Beta]2_]:=\[Theta]ofBeam[forwardL2c[\[Gamma]1,\[Beta]1,\[Alpha]2,\[Beta]2]]
 forward\[Phi][\[Gamma]1_,\[Beta]1_,\[Alpha]2_,\[Beta]2_]:=\[Phi]ofBeam[forwardL2c[\[Gamma]1,\[Beta]1,\[Alpha]2,\[Beta]2]]
 
+
+
+forwardPrint[\[Gamma]1_,\[Beta]1_,\[Alpha]2_,\[Beta]2_]:=
+Module[{\[Theta],\[Phi],M2,N1,N2,L1,L2},
+N1=forwardN1[\[Gamma]1,\[Beta]1];
+N2=forwardN2[\[Alpha]2,\[Beta]2];
+L1=forwardL1[N1];
+M2=forwardM2[L1];
+M2=forwardM2c[\[Gamma]1,\[Beta]1];
+L2=forwardL2[N2,L1];
+\[Theta]=forward\[Theta][\[Gamma]1,\[Beta]1,\[Alpha]2,\[Beta]2];
+\[Phi]=forward\[Phi][\[Gamma]1,\[Beta]1,\[Alpha]2,\[Beta]2];
+Print["Forward derivation:"];
+Print["N1:",N1];
+Print["N2:",N2];
+Print["L1:",L1];
+Print["L2:",L2];
+Print[Column[{"\[Degree]=\[Beta]1 "," "\[Beta]1*180/\[Pi]}],
+Column[{"\[Degree]=\[Gamma]1 "," "\[Gamma]1*180/\[Pi]}],
+Column[{"\[Degree]=\[Beta]2 "," "\[Beta]2*180/\[Pi]}],
+Column[{"\[Degree]=\[Alpha]2 "," "\[Alpha]2*180/\[Pi]}],
+Column[{" ==> "," ==> "}],
+Column[{" M2-home "," "Evaluate[M2-homeM2]}],
+Column[{" \[Theta] "," "\[Theta]*180/\[Pi]}],
+Column[{" \[Phi] "," "\[Phi]*180/\[Pi]}]]
+]
 
 
 (*"backward derivation:"*)
@@ -84,6 +110,33 @@ backward\[Beta]2[\[Theta]_,\[Phi]_]:=\[Beta]ofMirror[backwardN2c[\[Theta],\[Phi]
 backward\[Alpha]2[\[Theta]_,\[Phi]_]:=pitchOfMirror[backwardN2c[\[Theta],\[Phi]]]
 
 
+backwardPrint[\[Theta]_,\[Phi]_]:=
+Module[{\[Gamma]1,\[Beta]1,\[Alpha]2,\[Beta]2,M2,N1,N2,L1,L2},
+L2=backwardL2[\[Theta],\[Phi]];
+M2=backwardM2[L2];
+L1=backwardL1[M2];
+N2=backwardN2[L1,L2];
+N1=backwardN1[L0,L1];
+\[Gamma]1=backward\[Gamma]1[\[Theta],\[Phi]];
+\[Beta]1=backward\[Beta]1[\[Theta],\[Phi]];
+\[Alpha]2=backward\[Alpha]2[\[Theta],\[Phi]];
+\[Beta]2=backward\[Beta]2[\[Theta],\[Phi]];
+Print["Backward derivation:"];
+Print["N1:",N1];
+Print["N2:",N2];
+Print["L1:",L1];
+Print["L2:",L2];
+Print[Column[{"\[Degree]=\[Beta]1 "," "\[Beta]1*180/\[Pi]}],
+Column[{"\[Degree]=\[Gamma]1 "," "\[Gamma]1*180/\[Pi]}],
+Column[{"\[Degree]=\[Beta]2 "," "\[Beta]2*180/\[Pi]}],
+Column[{"\[Degree]=\[Alpha]2 "," "\[Alpha]2*180/\[Pi]}],
+Column[{" M2-home "," "Evaluate[M2-homeM2]}],
+Column[{" <== "," <== "}],
+Column[{" \[Theta] "," "\[Theta]*180/\[Pi]}],
+Column[{" \[Phi] "," "\[Phi]*180/\[Pi]}]]
+]
+
+
 "calculations for home:"
 L2ymax=Normalize[P-(homeM2)];
 positionAtZ[L2ymax,(homeM2),P[[3]]]-P;
@@ -98,6 +151,11 @@ Print[Column[{"\[Degree]=\[Beta]1"," "backward\[Beta]1[\[Theta]ymax,\[Phi]ymax]*
 Column[{"\[Degree]=\[Gamma]1"," "backward\[Gamma]1[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]}],
 Column[{"\[Degree]=\[Beta]2"," "backward\[Beta]2[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]}],
 Column[{"\[Degree]=\[Alpha]2"," "backward\[Alpha]2[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]}]]
+forwardPrint[backward\[Gamma]1[\[Theta]ymax,\[Phi]ymax],
+			 backward\[Beta]1[\[Theta]ymax,\[Phi]ymax],
+			 backward\[Alpha]2[\[Theta]ymax,\[Phi]ymax],
+			 backward\[Beta]2[\[Theta]ymax,\[Phi]ymax]]
+backwardPrint[\[Theta]ymax,\[Phi]ymax]
 
 
 "calculations for YMax:"
@@ -114,6 +172,11 @@ Print[Column[{"\[Degree]=\[Beta]1"," "backward\[Beta]1[\[Theta]ymax,\[Phi]ymax]*
 Column[{"\[Degree]=\[Gamma]1"," "backward\[Gamma]1[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]}],
 Column[{"\[Degree]=\[Beta]2"," "backward\[Beta]2[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]}],
 Column[{"\[Degree]=\[Alpha]2"," "backward\[Alpha]2[\[Theta]ymax,\[Phi]ymax]*180/\[Pi]}]]
+forwardPrint[backward\[Gamma]1[\[Theta]ymax,\[Phi]ymax],
+			 backward\[Beta]1[\[Theta]ymax,\[Phi]ymax],
+			 backward\[Alpha]2[\[Theta]ymax,\[Phi]ymax],
+			 backward\[Beta]2[\[Theta]ymax,\[Phi]ymax]]
+backwardPrint[\[Theta]ymax,\[Phi]ymax]
 
 
 "calculations for XYMax:"
@@ -141,6 +204,11 @@ Print[Column[{"\[Degree]=\[Beta]1"," "backward\[Beta]1[\[Theta]xymax,\[Phi]xymax
 Column[{"\[Degree]=\[Gamma]1"," "backward\[Gamma]1[\[Theta]xymax,\[Phi]xymax]*180/\[Pi]}],
 Column[{"\[Degree]=\[Beta]2"," "backward\[Beta]2[\[Theta]xymax,\[Phi]xymax]*180/\[Pi]}],
 Column[{"\[Degree]=\[Alpha]2"," "backward\[Alpha]2[\[Theta]xymax,\[Phi]xymax]*180/\[Pi]}]]
+forwardPrint[backward\[Gamma]1[\[Theta]xymax,\[Phi]xymax],
+			 backward\[Beta]1[\[Theta]xymax,\[Phi]xymax],
+			 backward\[Alpha]2[\[Theta]xymax,\[Phi]xymax],
+			 backward\[Beta]2[\[Theta]xymax,\[Phi]xymax]]
+backwardPrint[\[Theta]xymax,\[Phi]xymax]
 
 
 "calculations for XMax:"
@@ -154,7 +222,7 @@ backwardM2c[\[Theta]ymax,\[Phi]xmax]-homeM2
 Print[Column[{"\[Degree]=\[Beta]1"," "backward\[Beta]1[\[Theta]xmax,\[Phi]xmax]*180/\[Pi]}],
 Column[{"\[Degree]=\[Gamma]1"," "backward\[Gamma]1[\[Theta]xmax,\[Phi]xmax]*180/\[Pi]}],
 Column[{"\[Degree]=\[Beta]2"," "backward\[Beta]2[\[Theta]xmax,\[Phi]xmax]*180/\[Pi]}],
-Column[{"\[Degree]=\[Alpha]2"," "backward\[Alpha]2[\[Theta]xymax,\[Phi]xmax]*180/\[Pi]}]]
+Column[{"\[Degree]=\[Alpha]2"," "backward\[Alpha]2[\[Theta]xmax,\[Phi]xmax]*180/\[Pi]}]]
 
 
 (*Unit tests*)

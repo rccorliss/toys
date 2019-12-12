@@ -66,7 +66,7 @@ forwardL2c[\[Gamma]1_,\[Beta]1_,\[Alpha]2_,\[Beta]2_]:=forwardL2[forwardL1c[\[Ga
 forward\[Theta][\[Gamma]1_,\[Beta]1_,\[Alpha]2_,\[Beta]2_]:=\[Theta]ofBeam[forwardL2c[\[Gamma]1,\[Beta]1,\[Alpha]2,\[Beta]2]]
 forward\[Phi][\[Gamma]1_,\[Beta]1_,\[Alpha]2_,\[Beta]2_]:=\[Phi]ofBeam[forwardL2c[\[Gamma]1,\[Beta]1,\[Alpha]2,\[Beta]2]]
 forward\[Sigma]\[Theta][\[Gamma]1_,\[Beta]1_,\[Alpha]2_,\[Beta]2_,\[Sigma]\[Gamma]1_,\[Sigma]\[Beta]1_,\[Sigma]\[Alpha]2_,\[Sigma]\[Beta]2_]:=D[forward\[Theta][a,b,c,d],{{a,b,c,d}}].{\[Sigma]\[Gamma]1,\[Sigma]\[Beta]1,\[Sigma]\[Alpha]2,\[Sigma]\[Beta]2}/.a->\[Gamma]1/.b->\[Beta]1/.c->\[Alpha]2/.d->\[Beta]2
-forward\[Theta]Error[angles_,sigmas_]:=D[forward\[Theta][a,b,c,d],{{a,b,c,d}}].sigmas/.{a->angles[[1]],b->angles[[2]],c->angles[[3]],d->angles[[4]]}
+forward\[Theta]Error[angles_,sigmas_]:=D[forward\[Theta][a,b,c,d],{{a,b,c,d}}]^2.sigmas/.{a->angles[[1]],b->angles[[2]],c->angles[[3]],d->angles[[4]]}
 
 
 
@@ -270,7 +270,7 @@ PlotLabel->"\[Degree]\[Alpha] of mirror 2"]
 
 
 forwardError[angles_,sigmas_]
-ContourPlot[forward\[Theta]Error[backward4Angles[\[Theta]*\[Pi]/180,\[Phi]*\[Pi]/180],{1,0,0,0}],{\[Theta],5,85},{\[Phi],0,360},PlotLegends->Automatic, FrameLabel->{"\[Degree]\[Theta]","\[Degree]\[Phi]"},
+ContourPlot[Sqrt[forward\[Theta]Error[backward4Angles[\[Theta]*\[Pi]/180,\[Phi]*\[Pi]/180],{1,0,0,0}]],{\[Theta],5,85},{\[Phi],0,360},PlotLegends->Automatic, FrameLabel->{"\[Degree]\[Theta]","\[Degree]\[Phi]"},
 PlotLabel->"coef of \[Sigma]\[Beta] of mirror 1"]
 ContourPlot[forward\[Theta]Error[backward4Angles[\[Theta]*\[Pi]/180,\[Phi]*\[Pi]/180],{0,1,0,0}],{\[Theta],5,85},{\[Phi],0,360},PlotLegends->Automatic, FrameLabel->{"\[Degree]\[Theta]","\[Degree]\[Phi]"},
 PlotLabel->"coef of \[Sigma]\[Gamma] of mirror 1"]

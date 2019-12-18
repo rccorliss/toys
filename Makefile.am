@@ -19,9 +19,10 @@ AM_LDFLAGS = -L$(libdir) -L$(OFFLINE_MAIN)/lib
 # following a simple naming convention, please change this accordingly and
 # let me know
 ROOTDICTS = \
-  FieldSim_Dict.cc \
-  AnnularFieldSim_Dict.cc \
-  CylindricalFieldSim_Dict.cc 
+  AnnularFieldSim_Dict.cc 
+#  CylindricalFieldSim_Dict.cc 
+#  FieldSim_Dict.cc \
+
 # for root6 we need pcm and dictionaries but only for
 # i/o classes. For root5 we need only dictionaries but
 # those for i/o and classes available on the cmd line
@@ -31,26 +32,28 @@ if MAKEROOT6
 # to install other files in libdir, this construct gets around this
 pcmdir = $(libdir)
 nobase_dist_pcm_DATA = \
-  FieldSim_rdict.pcm \
-  AnnularFieldSim_rdict.pcm \
-  CylindricalFieldSim_rdict.pcm 
+  AnnularFieldSim_rdict.pcm 
+#  CylindricalFieldSim_rdict.pcm 
+#  FieldSim_rdict.pcm \
 else
   ROOT5_DICTS = \
-    FieldSim_Dict.cc  \
-    AnnularFieldSim_Dict.cc  \
-    CylindricalFieldSim_Dict.cc 
+    AnnularFieldSim_Dict.cc  
+#    CylindricalFieldSim_Dict.cc 
+#    FieldSim_Dict.cc  \
 endif
 
 # the below previously also had: # ROOT5_DICTS with a trailing slash
 libfieldsim_la_SOURCES = \
   $(ROOTDICTS) \
-  FieldSim.cc \
-  CylindricalFieldSim.cc 
+AnnularFieldSim.cc
+
+#FieldSim.cc \
+#  CylindricalFieldSim.cc 
 
 pkginclude_HEADERS = \
-  FieldSim.h  \
-  AnnularFieldSim.h  \
-  CylindricalFieldSim.h
+  AnnularFieldSim.h  
+#  FieldSim.h  \
+#  CylindricalFieldSim.h
 
 BUILT_SOURCES = \
   testexternals.cc

@@ -45,7 +45,7 @@ class CylindricalFieldSim{
 #ifndef MULTIARRAY
 #define MULTIARRAY
 template <class T>
-class MultiArray{
+class MultiArray : public TObject{
    //class to hold an up-to-six dimensional array of whatever T is.  Any indices not used are flattened.
  public:
    static const int MAX_DIM=6;

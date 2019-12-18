@@ -20,8 +20,8 @@ AM_LDFLAGS = -L$(libdir) -L$(OFFLINE_MAIN)/lib
 # let me know
 ROOTDICTS = \
   AnnularFieldSim_Dict.cc 
-#  CylindricalFieldSim_Dict.cc 
-#  FieldSim_Dict.cc \
+#  CylindricalFieldSim_Dict.cc \
+#  FieldSim_Dict.cc 
 
 # for root6 we need pcm and dictionaries but only for
 # i/o classes. For root5 we need only dictionaries but
@@ -33,13 +33,14 @@ if MAKEROOT6
 pcmdir = $(libdir)
 nobase_dist_pcm_DATA = \
   AnnularFieldSim_rdict.pcm 
-#  CylindricalFieldSim_rdict.pcm 
-#  FieldSim_rdict.pcm \
+#  CylindricalFieldSim_rdict.pcm \
+#  FieldSim_rdict.pcm 
 else
   ROOT5_DICTS = \
-    AnnularFieldSim_Dict.cc  
-#    CylindricalFieldSim_Dict.cc 
-#    FieldSim_Dict.cc  \
+    AnnularFieldSim_Dict.cc
+#rcc note that these all need trailing backslashes if not commented out.
+#    CylindricalFieldSim_Dict.cc \
+#    FieldSim_Dict.cc  
 endif
 
 # the below previously also had: # ROOT5_DICTS with a trailing slash

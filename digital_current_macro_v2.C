@@ -1,5 +1,5 @@
 #include "FieldSim.h"
-#include "CylindricalFieldSim.h"
+#include "AnnularFieldSim.h"
 R__LOAD_LIBRARY(.libs/libfieldsim)
 
 void digital_current_macro_v2(){
@@ -8,8 +8,8 @@ void digital_current_macro_v2(){
   now=gSystem->Now();
   printf("the time is %lu\n",(unsigned long)now);
 
-  CylindricalFieldSim *test;
-  CylindricalFieldSim *testgen;
+  AnnularFieldSim *test;
+  AnnularFieldSim *testgen;
   const TVector3 cyl(60,0,100);
   TVector3 ptemp(12.005,45.005,75.99);
   TVector3 ftemp,btemp;
@@ -26,7 +26,7 @@ void digital_current_macro_v2(){
   float rdiff[isteps];
   float rphidiff[isteps];
   
-  testgen=new CylindricalFieldSim(cyl.Perp(),2*TMath::Pi(),cyl.Z(),isteps+imin-1,isteps+imin-1,isteps+imin-1,100.0/12e-6);
+  testgen=new AnnularFieldSim(cyl.Perp(),2*TMath::Pi(),cyl.Z(),isteps+imin-1,isteps+imin-1,isteps+imin-1,100.0/12e-6);
   testgen->setFlatFields(1.4,200);
   testgen->populate_lookup();//2-3
   testgen->q->Set(isteps+imin-2,0,0,1e-12);///that's 10^7 protons in that box.
@@ -38,7 +38,7 @@ void digital_current_macro_v2(){
   for (int i=0;i<isteps;i++){
     printf("create %d\n",i);
     t[0]=gSystem->Now();
-    test=new CylindricalFieldSim(cyl.Perp(),2*TMath::Pi(),cyl.Z(),i+imin,i+imin,i+imin,100.0/12e-6);
+    test=new AnnularFieldSim(cyl.Perp(),2*TMath::Pi(),cyl.Z(),i+imin,i+imin,i+imin,100.0/12e-6);
     t[1]=gSystem->Now();
     printf("setFlat %d\n",i);
     test->setFlatFields(1.4,200);
@@ -137,13 +137,10 @@ void digital_current_macro_v2(){
   multi->Add(graph[i]);
   i++;
   multi->Draw("AC*");  
-
-
-
-  
-  
-    
   return;
+}
+
+  void cartesian_field_sim(){
   //gSystem->Load("./libs/libfieldsim");
   //all dimensions in cm, Coulomb.
   //define a detector box.  Propagation is along z to z=0.

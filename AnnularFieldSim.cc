@@ -1,11 +1,14 @@
 #include "TVector3.h"
 #include "AnnularFieldSim.h"
+#include "TH3F.h"
 
 AnnularFieldSim::AnnularFieldSim(float rin, float rout, float dz,int r, int phi, int z, float vdr){
   Escale=1; Bscale=1;
   vdrift=vdr;
   nr=r;nphi=phi;nz=z;
   rmin=rin; rmax=rout;
+  zmin=0;zmax=dz;
+  //todo:  reintroduce the ability to simulate a subsection of this.
   
   //define the size of the volume:
   dim.SetXYZ(1,0,0);
@@ -48,6 +51,8 @@ AnnularFieldSim::AnnularFieldSim(float rin, float rout, float dz,int r, int phi,
     Bfield->GetFlat(i)->SetXYZ(0,0,0);
 
   //and a grid of charges in those volumes.
+  //TODO:  this could be changed to be a TH3F...
+  //space charge in coulomb units.
   q=new MultiArray<float>(nr,nphi,nz);
   for (int i=0;i<q->Length();i++)
     *(q->GetFlat(i))=0;
@@ -80,6 +85,8 @@ TVector3 AnnularFieldSim::calc_unit_field(TVector3 at, TVector3 from){
 }
 
 TVector3 AnnularFieldSim::fieldIntegral(float zdest,TVector3 start){
+  //integrates E dz, from the starting point to the selected z position.  The path is assumed to be along z for each step, with adjustments to x and y accumulated after each step.
+  
   int dir=(start.Z()>zdest?-1:1);//+1 if going to larger z, -1 if going to smaller;
 
   int r=(start.Perp()-rmin)/step.Perp();
@@ -112,6 +119,8 @@ TVector3 AnnularFieldSim::fieldIntegral(float zdest,TVector3 start){
 }
 
 TVector3 AnnularFieldSim::getCellCenter(int r, int phi, int z){
+  //returns the midpoint of the cell (halfway between each edge, not weighted center)
+  
   TVector3 c(1,0,0);
   c.SetPerp((r+0.5)*step.Perp()+rmin);
   c.SetPhi((phi+0.5)*step.Phi());
@@ -196,6 +205,73 @@ TVector3 AnnularFieldSim::interpolatedFieldIntegral(float zdest,TVector3 start){
   }
     
   return dir*fieldInt;
+}
+
+void AnnularFieldSim::load_spacecharge(TH3F *hist, float scalefactor=1){
+  //load spacecharge densities from a histogram, where scalefactor translates into local units
+  //noting that the histogram limits may differ from the simulation size, and have different granularity
+  //hist is assumed/required to be x=phi, y=r, z=z
+
+  //get dimensions of input
+  float hrmin=hist->GetYaxis()->GetXmin();
+  float hrmax=hist->GetYaxis()->GetXmax();
+  float hphimin=hist->GetXaxis()->GetXmin();
+  float hphimax=hist->GetXaxis()->GetXmax();
+  float hzmin=hist->GetZaxis()->GetXmin();
+  float hzmax=hist->GetZaxis()->GetXmax();
+  
+  //get number of bins in each dimension
+  int hrn=hist->GetNbinsY();
+  int hphin=hist->GetNbinsX();
+  int hzn=hist->GetNbinsZ();
+
+  //do some computation of steps:
+  float hrstep=(hrmax-hrmin)/hrn;
+  float hphistep=(hphimax-hphimin)/hphin;
+  float hzstep=(hzmax-hzmin)/hzn;
+
+  //loop over every bin and add that to the internal model:
+  //note that bin 0 is the underflow, so we need the +1 internally
+  for (int i=0;i<hrn;i++){
+    float hr=hrmin+hrstep*i;
+    int localr=(hr-rmin)/step.Perp();
+    if (localr<0){
+      printf("Loading from histogram has r out of range! r=%f < rmin=%f\n",hr,rmin);
+      continue;
+    }
+    if (localr>=nr){
+      printf("Loading from histogram has r out of range! r=%f > rmax=%f\n",hr,rmax);
+      continue;
+    }
+    for (int j=0;j<hphin;j++){
+      float hphi=hphimin+hphistep*j;
+      int localphi=hphi/step.Phi();
+      if (localphi>=nphi){//handle wrap-around:
+	localphi-=nphi;
+      }
+      if (localphi<0){//handle wrap-around:
+	localphi+=nphi;
+      }
+      for (int k=0;k<hzn;k++){
+	float hz=hzmin+hzstep*k;
+	int localz=hz/step.Z();
+	if (localz<0){
+	  printf("Loading from histogram has z out of range! z=%f < zmin=%f\n",hz,zmin);
+	  continue;
+	}
+	if (localz>=nz){
+	  printf("Loading from histogram has z out of range! z=%f > zmax=%f\n",hz,zmax);
+	  continue;
+	}
+	float qbin=scalefactor*hist->GetBinContent(hist->GetBin(i+1,j+1,k+1));
+	float qold=q->Get(localr,localphi,localz);
+	q->Set(localr,localphi,localz,qbin+qold);
+      }
+    }
+  }
+  
+
+  return;
 }
 
 void AnnularFieldSim::populate_fieldmap(){

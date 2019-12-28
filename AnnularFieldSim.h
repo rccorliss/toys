@@ -2,12 +2,14 @@
 #include "TVector3.h"
 
 template <class T> class MultiArray;
+class TH3F;
 class AnnularFieldSim{
  public: //bad form to leave this all exposed, I know.
   int nr,nphi,nz; //dimensions of internal grid
   TVector3 step; //step size in each direction.
   float phispan;//angular span of the area in the phi direction, since TVector3 is too smart.
   float rmin, rmax;//inner and outer radii of the annulus
+  float zmin, zmax;//lower and upper edges of the coordinate system in z (not fully implemented yet)
   double vdrift; //gas drift speed.
   //double omegatau; //gas propagation constant depends on field and vdrift
   float Bscale;
@@ -26,6 +28,7 @@ class AnnularFieldSim{
 
  public:
   AnnularFieldSim(float rmin,float rmax, float dz,int r,int phi, int z, float vdr);
+  void load_spacecharge(TH3F *hist, float scalefactor);
   void setScaleFactorB(float x){Bscale=x;return;};
   void setScaleFactorE(float x){Escale=x;return;};
   void setFlatFields(float B, float E);

@@ -28,7 +28,7 @@ class AnnularFieldSim{
 
  public:
   AnnularFieldSim(float rmin,float rmax, float dz,int r,int phi, int z, float vdr);
-  void load_spacecharge(TH3F *hist, float scalefactor);
+  void load_spacecharge(TH3F *hist, float zoffset, float scalefactor);
   void setScaleFactorB(float x){Bscale=x;return;};
   void setScaleFactorE(float x){Escale=x;return;};
   void setFlatFields(float B, float E);
@@ -40,6 +40,7 @@ class AnnularFieldSim{
   void populate_fieldmap();
   void  populate_lookup();
   TVector3 sum_field_at(int r,int phi, int z);
+  TVector3 swimToInSteps(float zdest,TVector3 start, int steps, bool interpolate);
   TVector3 swimTo(float zdest,TVector3 start, bool interpolate);
  
  private:

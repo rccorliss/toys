@@ -2,6 +2,8 @@
 #include "AnnularFieldSim.h"
 #include "TH3F.h"
 
+#define ALMOST_ZERO 0.00001
+
 AnnularFieldSim::AnnularFieldSim(float rin, float rout, float dz,int r, int phi, int z, float vdr){
   Escale=1; Bscale=1;
   vdrift=vdr;
@@ -70,10 +72,10 @@ TVector3 AnnularFieldSim::calc_unit_field(TVector3 at, TVector3 from){
   //note this is the field due to a fixed point charge in free space.
   //if doing cylindrical calcs with different boundary conditions, this needs to change.
  
-  const float k=8.987*1e13;//N*cm^2/C^2 in a vacuum. N*cm^2/C units, so that we supply space charge in coulomb units.
+  const float k=8.987*1e13;//=1/(4*pi*eps0) in N*cm^2/C^2 in a vacuum. N*cm^2/C units, so that we supply space charge in coulomb units.
   TVector3 delr=at-from;
   TVector3 field=delr; //to set the direction.
-  if (delr.Mag()<0.00001){
+  if (delr.Mag()<ALMOST_ZERO){
     //do nothing.  the vector is already zero, which will be our approximation.
     //field.SetMag(0);//no contribution if we're in the same cell. -- but root warns if trying to resize something of magnitude zero.
   } else{
@@ -86,11 +88,21 @@ TVector3 AnnularFieldSim::calc_unit_field(TVector3 at, TVector3 from){
 
 TVector3 AnnularFieldSim::fieldIntegral(float zdest,TVector3 start){
   //integrates E dz, from the starting point to the selected z position.  The path is assumed to be along z for each step, with adjustments to x and y accumulated after each step.
+  // printf("AnnularFieldSim::fieldIntegral(x=%f,y=%f, z=%f) to z=%f\n",start.X(),start.Y(),start.Z(),zdest);
+
+
   
   int dir=(start.Z()>zdest?-1:1);//+1 if going to larger z, -1 if going to smaller;
 
   int r=(start.Perp()-rmin)/step.Perp();
   int phi=start.Phi()/step.Phi();
+  if (phi>=nphi){//handle wrap-around:
+    phi-=nphi;
+   }
+  if (phi<0){//handle wrap-around:
+    phi+=nphi;
+  }
+  
   int zi,zf;
   double startz,endz;
 
@@ -101,18 +113,27 @@ TVector3 AnnularFieldSim::fieldIntegral(float zdest,TVector3 start){
     startz=start.Z();
     endz=zdest;
   } else{
-    zf=start.Z()/step.Z(); //highest cell with lower bound less than position of particle
-    zi=zdest/step.Z(); //highest cell with lower bound less than target position of particle
+    zf=start.Z()/step.Z(); //highest cell with lower bound less than or equal to position of particle
+    zi=zdest/step.Z(); //highest cell with lower bound less than or equal to target position of particle
     startz=zdest;
     endz=start.Z();
-  } 
+  }
 
+ 
   TVector3 fieldInt(0,0,0);
+  // printf("AnnularFieldSim::fieldIntegral requesting (%d,%d,%d)-(%d,%d,%d) (inclusive) cells\n",r,phi,zi,r,phi,zf-1);
     for(int i=zi;i<zf;i++){ //count the whole cell of the lower end, and skip the whole cell of the high end.
+      TVector3 tf=Efield->Get(r,phi,i);
+      //printf("fieldAt (%d,%d,%d)=(%f,%f,%f) step=%f\n",r,phi,i,tf.X(),tf.Y(),tf.Z(),step.Z());
       fieldInt+=Efield->Get(r,phi,i)*step.Z();
   }
     fieldInt-=Efield->Get(r,phi,zi)*(startz-zi*step.Z());//remove the part of the low end cell we didn't travel through
-    fieldInt+=Efield->Get(r,phi,zf)*(endz-zf*step.Z());//add the part of the high end cell we did travel through
+
+    if (endz/step.Z()-zf>ALMOST_ZERO){
+      //printf("endz/step.Z()=%f, zf=%f\n",endz/step.Z(),zf*1.0);
+      //if our final step is actually in the next step.
+      fieldInt+=Efield->Get(r,phi,zf)*(endz-zf*step.Z());//add the part of the high end cell we did travel through
+    }
 
     
   return dir*fieldInt;
@@ -132,13 +153,15 @@ TVector3 AnnularFieldSim::getCellCenter(int r, int phi, int z){
 
 
 TVector3 AnnularFieldSim::interpolatedFieldIntegral(float zdest,TVector3 start){
+  printf("AnnularFieldSim::interpolatedFieldIntegral(x=%f,y=%f, z=%f)\n",start.X(),start.Y(),start.Z());
+
   int dir=(start.Z()>zdest?-1:1);//+1 if going to larger z, -1 if going to smaller;
 
   float r0=(start.Perp()-rmin)/step.Perp();
   float phi0=start.Phi()/step.Phi();
   int zi,zf;
   double startz,endz;
-  // printf("interpolating fieldInt at  r=%f,phi=%f\n",r0,phi0);
+  //printf("interpolating fieldInt at  r=%f,phi=%f\n",r0,phi0);
 
   //make sure 'zi' is always the smaller of the two numbers, for handling the partial-steps.
   if (dir>0){
@@ -193,7 +216,7 @@ TVector3 AnnularFieldSim::interpolatedFieldIntegral(float zdest,TVector3 start){
   TVector3 partialInt(0,0,0);
   for (int c=0;c<4;c++){
     partialInt.SetXYZ(0,0,0);
-    //printf("looking for element r=%d,phi=%d\n",r[c],phi[c]);
+    printf("looking for element r=%d,phi=%d\n",r[c],phi[c]);
     for(int i=zi;i<zf;i++){ //count the whole cell of the lower end, and skip the whole cell of the high end.
       
       partialInt+=Efield->Get(r[c],phi[c],i)*step.Z();
@@ -207,10 +230,11 @@ TVector3 AnnularFieldSim::interpolatedFieldIntegral(float zdest,TVector3 start){
   return dir*fieldInt;
 }
 
-void AnnularFieldSim::load_spacecharge(TH3F *hist, float scalefactor=1){
+void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefactor=1){
   //load spacecharge densities from a histogram, where scalefactor translates into local units
   //noting that the histogram limits may differ from the simulation size, and have different granularity
   //hist is assumed/required to be x=phi, y=r, z=z
+  //z offset 'drifts' the charge by that distance toward z=0.
 
   //get dimensions of input
   float hrmin=hist->GetYaxis()->GetXmin();
@@ -230,21 +254,33 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float scalefactor=1){
   float hphistep=(hphimax-hphimin)/hphin;
   float hzstep=(hzmax-hzmin)/hzn;
 
+  //clear the previous spacecharge dist:
+    for (int i=0;i<q->Length();i++)
+    *(q->GetFlat(i))=0;
+
+  
   //loop over every bin and add that to the internal model:
   //note that bin 0 is the underflow, so we need the +1 internally
-  for (int i=0;i<hrn;i++){
-    float hr=hrmin+hrstep*i;
+
+  //the minimum r we need is localr=0, hence:
+  //hr=localr*dr+rmin
+  //localr*dr+rmin-hrmin=hrstep*(i+0.5)
+  //i=(localr*dr+rmin-hrmin)/hrstep
+
+  for (int i=(rmin-hrmin)/hrstep;i<hrn;i++){
+    float hr=hrmin+hrstep*(i+0.5);//bin center
     int localr=(hr-rmin)/step.Perp();
     if (localr<0){
-      printf("Loading from histogram has r out of range! r=%f < rmin=%f\n",hr,rmin);
+      printf("Loading from histogram has r out of range! r=%f < rmin=%f\n",hr,rmin);      
       continue;
     }
     if (localr>=nr){
       printf("Loading from histogram has r out of range! r=%f > rmax=%f\n",hr,rmax);
+      i=hrn; //no reason to keep looking at larger r.
       continue;
     }
     for (int j=0;j<hphin;j++){
-      float hphi=hphimin+hphistep*j;
+      float hphi=hphimin+hphistep*(j+0.5); //bin center
       int localphi=hphi/step.Phi();
       if (localphi>=nphi){//handle wrap-around:
 	localphi-=nphi;
@@ -252,8 +288,9 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float scalefactor=1){
       if (localphi<0){//handle wrap-around:
 	localphi+=nphi;
       }
-      for (int k=0;k<hzn;k++){
-	float hz=hzmin+hzstep*k;
+      //todo:  should add ability to take in a phi- slice only
+      for (int k=(zmin-(hzmin-zoffset))/hzstep;k<hzn;k++){
+	float hz=hzmin-zoffset+hzstep*(k+0.5);//bin center
 	int localz=hz/step.Z();
 	if (localz<0){
 	  printf("Loading from histogram has z out of range! z=%f < zmin=%f\n",hz,zmin);
@@ -261,10 +298,14 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float scalefactor=1){
 	}
 	if (localz>=nz){
 	  printf("Loading from histogram has z out of range! z=%f > zmax=%f\n",hz,zmax);
+	  k=hzn;//no reason to keep looking at larger z.
 	  continue;
 	}
-	float qbin=scalefactor*hist->GetBinContent(hist->GetBin(i+1,j+1,k+1));
+	//can be simplified:  float vol=hzstep*(hphistep*(hr+hrstep)*(hr+hrstep) - hphistep*hr*hr);
+	float vol=hzstep*hphistep*(2*hr+hrstep)*hrstep;
+	float qbin=scalefactor*vol*hist->GetBinContent(hist->GetBin(j+1,i+1,k+1));
 	float qold=q->Get(localr,localphi,localz);
+	//printf("loading Q=%f from hist(%d,%d,%d) into cell (%d,%d,%d), qold=%f\n",qbin,i,j,k,localr,localphi,localz,qold);
 	q->Set(localr,localphi,localz,qbin+qold);
       }
     }
@@ -323,7 +364,7 @@ void  AnnularFieldSim::populate_lookup(){
 }
 
 void AnnularFieldSim::setFlatFields(float B, float E){
-  //printf("AnnularFieldSim::setFlatFields(B=%f,E=%f)\n",B,E);
+  printf("AnnularFieldSim::setFlatFields(B=%f,E=%f)\n",B,E);
   for (int i=0;i<Eexternal->Length();i++)
     Eexternal->GetFlat(i)->SetXYZ(0,0,E);
   for (int i=0;i<Bfield->Length();i++)
@@ -333,6 +374,7 @@ void AnnularFieldSim::setFlatFields(float B, float E){
 
 TVector3 AnnularFieldSim::sum_field_at(int r,int phi, int z){
  //sum the E field over all nr by ny by nz cells of sources, at the specific position x,y,z.
+  //printf("AnnularFieldSim::sum_field_at(r=%d,phi=%d, z=%d)\n",r,phi,z);
   TVector3 sum(0,0,0);
   for (int ir=0;ir<nr;ir++){
     for (int iphi=0;iphi<nphi;iphi++){
@@ -348,11 +390,34 @@ TVector3 AnnularFieldSim::sum_field_at(int r,int phi, int z){
   return sum;
 }
 
+TVector3 AnnularFieldSim::swimToInSteps(float zdest,TVector3 start,int steps=1, bool interpolate=false){
+  //short-circuit if we're out of range:
+  
+    double zdist=zdest-start.Z();
+    double zstep=zdist/steps;
+
+    TVector3 ret=start;
+    for (int i=0;i<steps;i++){
+        if (ret.Perp()<rmin || ret.Perp()>rmax || ret.Z()<zmin || ret.Z()>zmax){
+    printf("Asked to swim particle from (%f,%f,%f) which is outside the TPC volume.  Returning original position.\n",ret.X(),ret.Y(),ret.Z());
+    return ret;
+  }
+      ret=swimTo(start.Z()+zstep*(i+1),ret,false);
+    }
+  
+  return ret;
+}
+
 TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate=false){
 
  //using second order langevin expansion from http://skipper.physics.sunysb.edu/~prakhar/tpc/Papers/ALICE-INT-2010-016.pdf
   //TVector3 (*field)[nr][ny][nz]=field_;
 
+  if (start.Perp()<rmin || start.Perp()>rmax || start.Z()<zmin || start.Z()>zmax){
+    printf("Asked to swim particle from (%f,%f,%f) which is outside the TPC volume.  Returning original position.\n",start.X(),start.Y(),start.Z());
+    return start;
+  }
+  
   //set the direction of the external fields.
   TVector3 B=Bfield->Get(0,0,0)*Bscale;//static field in tesla T=Vs/m^2
   
@@ -361,6 +426,11 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate=fa
   //int zi=start.Z()/step.Z();
   double zdist=zdest-start.Z();
 
+  //short-circuit if there's no travel length:
+  if (TMath::Abs(zdist)<ALMOST_ZERO*step.Z()){
+    printf("Asked to swim particle from (%f,%f,%f) to z=%f, which is a distance of %fcm.  Returning original position.\n",start.X(),start.Y(),start.Z(), zdest,zdist);
+    return start;
+  }
 
   TVector3 fieldInt;
   if (interpolate){
@@ -387,7 +457,7 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate=fa
   double deltaY=c0*fieldInt.Y()/fieldz-c1*fieldInt.X()/fieldz+c1*B.X()/B.Z()*zdist+c2*B.Y()/B.Z()*zdist;
   double deltaZ=0; //not correct, but small?  different E leads to different drift velocity.  see linked paper.  fix eventually.
 
-  //printf("swimTo: (%2.4f,%2.4f,%2.4f) to z=%2.4f\n",start.X(),start.Y(), start.Z(),zdest);
+  printf("swimTo: (%2.4f,%2.4f,%2.4f) to z=%2.4f\n",start.X(),start.Y(), start.Z(),zdest);
   //printf("swimTo: fieldInt=(%2.4f,%2.4f,%2.4f)\n",fieldInt.X(),fieldInt.Y(),fieldInt.Z());
   
   TVector3 dest(start.X()+deltaX,start.Y()+deltaY,zdest+deltaZ);

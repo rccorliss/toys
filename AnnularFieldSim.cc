@@ -157,8 +157,56 @@ TVector3 AnnularFieldSim::interpolatedFieldIntegral(float zdest,TVector3 start){
 
   int dir=(start.Z()>zdest?-1:1);//+1 if going to larger z, -1 if going to smaller;
 
-  float r0=(start.Perp()-rmin)/step.Perp();
-  float phi0=start.Phi()/step.Phi();
+
+  float r0=(start.Perp()-rmin)/step.Perp()-0.5; //the position in r, in units of step, starting from the center of the 0th bin.
+  int r0i=floor(r0); //the integer portion of the position. -- what center is below our position?
+  float r0d=r0-r0i;//the decimal portion of the position. -- how far past center are we?
+  int ri[4];//the r position of the four cell centers to consider
+  ri[0]=ri[1]=r0i;
+  ri[2]=ri[3]=r0i+1;
+  float rw[4];//the weight of that cell, linear in distance from the center of it
+  rw[0]=rw[1]=1-r0d; //1 when we're on it, 0 when we're at the other one.
+  rw[2]=rw[3]=r0d; //1 when we're on it, 0 when we're at the other one
+
+  bool skiplow=false;
+  if (ri[0]<0){
+    skiplow=true; //don't bother handling 0 and 1 in the coordinates.
+    rw[2]=rw[3]=0; //and weight like we're dead-center on the outer cells.
+  }
+  bool skiphigh=false;
+  if (ri[2]>=nr){
+    skiphigh=true; //don't bother handling 2 and 3 in the coordinates.
+    rw[0]=rw[1]=0; //and weight like we're dead-center on the inner cells.
+  }
+  
+  //now repeat that structure for phi:
+  float p0=(start.Phi())/step.Phi()-0.5; //the position in phi, in units of step, starting from the center of the 0th bin.
+  int p0i=floor(p0); //the integer portion of the position. -- what center is below our position?
+  float p0d=p0-p0i;//the decimal portion of the position. -- how far past center are we?
+  int pi[4];//the phi position of the four cell centers to consider
+  pi[0]=pi[2]=p0i;
+  pi[1]=pi[3]=p0i+1;
+  float pw[4];//the weight of that cell, linear in distance from the center of it
+  pw[0]=pw[2]=1-p0d; //1 when we're on it, 0 when we're at the other one.
+  pw[1]=pw[3]=p0d; //1 when we're on it, 0 when we're at the other one
+  //previously, we needed to handle being above or below our bounds.  now we need to handle wrap-around:  
+  if (pi[0]<0){
+    pi[0]+=nphi;
+    pi[2]=pi[0];
+  }
+   if (pi[0]>=nr){
+     pi[0]-=nphi;
+     pi[2]=pi[0];
+    }
+ if (pi[1]<0){
+    pi[1]+=nphi;
+    pi[3]=pi[1];
+  }
+   if (pi[1]>=nr){
+     pi[1]-=nphi;
+     pi[3]=pi[1];
+    }  
+
   int zi,zf;
   double startz,endz;
   //printf("interpolating fieldInt at  r=%f,phi=%f\n",r0,phi0);
@@ -175,56 +223,23 @@ TVector3 AnnularFieldSim::interpolatedFieldIntegral(float zdest,TVector3 start){
     startz=zdest;
     endz=start.Z();
   } 
-  //we can always interpolate between four positions.
-  //wherever x is, only one of (x+dx/2, x-dx/2) will be in a different cell, where dx is the cell size.
-  //the same logic applies to y.
-  //so the four cells we want to interpolate with are the ones containing:
-  //(x-dx/2,y-dy/2), (x-dx/2,y-dy/2), (x+dx/2,y-dy/2), (x+dx/2,y-dy/2),
-  //where x is the nominal coordinate.
-  //and the coefficients ought to be (1-|x-dx/2|/dx)(1-|y-dy/2|/dy), where x and y are the nominal coordinate measured wrt the lower corner of the box.
-  //which is 1 if we're in the exact center, and 0.5 if we're on the edge in one direction, or 0.25 in the corner.
-  float rf[4],phif[4]; //integer=what cell we're in.  decimal=how far into the cell we are
-  rf[0]=rf[1]=(r0-0.5);
-  rf[2]=rf[3]=(r0+0.5);
-  phif[0]=phif[2]=(phi0-0.5);
-  phif[1]=phif[3]=(phi0+0.5);
-  float coef[4];
-  int r[4], phi[4];
 
-  
-  for (int i=0;i<4;i++){
-    if (phif[i]>=nphi){//handle wrap-around:
-      phif[i]-=nphi;
-      //phif[i]-=2*TMath::Pi();
-    }
-    if (phif[i]<0){//handle wrap-around:
-      phif[i]+=nphi;
-      //phif[i]+=2*TMath::Pi();
-    }
-    
-    r[i]=rf[i]; //get integer portion of float
-    phi[i]=phif[i];
- 
 
-    //  coef[i]=(1-abs( ( (start.X()-x[i]*step.X())-step.X()/2.0 )/step.X() )  ... can simplifiy:
-    float rrel=r0-r[i]; //fractional r position of point in ith cell, from -0.5 to +1.5
-    float phirel=phi0-phi[i];
-    coef[i]=(1-abs( rrel - 0.5))*(1-abs( phirel - 0.5));
-  }
+  TVector3 fieldInt, partialInt;//where we'll store integrals as we generate them.
   
-  TVector3 fieldInt(0,0,0);
-  TVector3 partialInt(0,0,0);
-  for (int c=0;c<4;c++){
+  for (int i=skiplow*2;i<4-skiphigh*2;i++){
     partialInt.SetXYZ(0,0,0);
-    printf("looking for element r=%d,phi=%d\n",r[c],phi[c]);
-    for(int i=zi;i<zf;i++){ //count the whole cell of the lower end, and skip the whole cell of the high end.
+    printf("looking for element r=%d,phi=%d\n",ri[i],pi[i]);
+    for(int j=zi;j<zf;j++){ //count the whole cell of the lower end, and skip the whole cell of the high end.
       
-      partialInt+=Efield->Get(r[c],phi[c],i)*step.Z();
+      partialInt+=Efield->Get(ri[i],pi[i],j)*step.Z();
     }
   
-    partialInt-=Efield->Get(r[c],phi[c],zi)*(startz-zi*step.Z());//remove the part of the low end cell we didn't travel through
-    partialInt+=Efield->Get(r[c],phi[c],zf)*(endz-zf*step.Z());//add the part of the high end cell we did travel through
-    fieldInt+=coef[c]*partialInt;
+    partialInt-=Efield->Get(ri[i],pi[i],zi)*(startz-zi*step.Z());//remove the part of the low end cell we didn't travel through
+    if (endz/step.Z()-zf>ALMOST_ZERO){
+    partialInt+=Efield->Get(ri[i],pi[i],zf)*(endz-zf*step.Z());//add the part of the high end cell we did travel through
+    }
+    fieldInt+=rw[i]*pw[i]*partialInt;
   }
     
   return dir*fieldInt;
@@ -457,7 +472,7 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate=fa
   double deltaY=c0*fieldInt.Y()/fieldz-c1*fieldInt.X()/fieldz+c1*B.X()/B.Z()*zdist+c2*B.Y()/B.Z()*zdist;
   double deltaZ=0; //not correct, but small?  different E leads to different drift velocity.  see linked paper.  fix eventually.
 
-  printf("swimTo: (%2.4f,%2.4f,%2.4f) to z=%2.4f\n",start.X(),start.Y(), start.Z(),zdest);
+  //printf("swimTo: (%2.4f,%2.4f,%2.4f) to z=%2.4f\n",start.X(),start.Y(), start.Z(),zdest);
   //printf("swimTo: fieldInt=(%2.4f,%2.4f,%2.4f)\n",fieldInt.X(),fieldInt.Y(),fieldInt.Z());
   
   TVector3 dest(start.X()+deltaX,start.Y()+deltaY,zdest+deltaZ);

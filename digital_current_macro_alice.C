@@ -17,6 +17,33 @@ void digital_current_macro_alice(){
   const float alice_driftVolt=-99930; //V
   const float alice_driftVel=2.58*1e6;//cm per s
   const float alice_chargescale=8.85e-16;//their hist. has charge in units of C/cm^3 /eps0.  This is eps0 in SI+cm units so that I can multiple by the volume in cm^3 to get the right Q.
+
+
+  //define a region of interest, in units of the intrinsic scale of the alice histogram:
+  int nr=159;
+  int nr_roi=5;
+  int nphi=360;
+  int nphi_roi=5;
+  int nz=62;
+  int nz_roi=12;
+
+  float rmin_roi=alice_rmin;
+  float rmax_roi=rmin_roi+alice_deltar/nr*nr_roi;
+ float phimin_roi=0;
+ float phimax_roi=phimin_roi+2*TMath::Pi()/nphi*nphi_roi;
+  float zmin_roi=0;
+  float zmax_roi=zmin_roi+alice_z/nz*nz_roi;
+
+  float rmin_roi_with_buffer=alice_rmin+alice_deltar/(nr*1.0)*(0.5);
+  float rmax_roi_with_buffer=rmin_roi+alice_deltar/(nr*1.0)*(nr_roi-0.5);
+  float phimin_roi_with_buffer=2*TMath::Pi()/(nphi*1.0)*(0.5);
+ float phimax_roi_with_buffer=phimin_roi+2*TMath::Pi()/(nphi*1.0)*(nphi_roi-0.5);
+ float zmin_roi_with_buffer=alice_z/(nz*1.0)*(0.5);
+ float zmax_roi_with_buffer=zmin_roi+alice_z/(nz*1.0)*(nz_roi-0.5);
+
+ printf("r bounds are %f<%f<%f<r<%f<%f<%f\n",alice_rmin,rmin_roi,rmin_roi_with_buffer,rmax_roi_with_buffer,rmax_roi,alice_rmax);
+ printf("phi bounds are %f<%f<%f<phi<%f<%f<%f\n",0.0,phimin_roi,phimin_roi_with_buffer,phimax_roi_with_buffer,phimax_roi,2*TMath::Pi());
+ 
   //get the ALICE histogram
   TFile *f=TFile::Open("InputSCDensityHistograms_8000events.root");
   TH3F* alice_average=(TH3F*)f->Get("inputSCDensity3D_8000_avg");
@@ -24,9 +51,14 @@ void digital_current_macro_alice(){
   printf("loaded hist.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   AnnularFieldSim *alice=
-    new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,9,120,9,alice_driftVel);
- AnnularFieldSim *alice2=
-    new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,9,90,9,alice_driftVel);
+    new  AnnularFieldSim(alice_rmin,alice_rmax,alice_z,
+		  nr, 0, nr_roi,
+		  nphi, 0, nphi_roi,
+		  nz, 0, nz_roi,
+		  alice_driftVel);
+  //  new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,9,120,9,alice_driftVel);
+  AnnularFieldSim *alice2=
+      new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,4,4,4,alice_driftVel);
    
     // dropping half-res for test: new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,53,18,31,alice_driftVel);
     //full resolution is too big:  new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,159,360,62,alice_driftVel);
@@ -50,29 +82,59 @@ void digital_current_macro_alice(){
   start=now;
   alice->populate_fieldmap();
   alice2->populate_fieldmap();
-
+ now=gSystem->Now();
+  printf("populated fieldmap.  the dtime is %lu\n",(unsigned long)(now-start));
+  start=now;
+ 
   //define a grid of test points:
-  const int nparticles=100*100;
+  const int nparticles=50*50;
+  const int divisor=50;
   TVector3 testparticle[nparticles];
   TVector3 outparticle[nparticles];
   TVector3 outparticle2[nparticles];
   TVector3 backparticle[nparticles];
   float outx[nparticles], outy[nparticles],outz[nparticles];
   for (int i=0;i<nparticles;i++){
-    int rpos=i/100;
-    testparticle[i].SetXYZ(alice_deltar*(rpos/100.0)+alice_rmin,0,0);
-    testparticle[i].RotateZ(6.28/100.0*(i%100));
+    int rpos=i/divisor;
+    int phipos=i%divisor;
+    testparticle[i].SetXYZ((rmax_roi_with_buffer-rmin_roi_with_buffer)*(rpos/(divisor*1.0))+rmin_roi_with_buffer,0,zmin_roi);
+    testparticle[i].RotateZ((phimax_roi_with_buffer-phimin_roi_with_buffer)*(phipos/(divisor*1.0))+phimin_roi_with_buffer);
   }
+
+  TFile *output=TFile::Open("last_macro_output.ttree.root","RECREATE");
+  TVector3 orig,out1,out2,back1,back2;
+  TTree pTree("pTree","Particle Tree");
+  pTree.Branch("orig","TVector3",&orig);
+  pTree.Branch("out1","TVector3",&out1);
+  pTree.Branch("out2","TVector3",&out2);
+  pTree.Branch("back1","TVector3",&back1);
+  pTree.Branch("back2","TVector3",&back2);
+
+
+  
   for (int i=0;i<nparticles;i++){
-    //printf("test[%d]=(%f,%f,%f)\n",i,testparticle[i].X(),testparticle[i].Y(),testparticle[i].Z());
-    outparticle[i]=alice->swimToInSteps(alice_z,testparticle[i],600,true);
+    if (!(i%100)) printf("(periodic progress...) test[%d]=(%f,%f,%f)\n",i,testparticle[i].X(),testparticle[i].Y(),testparticle[i].Z());
+    orig=testparticle[i];
+    
+    out1=outparticle[i]=alice->swimToInSteps(zmax_roi,testparticle[i],600,true);
     outx[i]=outparticle[i].X();
     outy[i]=outparticle[i].Y();
     outz[i]=outparticle[i].Z();
-    outparticle2[i]=alice2->swimToInSteps(alice_z,testparticle[i],600,true);
+    
+    out2=outparticle2[i]=alice2->swimToInSteps(zmax_roi,testparticle[i],600,true);
     //printf("out[%d]=(%f,%f,%f)\n",i,outparticle[i].X(),outparticle[i].Y(),outparticle[i].Z());
-    //backparticle[i]=alice->swimToInSteps(testparticle[i].Z(),outparticle[i],600,true);
+    back1=backparticle[i]=alice->swimToInSteps(testparticle[i].Z(),outparticle[i],600,true);
+    back2=backparticle[i]=alice2->swimToInSteps(testparticle[i].Z(),outparticle2[i],600,true);
+
+    //for convenience of reading, set all of the pTree in microns, not cm:
+    orig=orig*1e4;//10mm/cm*1000um/mm
+    out1*=1e4;//10mm/cm*1000um/mm
+    out2*=1e4;//10mm/cm*1000um/mm
+    back1*=1e4;//10mm/cm*1000um/mm
+    back2*=1e4;//10mm/cm*1000um/mm
+    pTree.Fill();
   }
+  pTree.Write();
 
   //  TH2F* hDeltaForward=new TH2F("hDeltaForward","xy offset of all testpoints;x offset (cm); y offset (cm)",100,-50,50,100,-50,50);
   TH2F* hDeltaForward=new TH2F("hDeltaForward","r offset vs thrown r of all testpoints;r test (cm); r offset (cm)",100,0,350,100,-40,20);

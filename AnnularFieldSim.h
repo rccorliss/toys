@@ -4,12 +4,30 @@
 template <class T> class MultiArray;
 class TH3F;
 class AnnularFieldSim{
- public: //bad form to leave this all exposed, I know.
-  int nr,nphi,nz; //dimensions of internal grid
-  TVector3 step; //step size in each direction.
+ public:
+  enum BoundsCase {InBounds,OnHighEdge, OnLowEdge,OutOfBounds}; //note that 'OnLowEdge' is qualitatively different from 'OnHighEdge'.  Low means there is a non-zero distance between the point and the edge of the bin.  High applies even if that distance is exactly zero.
+
+
+  //bad form to leave this all exposed, I know.
+
+  // bool localZoom;//whether we have an increased local resolution
+  //int fullnr,fullnphi,fullnz; //dimensions of internal high-res grid
+  //int localdr,localdphi,localdz;//number of cells in each direction from a space point to treat in high-res.
+  int nr,nphi,nz; //dimensions of internal low-resgrid
+  TVector3 step; //step size in each direction. in the low-res grid.
   float phispan;//angular span of the area in the phi direction, since TVector3 is too smart.
   float rmin, rmax;//inner and outer radii of the annulus
   float zmin, zmax;//lower and upper edges of the coordinate system in z (not fully implemented yet)
+  //float phimin, phimax;//not implemented at all yet.
+
+  //allow us to track particles only in a subset of the region, to study sections in greater detail
+  //particles will only track in indices rmin_roi<=r<rmax_roi etc.
+  int rmin_roi, rmax_roi, nr_roi;
+  int zmin_roi, zmax_roi, nz_roi;
+  int phimin_roi, phimax_roi, nphi_roi;
+
+  
+  
   double vdrift; //gas drift speed.
   //double omegatau; //gas propagation constant depends on field and vdrift
   float Bscale;
@@ -25,9 +43,17 @@ class AnnularFieldSim{
   MultiArray<TVector3> *Bfield; //magnetic field for system.
   MultiArray<float> *q; //space charge
 
-
+  MultiArray<int> *rUpperBounds; //the (excluded) upper bounds of the effective rbins for each r point in the high-res grid
+  MultiArray<int> *phiUpperBounds; //the (excluded) upper bounds of the effective phibins for each phi point in the high-res grid
+  MultiArray<int> *zUpperBounds; //the (excluded) upper bounds of the effective zbins for each z point in the high-res grid
+  
  public:
-  AnnularFieldSim(float rmin,float rmax, float dz,int r,int phi, int z, float vdr);
+  AnnularFieldSim(float rmin,float rmax, float dz,int r,int phi, int z, float vdr); //abbr. constructor with roi=full region
+  AnnularFieldSim(float rin, float rout, float dz,
+		  int r, int roi_r0, int roi_r1,
+		  int phi, int roi_phi0, int roi_phi1,
+		  int z, int roi_z0, int roi_z1,
+		  float vdr);
   void load_spacecharge(TH3F *hist, float zoffset, float scalefactor);
   void setScaleFactorB(float x){Bscale=x;return;};
   void setScaleFactorE(float x){Escale=x;return;};
@@ -35,7 +61,8 @@ class AnnularFieldSim{
 
   TVector3 calc_unit_field(TVector3 at, TVector3 from);
   TVector3 interpolatedFieldIntegral(float zdest,TVector3 start);
-  TVector3 getCellCenter(int r, int phi, int z);
+  TVector3 GetCellCenter(int r, int phi, int z);
+  TVector3 GetWeightedCellCenter(int r, int phi, int z);
   TVector3 fieldIntegral(float zdest,TVector3 start);
   void populate_fieldmap();
   void  populate_lookup();
@@ -44,6 +71,11 @@ class AnnularFieldSim{
   TVector3 swimTo(float zdest,TVector3 start, bool interpolate);
  
  private:
+  BoundsCase GetRindexAndCheckBounds(float pos, int *r);
+  BoundsCase GetPhiIndexAndCheckBounds(float pos, int *phi);
+  BoundsCase GetZindexAndCheckBounds(float pos, int *z);
+  int FilterPhiIndex(int phi);
+
     float RosseggerEterm(int m, int n, TVector3 at, TVector3 from);
 
 };

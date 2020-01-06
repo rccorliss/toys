@@ -10,11 +10,8 @@ class AnnularFieldSim{
 
   //bad form to leave this all exposed, I know.
 
-  // bool localZoom;//whether we have an increased local resolution
-  //int fullnr,fullnphi,fullnz; //dimensions of internal high-res grid
-  //int localdr,localdphi,localdz;//number of cells in each direction from a space point to treat in high-res.
-  int nr,nphi,nz; //dimensions of internal low-resgrid
-  TVector3 step; //step size in each direction. in the low-res grid.
+  int nr,nphi,nz; //dimensions of internal high-res charge grid
+  TVector3 step; //step size in each direction. in the high-res grid.
   float phispan;//angular span of the area in the phi direction, since TVector3 is too smart.
   float rmin, rmax;//inner and outer radii of the annulus
   float zmin, zmax;//lower and upper edges of the coordinate system in z (not fully implemented yet)
@@ -26,7 +23,14 @@ class AnnularFieldSim{
   int zmin_roi, zmax_roi, nz_roi;
   int phimin_roi, phimax_roi, nphi_roi;
 
-  
+  //allow us to handle local regions in high-res, and the rest in lower res:
+  int r_spacing, phi_spacing, z_spacing;//number of cells in the high-res grid that are ganged together (save for the last bin, which might have fewer)
+  int nr_low, nphi_low, nz_low;//dimensions of internal low-res grids.
+  int nr_high, nphi_high, nz_high;//dimensions of internal hig-res local grids.
+  MultiArray<TVector3> *Epartial_lowres;
+  MultiArray<TVector3> *Epartial_highres;
+   MultiArray<float> *q_local;
+
   
   double vdrift; //gas drift speed.
   //double omegatau; //gas propagation constant depends on field and vdrift
@@ -61,7 +65,10 @@ class AnnularFieldSim{
 
   TVector3 calc_unit_field(TVector3 at, TVector3 from);
   TVector3 interpolatedFieldIntegral(float zdest,TVector3 start);
+  int FilterPhiIndex(int phi,int range); //defaults to using nphi for range.
+
   TVector3 GetCellCenter(int r, int phi, int z);
+  TVector3 GetGroupCellCenter(int r0, int r1, int phi0, int phi1, int z0, int z1);
   TVector3 GetWeightedCellCenter(int r, int phi, int z);
   TVector3 fieldIntegral(float zdest,TVector3 start);
   void populate_fieldmap();
@@ -109,6 +116,23 @@ class MultiArray : public TObject{
      //field=(T)( malloc(length*sizeof(T) ));
      //for (int i=0;i<length;i++) field[i].SetXYZ(0,0,0);
    }
+
+   void Add(int a, int b, int c, T in){
+     Set(a,b,c,0,0,0,in);
+     return;
+   };
+   void Add(int a, int b, int c, int d, int e, int f, T in){
+     int n_[6];
+     n_[0]=a; n_[1]=b; n_[2]=c; n_[3]=d; n_[4]=e; n_[5]=f;
+     int index=n_[0];
+     for (int i=1;i<dim;i++){
+       index=(index*n[i])+n_[i];
+     }
+     field[index]=field[index]+in;
+     return; 
+   }
+
+   
    T Get(int a=0, int b=0, int c=0, int d=0, int e=0, int f=0){
      int n_[6];
      n_[0]=a; n_[1]=b; n_[2]=c; n_[3]=d; n_[4]=e; n_[5]=f;

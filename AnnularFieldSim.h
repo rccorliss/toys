@@ -7,6 +7,10 @@ class AnnularFieldSim{
  public:
   enum BoundsCase {InBounds,OnHighEdge, OnLowEdge,OutOfBounds}; //note that 'OnLowEdge' is qualitatively different from 'OnHighEdge'.  Low means there is a non-zero distance between the point and the edge of the bin.  High applies even if that distance is exactly zero.
 
+  //debug items
+  //
+  int debug_printActionEveryN;
+  int debug_printCounter;
   
   //constants of motion, dimensions, etc:
   //
@@ -77,6 +81,14 @@ class AnnularFieldSim{
 		  int phi, int roi_phi0, int roi_phi1, int in_phiLowSpacing, int in_phiHighSize,
 		  int z, int roi_z0, int roi_z1,int in_zLowSpacing, int in_zHighSize,
 		  float vdr);
+
+  //debug functions:
+  void UpdateEveryN(int n){debug_printActionEveryN=n; return;};
+  bool debugFlag(){
+    if(debug_printActionEveryN>0 && debug_printCounter++>=debug_printActionEveryN){
+      debug_printCounter=0;return true;
+    } return false;};
+
   
   void load_spacecharge(TH3F *hist, float zoffset, float scalefactor);
   void setScaleFactorB(float x){Bscale=x;return;};

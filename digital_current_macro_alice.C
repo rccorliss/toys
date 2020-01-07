@@ -51,37 +51,41 @@ void digital_current_macro_alice(){
   printf("loaded hist.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   AnnularFieldSim *alice=
-    new  AnnularFieldSim(alice_rmin,alice_rmax,alice_z,
-		  nr, 0, nr_roi,
-		  nphi, 0, nphi_roi,
-		  nz, 0, nz_roi,
-		  alice_driftVel);
-  //  new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,9,120,9,alice_driftVel);
+   new  AnnularFieldSim(alice_rmin,alice_rmax,alice_z,
+			nr, 0, nr_roi,
+			nphi, 0, nphi_roi,
+			nz, 0, nz_roi,
+			alice_driftVel);
+    // new AnnularFieldSim (alice_rmin,alice_rmax,alice_z,9,0,9,12,0,12,9,0,9,alice_driftVel);
+
+  /* just confusing for now
   AnnularFieldSim *alice2=
       new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,4,4,4,alice_driftVel);
-   
+  */
     // dropping half-res for test: new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,53,18,31,alice_driftVel);
     //full resolution is too big:  new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,159,360,62,alice_driftVel);
+
+  alice->UpdateEveryN(1e4);
   now=gSystem->Now();
   printf("created sim obj.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   alice->setFlatFields(0.5, alice_driftVolt/alice_z);
-  alice2->setFlatFields(0.5, alice_driftVolt/alice_z);
+  // alice2->setFlatFields(0.5, alice_driftVolt/alice_z);
   now=gSystem->Now();
   printf("set fields.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   alice->load_spacecharge(alice_average,0,alice_chargescale);
-  alice2->load_spacecharge(alice_average,0,alice_chargescale);
+  //alice2->load_spacecharge(alice_average,0,alice_chargescale);
   now=gSystem->Now();
   printf("loaded spacecharge.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   alice->populate_lookup();
-  alice2->populate_lookup();
+  //alice2->populate_lookup();
   now=gSystem->Now();
   printf("populated lookup.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   alice->populate_fieldmap();
-  alice2->populate_fieldmap();
+  //alice2->populate_fieldmap();
  now=gSystem->Now();
   printf("populated fieldmap.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
@@ -121,10 +125,10 @@ void digital_current_macro_alice(){
     outy[i]=outparticle[i].Y();
     outz[i]=outparticle[i].Z();
     
-    out2=outparticle2[i]=alice2->swimToInSteps(zmax_roi,testparticle[i],600,true);
+    //out2=outparticle2[i]=alice2->swimToInSteps(zmax_roi,testparticle[i],600,true);
     //printf("out[%d]=(%f,%f,%f)\n",i,outparticle[i].X(),outparticle[i].Y(),outparticle[i].Z());
     back1=backparticle[i]=alice->swimToInSteps(testparticle[i].Z(),outparticle[i],600,true);
-    back2=backparticle[i]=alice2->swimToInSteps(testparticle[i].Z(),outparticle2[i],600,true);
+    //back2=backparticle[i]=alice2->swimToInSteps(testparticle[i].Z(),outparticle2[i],600,true);
 
     //for convenience of reading, set all of the pTree in microns, not cm:
     orig=orig*1e4;//10mm/cm*1000um/mm

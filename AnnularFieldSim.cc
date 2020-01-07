@@ -5,9 +5,9 @@
 #define ALMOST_ZERO 0.00001
 
 AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, float in_outerZ,
-				 int r, int roi_r0, int roi_r1, int in_rSpacing,
-				 int phi, int roi_phi0, int roi_phi1, int in_phiSpacing,
-				 int z, int roi_z0, int roi_z1,int in_zSpacing,
+				 int r, int roi_r0, int roi_r1, int in_rLowSpacing, int in_rHighSize,
+				 int phi, int roi_phi0, int roi_phi1, int in_phiLowSpacing, int in_phiHighSize,
+				 int z, int roi_z0, int roi_z1,int in_zLowSpacing, int in_zHighSize,
 				 float vdr){
   //check well-ordering:
   if (roi_r0 >=r || roi_r1>r || roi_r0>=roi_r1){
@@ -34,7 +34,7 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
   dim.SetPerp(rmax-rmin);
   dim.SetPhi(0);
   phispan=2*TMath::Pi();
-  dim.SetZ(dz);
+  dim.SetZ(in_outerZ);
   
 
   //load parameters of the whole-volume tiling
@@ -48,6 +48,13 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
   step.SetZ(dim.Z()/nz);
   // printf("f-bin size:  r=%f,phi=%f, wanted %f,%f\n",step.Perp(),step.Phi(),dr/r,dphi/phi);
 
+  //create an array to store the charge in each f-bin
+  q=new MultiArray<float>(nr,nphi,nz);
+  for (int i=0;i<q->Length();i++)
+    *(q->GetFlat(i))=0;
+  
+  
+
   
   //load parameters of our region of interest
   rmin_roi=roi_r0; phimin_roi=roi_phi0; zmin_roi=roi_z0; //lower edge of our region of interest, measured in f-bins
@@ -55,73 +62,15 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
 
   //calculate the dimensions, in f-bins in our region of interest
   nr_roi=rmax_roi-rmin_roi;
- nphi_roi=phimax_roi-phimin_roi;
+  nphi_roi=phimax_roi-phimin_roi;
   nz_roi=zmax_roi-zmin_roi;
 
-  //create a field grid for the roi with the specified dimensions
+  //create an array to hold the SC-induced electric field in the roi with the specified dimensions
   Efield=new MultiArray<TVector3>(nr_roi,nphi_roi,nz_roi);
   for (int i=0;i<Efield->Length();i++)
     Efield->GetFlat(i)->SetXYZ(0,0,0);
-  
 
-  //load parameters of our high-resolution behavior
- 
-
-
-  
-  //todo:
-  //1) check math to find the right spacings.  I think it's:
-  //if we ask for a specific number of bins, we have to choose whether 
-
-
-  /* old version where we derive the spacing from the required number of bins.
-     This had a problem because if we give an nbins that doesn't have a multiple near our actual number, there would be a large leftover bin.
-  r_spacing=0;
-  while (r_spacing*(nr_low-1)<nr) r_spacing++;//keep incrementing until the start of the last bin doesn't fit in the region, then go back one:
-  r_spacing--; //we either fit exactly, or the last bin is an odd shape.  But if we do this, we can't tell whether it's short or long.  I'd rather force it to be short.
-  phi_spacing=0;
-  while (phi_spacing*nphi_low<nphi) phi_spacing++;//keep incrementing until we are either exactly nr, or bigger, so our last bin is shorter than the rest.
-  z_spacing=0;
-  while (z_spacing*nz_low<nz) z_spacing++;//keep incrementing until we are either exactly nr, or bigger, so our last bin is shorter than the rest.
-  */
-  //new version:  user specifies the spacings instead.  We're now guaranteed the last bin is full size or short, which is easier to handle.
-  r_spacing=in_r_spacing;
-  phi_spacing=in_phi_spacing;
-  z_spacing=in_z_spacing;
-  nr_low=ceil(nr/(r_spacing*1.0));
-  nphi_low=ceil(nphi/(phi_spacing*1.0));
-  nz_low=ceil(nz/(z_spacing*1.0));
-  
-
-  //todo:
-  //read the lookup on the relative highres-to-highres to get the local effects
-  //then interpolate the lookup between the lowres-to-lowres on both ends to get the highest res to fill out to the next spacing
-  //then interpolate the lookupbetween the lowres-to-lowres just on the destination end, summing over the whole lowres on the origin end
-  //this should reduce to the current system if: highres neighborhood always encompasses the entire roi
-  //or if: lowres spacing is 1 (meaning n*_low=n*)
-  
-
-  /* now divided into highres and lowres segments:
-  //and the 'lookup' grid to compute the field in each cell given charge in each other cell.
-  Epartial=new MultiArray<TVector3>(nr_roi,nphi_roi,nz_roi,nr,nphi,nz);
-  for (int i=0;i<Epartial->Length();i++)
-    Epartial->GetFlat(i)->SetXYZ(0,0,0);
-  */
-
-  //create the low-res, absolute 'lookup' grid to compute the field in each cell given charge in each other cell.
-  Epartial_lowres=new MultiArray<TVector3>(nr_low,nphi_low,nz_low,nr_low,nphi_low,nz_low);
-  for (int i=0;i<Epartial_lowres->Length();i++)
-    Epartial_lowres->GetFlat(i)->SetXYZ(0,0,0);
-
-  //create the high-res, relative 'lookup' grid to compute the field in each cell given charge in each nearby cell.
-  Epartial_highres=new MultiArray<TVector3>(nr_roi,nphi_roi,nz_roi,nr_high,nphi_high,nz_high);
-  for (int i=0;i<Epartial_highres->Length();i++)
-    Epartial_highres->GetFlat(i)->SetXYZ(0,0,0);
-
-  
-
-  
-  //and to hold the external fieldmap over the region of interest in high res
+  //and to hold the external electric fieldmap over the region of interest
   Eexternal=new MultiArray<TVector3>(nr_roi,nphi_roi,nz_roi);
   for (int i=0;i<Eexternal->Length();i++)
     Eexternal->GetFlat(i)->SetXYZ(0,0,0);
@@ -131,36 +80,74 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
   for (int i=0;i<Bfield->Length();i++)
     Bfield->GetFlat(i)->SetXYZ(0,0,0);
 
-  //and a grid of charges in the entire source volume, regardless of roi.
-  //TODO:  this could be changed to be a TH3F...
-  //space charge in coulomb units.
-  q=new MultiArray<float>(nr,nphi,nz);
-  for (int i=0;i<q->Length();i++)
-    *(q->GetFlat(i))=0;
+  
+  
+
+  //load parameters of our high-resolution behavior
+  nr_high=in_rHighSize;nphi_high=in_phiHighSize;nz_high=in_zHighSize; //dimensions, in f-bins of neighborhood of a f-bin in which we calculated the field in full resolution
+
+  //create the high-res, relative 'lookup' grid to compute the field in each f-bin in the roi given charge in each other nearby f-bin.
+  //note that first and less elements in each direction average over multiple f-bins to match the l-bin spacing.
+  Epartial_highres=new MultiArray<TVector3>(nr_roi,nphi_roi,nz_roi,nr_high,nphi_high,nz_high);
+  for (int i=0;i<Epartial_highres->Length();i++)
+    Epartial_highres->GetFlat(i)->SetXYZ(0,0,0);
+
+  //create a local charge grid that we will fill with the f-bin contents and match to Epartial:
+  q_local=new MultiArray<float>(nr_high,nphi_high,nz_high);
+  for (int i=0;i<q_local->Length();i++)
+    *(q_local->GetFlat(i))=0;
+
+
+
+  //load parameters of our low-resolution behavior
+  r_spacing=in_rLowSpacing; phi_spacing=in_phiLowSpacing; z_spacing=in_zLowSpacing; //number of f-bins, in each direction, to gang together to make a single low-resolution bin (l-bin)
+
+  //compute the number of l-bins in each direction.  In each dimension, the last bin may have a smaller number of f-bins than the rest, to match up with the total number of f-bins.
+  nr_low=ceil(nr/(r_spacing*1.0));
+  nphi_low=ceil(nphi/(phi_spacing*1.0));
+  nz_low=ceil(nz/(z_spacing*1.0));
+
+  //calculate the lowest (inclusive) and highest (exclusive) l-bins that are in our region of interest
+  rmin_roi_low=roi_r0/r_spacing; phimin_roi=roi_phi0/phi_spacing; zmin_roi=roi_z0/z_spacing; //lower edge of our region of interest, measured in l-bins
+  rmax_roi_low=(roi_r1-1)/r_spacing+1;
+  phimax_roi_low=(roi_phi1-1)/phi_spacing+1;
+  zmax_roi_low=(roi_z1-1)/z_spacing+1; //exlcuded upper edge of our region of interest, measured in l-bins
+  //that is, look at the last l-bin that is needed, and add 1 to that.
+
+  //calculate the dimensions, in l-bins in our region of interest
+  nr_roi_low=rmax_roi_low-rmin_roi_low;
+  nphi_roi_low=phimax_roi_low-phimin_roi_low;
+  nz_roi_low=zmax_roi_low-zmin_roi_low;
+
+  //create the low-res, absolute 'lookup' grid to compute the field in each l-bin in the roi given charge in each other l-bin.
+  Epartial_lowres=new MultiArray<TVector3>(nr_roi_low,nphi_roi_low,nz_roi_low,nr_low,nphi_low,nz_low);
+  for (int i=0;i<Epartial_lowres->Length();i++)
+    Epartial_lowres->GetFlat(i)->SetXYZ(0,0,0);
+
+  //create a holder for the charge in each l-bin, to save time later.
   q_lowres=new MultiArray<float>(nr_low,nphi_low,nz_low);
   for (int i=0;i<q_lowres->Length();i++)
     *(q_lowres->GetFlat(i))=0;
 
 
 
-  //define the external fields:
-  setFlatFields(1.4/*tesla*/,200/*V/cm*/);
   return;
 }
 
 AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, float in_outerZ,
-				 int r, int roi_r0, int roi_r1, int in_rSpacing,
-				 int phi, int roi_phi0, int roi_phi1, int in_phiSpacing,
-				 int z, int roi_z0, int roi_z1,int in_zSpacing,
+				 int r, int roi_r0, int roi_r1, 
+				 int phi, int roi_phi0, int roi_phi1, 
+				 int z, int roi_z0, int roi_z1,
 				 float vdr)
   :
   AnnularFieldSim(in_innerRadius, in_outerRadius, in_outerZ,
-		  r, roi_r0, roi_r1, 1,
-		  phi, roi_phi0, roi_phi1, 1,
-		  z, roi_z0, roi_z1, 1,
-		  vdr){
+		  r, roi_r0, roi_r1, 1,1,
+		  phi, roi_phi0, roi_phi1, 1,1,
+		  z, roi_z0, roi_z1, 1,1,
+		  vdr)
   {
     //just passing through for the old version again
+    //creates a region with high-res size of 1 (just a single cell) and low-res spacing of 1, which ought to match the behavior (with a little more overhead) from when there was no highres-lowres distinction
     return;
   }
 AnnularFieldSim::AnnularFieldSim(float rin, float rout, float dz,int r, int phi, int z, float vdr)
@@ -194,7 +181,9 @@ TVector3 AnnularFieldSim::calc_unit_field(TVector3 at, TVector3 from){
   
   return field;
 }
-int AnnularFieldSim::FilterPhiIndex(int phi,int range=nphi){
+int AnnularFieldSim::FilterPhiIndex(int phi,int range=-1){
+  if (range<0) range=nphi; //default input is range=-1.  in that case, use the intrinsic resolution of the q grid.
+		 
   //shifts phi up or down by nphi (=2pi in phi index space), and complains if this doesn't put it in range.
   int p=phi;
   if (p>=range){
@@ -233,11 +222,14 @@ AnnularFieldSim::BoundsCase AnnularFieldSim::GetRindexAndCheckBounds(float pos, 
 }
 AnnularFieldSim::BoundsCase AnnularFieldSim::GetPhiIndexAndCheckBounds(float pos, int *phi){
   float p0f=(pos)/step.Phi(); //the position in phi, in units of step, starting from the low edge of the 0th bin.
-  int p0=FilterPhiIndex(floor(p0f));
+  int phitemp=floor(p0f);
+  int p0=FilterPhiIndex(phitemp);
   *phi=p0;
 
-  int p0lowered_slightly=FilterPhiIndex(floor(p0f-ALMOST_ZERO));
-  int p0raised_slightly=FilterPhiIndex(floor(p0f+ALMOST_ZERO));
+   phitemp=floor(p0f-ALMOST_ZERO);
+  int p0lowered_slightly=FilterPhiIndex(phitemp);
+   phitemp=floor(p0f+ALMOST_ZERO);
+  int p0raised_slightly=FilterPhiIndex(phitemp);
   //annoying detail:  if we are at index 0, we might go above pmax by going down.
   // and if we are at nphi-1, we might go below pmin by going up.
   // if we are not at p0=0 or nphi-1, the slight wiggles won't move us.
@@ -364,7 +356,7 @@ TVector3 AnnularFieldSim::GetGroupCellCenter(int r0, int r1, int phi0, int phi1,
   if(phi0>phi1) phi1+=nphi;
   if(phi0>phi1) {
     printf("phi1(%d)<=phi0(%d) even after boosting phi1.  check what called this!\n",phi1,phi0);
-    asser(1==2);
+    assert(1==2);
   }
   float phiavg=(r0+r1)/2.0+0.5;
   if (phiavg>=nphi) phiavg-=nphi;
@@ -584,17 +576,16 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefac
     }
   }
 
-  //todo:  go through the q and build q_lowres.
+  //go through the q array and build q_lowres.
   for (int i=0;i<q_lowres->Length();i++)
     *(q_lowres->GetFlat(i))=0;
 
   //fill our low-res
   //note that this assumes the last bin is short or normal length, not long.
   for (int ifr=0;ifr<nr;ifr++){
-    int r_low=ifr/r_spacing;
+    int r_low=ifr/r_spacing; //index of our l-bin is just the integer division of the index of our f-bin
     for (int ifphi=0;ifphi<nphi;ifphi++){
       int phi_low=ifphi/phi_spacing;
-      if (phi_high>=nphi) phi_high=nphi-1;
       for (int ifz=0;ifz<nz;ifz++){
 	int z_low=ifz/z_spacing;
   	q_lowres->Add(r_low,phi_low,z_low,q->Get(ifr,ifphi,ifz));
@@ -641,9 +632,9 @@ void AnnularFieldSim::populate_highres_lookup(){
   TVector3 from(1,0,0);
 
   //populate_highres_lookup();
-  int r_highres_dist=(nr_highres-1)/2;
-  int phi_highres_dist=(nphi_highres-1)/2;
-  int z_highres_dist=(nz_highres-1)/2;
+  int r_highres_dist=(nr_high-1)/2;
+  int phi_highres_dist=(nphi_high-1)/2;
+  int z_highres_dist=(nz_high-1)/2;
 
 
 
@@ -662,66 +653,77 @@ void AnnularFieldSim::populate_highres_lookup(){
     for (int ifphi=phimin_roi;ifphi<phimax_roi;ifphi++){
       for (int ifz=zmin_roi;ifz<zmax_roi;ifz++){
 	at=GetCellCenter(ifr, ifphi, ifz);
+	//define the parent l-bin cells we're dealing with here:
 	int r_parentlow=floor((ifr-r_highres_dist)/(r_spacing*1.0));//partly enclosed in our high-res region
 	int r_parenthigh=floor((ifr+r_highres_dist)/(r_spacing*1.0))+1;//definitely not enclosed in our high-res region
 	int phi_parentlow=floor((ifphi-phi_highres_dist)/(phi_spacing*1.0));
 	int phi_parenthigh=floor((ifphi+phi_highres_dist)/(phi_spacing*1.0))+1; //note that this can be bigger than nphi!  We keep track of that.
 	int z_parentlow=floor((ifz-z_highres_dist)/(z_spacing*1.0));
 	int z_parenthigh=floor((ifz+z_highres_dist)/(z_spacing*1.0))+1;
-	
-	for (int ir=r_parentlow*r_spacing;ir<r_parenthigh*rspacing;ir++){
+
+
+	//for every f-bin in the l-bins we're dealing with, figure out which relative highres bin it's in, and average the field vector into that bin's vector
+	//note most of these relative bins have exactly one f-bin in them.  It's only the edges that can get more.
+	//note this is a running average:  Anew=(Aold*Nold+V)/(Nold+1) and so on.
+	//note also that we automatically skip f-bins that would've been out of the valid overall volume.
+	for (int ir=r_parentlow*r_spacing;ir<r_parenthigh*r_spacing;ir++){
+	  //skip parts that are out of range:
 	  if (ir<0) ir=0;
-	  if (ir>=nr) continue;
-	  int rbin=(ir-r)+r_highres_dist;//zeroth bin when we're at max distance below, etc.
+	  if (ir>=nr) break;
+	  
+	  int rbin=(ir-ifr)+r_highres_dist;//zeroth bin when we're at max distance below, etc.
 	  int rcell=1;
 	  if (rbin<=0) {
 	    rbin=0;
 	    rcell=0;
 	  }
-	  if (rbin>=nr_highres){
-	    rbin=nr_highres-1;
+	  if (rbin>=nr_high){
+	    rbin=nr_high-1;
 	    rcell=2;
 	  }
-	  for (int iphi=phi_parentlow*phi_spacing;iphi<phi_parenthigh*phispacing;iphi++){
-	    //no phi checks since it's circular.
-	    int phibin=(iphi-phi)+phi_highres_dist;
+	  for (int iphi=phi_parentlow*phi_spacing;iphi<phi_parenthigh*phi_spacing;iphi++){
+	    //no phi out-of-range checks since it's circular.
+	    int phibin=(iphi-ifphi)+phi_highres_dist;
 	    int phicell=1;
 	    if (phibin<=0) {
 	      phibin=0;
 	      phicell=0;
 	    }
-	    if (phibin>=nphi_highres){
-	      phibin=nphi_highres-1;
+	    if (phibin>=nphi_high){
+	      phibin=nphi_high-1;
 	      phicell=2;
 	    }
-	    for (int iz=z_parentlow*z_spacing;iz<z_parenthigh*zspacing;iz++){
+	    for (int iz=z_parentlow*z_spacing;iz<z_parenthigh*z_spacing;iz++){
 	      if (iz<0) iz=0;
-	      if (iz>=nz) continue;
-	      int zbin=(iz-z)+z_highres_dist;
+	      if (iz>=nz) break;
+	      int zbin=(iz-ifz)+z_highres_dist;
 	      int zcell=1;
 	      if (zbin<=0) {
 		zbin=0;
 		zcell=0;
 	      }
-	      if (zbin>=nz_highres){
-		zbin=nz_highres-1;
+	      if (zbin>=nz_high){
+		zbin=nz_high-1;
 		zcell=2;
 	      }
-	      from=GetCellCenter(rbin, phibin, zbin);
+	      //'from' is in absolute coordinates
+	      from=GetCellCenter(ir, FilterPhiIndex(iphi), iz);
 	      ncellsin[rcell][phicell][zcell]++;
 	      int nc= ncellsin[rcell][phicell][zcell];
-	      
-	      TVector3 currentf=Epartial->Get(ifr-rmin_roi,ifphi-phimin_roi,ifz-zmin_roi,rbin,phibin,zbin);
+
+	      //but Epartial is in coordinates relative to the roi
+	      TVector3 currentf=Epartial_highres->Get(ifr-rmin_roi,ifphi-phimin_roi,ifz-zmin_roi,rbin,phibin,zbin);
 	      //to keep this as the average, we multiply what's there back to its initial summed-but-not-divided value
 	      //then add our new value, and the divide the new sum by the total number of cells
-	      TVector3 newf=(currentf*(nc-1)+calc_unit_field(at,from))/nc;
-	      Epartial_highres->Set(ifr-rmin_roi,ifphi-phimin_roi,ifz-zmin_roi,rbin,phibin,zbin,newf)
+	      TVector3 newf=(currentf*(nc-1)+calc_unit_field(at,from))*(1/(nc*1.0));
+	      Epartial_highres->Set(ifr-rmin_roi,ifphi-phimin_roi,ifz-zmin_roi,rbin,phibin,zbin,newf);
 	    }
 	  }
 	}
       }
     }
   }
+  return;
 }
 
 void AnnularFieldSim::populate_lowres_lookup(){
@@ -729,17 +731,17 @@ void AnnularFieldSim::populate_lowres_lookup(){
   TVector3 at(1,0,0);
   TVector3 from(1,0,0);
 
-  int r_low,r_high,phi_low,phi_high,z_low,z_high;
-  //todo: add checks to see if we're in the region of interest?  Otherwise, I can't scale this down to match the old.
-  for (int ifr=0;ifr<nr_low;ifr++){
+  int r_low,r_high,phi_low,phi_high,z_low,z_high;//edges of the l-bin
+
+  for (int ifr=rmin_roi_low;ifr<rmax_roi_low;ifr++){
     r_low=ifr*r_spacing;
     r_high=r_low+r_spacing-1;
     if (r_high>=nr) r_high=nr-1;	
-    for (int ifphi=0;ifphi<nphi_low;ifphi++){
+    for (int ifphi=phimin_roi_low;ifphi<phimax_roi_low;ifphi++){
       phi_low=ifphi*phi_spacing;
       phi_high=phi_low+phi_spacing-1;
       if (phi_high>=nphi) phi_high=nphi-1;
-      for (int ifz=0;ifz<nz_low;ifz++){
+      for (int ifz=zmin_roi_low;ifz<zmax_roi_low;ifz++){
 	z_low=ifz*z_spacing;
 	z_high=z_low+z_spacing-1;
 	if (z_high>=nz) z_high=nz-1;
@@ -760,7 +762,7 @@ void AnnularFieldSim::populate_lowres_lookup(){
 
 	      //*f[ifx][ify][ifz][iox][ioy][ioz]=cacl_unit_field(at,from);
 	      //printf("calc_unit_field...\n");
-	      Epartial_lowres->Set(ifr,ifphi,ifz,ior,iophi,ioz,calc_unit_field(at,from));
+	      Epartial_lowres->Set(ifr-rmin_roi_low,ifphi-phimin_roi_low,ifz-zmin_roi_low,ior,iophi,ioz,calc_unit_field(at,from));
 	    }
 	  }
 	}
@@ -809,16 +811,16 @@ TVector3 AnnularFieldSim::sum_field_at(int r,int phi, int z){
   //note the specific position in Epartial is in relative coordinates.
   printf("AnnularFieldSim::sum_field_at(r=%d,phi=%d, z=%d)\n",r,phi,z);
 
-  
-  //reminder:
-  //Epartial_lowres=new MultiArray<TVector3>(nr_low,nphi_low,nz_low,nr_low,nphi_low,nz_low);
-  //Epartial_highres=new MultiArray<TVector3>(nr_roi,nphi_roi,nz_roi,nr_high,nphi_high,nz_high);
-  int r_highres_dist=(nr_highres-1)/2;
-  int phi_highres_dist=(nphi_highres-1)/2;
-  int z_highres_dist=(nz_highres-1)/2;
+  /*
+    for the near future:
+  TVector3 sum=(sum_local_field_at(r, phi, z)
+		+ sum_nonlocal_field_at(r,phi,z)
+		+ Escale*Eexternal->Get(r-rmin_roi,phi-phimin_roi,z-zmin_roi));
+  return sum;
+  */
+		
 
-  //first, let's calculate our highres point's position in the lowres grid
-  //this will be needed to do 
+
   
 
   //do the summation of the inner high-resolution region charges:
@@ -840,7 +842,10 @@ TVector3 AnnularFieldSim::sum_field_at(int r,int phi, int z){
   //
   //
 
- 
+  int r_highres_dist=(nr_high-1)/2;
+  int phi_highres_dist=(nphi_high-1)/2;
+  int z_highres_dist=(nz_high-1)/2;
+
   int r_parentlow=floor((r-r_highres_dist)/(r_spacing*1.0));//partly enclosed in our high-res region
   int r_parenthigh=floor((r+r_highres_dist)/(r_spacing*1.0))+1;//definitely not enclosed in our high-res region
   int phi_parentlow=floor((phi-phi_highres_dist)/(phi_spacing*1.0));
@@ -850,25 +855,26 @@ TVector3 AnnularFieldSim::sum_field_at(int r,int phi, int z){
 
   //zero our current qlocal holder:
   for (int i=0;i<q_local->Length();i++)
-    q_local->GetFlat(i)->SetXYZ(0,0,0);
+    *(q_local->GetFlat(i))=0;
 
-  for (int ir=r_parentlow*r_spacing;ir<r_parenthigh*rspacing;ir++){
+  //get the charge involved in the local highres block:
+  for (int ir=r_parentlow*r_spacing;ir<r_parenthigh*r_spacing;ir++){
     if (ir<0) ir=0;
     if (ir>=nr) continue;
     int rbin=(ir-r)+r_highres_dist;//zeroth bin when we're at max distance below, etc.
     if (rbin<0) rbin=0;
-    if (rbin>=nr_highres) rbin=nr_highres-1;
-    for (int iphi=phi_parentlow*phi_spacing;iphi<phi_parenthigh*phispacing;iphi++){
-      //no phi checks since it's circular.
+    if (rbin>=nr_high) rbin=nr_high-1;
+    for (int iphi=phi_parentlow*phi_spacing;iphi<phi_parenthigh*phi_spacing;iphi++){
+      //no phi range checks since it's circular.
       int phibin=(iphi-phi)+phi_highres_dist;
       if (phibin<0) phibin=0;
-      if (phibin>=nphi_highres) phibin=nphi_highres-1;
-      for (int iz=z_parentlow*z_spacing;iz<z_parenthigh*zspacing;iz++){
+      if (phibin>=nphi_high) phibin=nphi_high-1;
+      for (int iz=z_parentlow*z_spacing;iz<z_parenthigh*z_spacing;iz++){
 	if (iz<0) iz=0;
 	if (iz>=nz) continue;
 	int zbin=(iz-z)+z_highres_dist;
 	if (zbin<0) zbin=0;
-	if (zbin>=nz_highres) zbin=nz_highres-1;
+	if (zbin>=nz_high) zbin=nz_high-1;
 	q_local->Add(rbin,phibin,zbin,q->Get(ir,FilterPhiIndex(iphi),iz));
       }
     }
@@ -880,9 +886,12 @@ TVector3 AnnularFieldSim::sum_field_at(int r,int phi, int z){
 
   TVector3 sum(0,0,0);
 
-  for (int ir=0;ir<nr_highres;ir++){
-    for (int iphi=0;iphi<nphi_highres;iphi++){
-      for (int iz=0;iz<nz_highres;iz++){
+  //note that Epartial_highres returns zero if we're outside of the valid region.  q_local will also be zero there.
+  //these are loops over the position in the epartial highres grid, so relative to the point in question:
+  for (int ir=0;ir<nr_high;ir++){
+    for (int iphi=0;iphi<nphi_high;iphi++){
+      for (int iz=0;iz<nz_high;iz++){
+	//first three are relative to the roi, last three are relative to the point in the first three.  ooph.
 	sum+=Epartial_highres->Get(r-rmin_roi,phi-phimin_roi,z-zmin_roi,ir,iphi,iz)*q_local->Get(ir,iphi,iz);
       }
     }
@@ -894,7 +903,7 @@ TVector3 AnnularFieldSim::sum_field_at(int r,int phi, int z){
   bool skip[]={false,false,false,false,false,false,false,false};
 
   
-  float r0=r/(1.0*r_spacing)-0.5; //the position in r, in units of r_spacing, starting from the center of the 0th bin.
+  float r0=r/(1.0*r_spacing)-0.5-rmin_roi_low; //the position in r, in units of r_spacing, starting from the center of the 0th l-bin in the roi.
   int r0i=floor(r0); //the integer portion of the position. -- what center is below our position?
   float r0d=r0-r0i;//the decimal portion of the position. -- how far past center are we?
   //instead of listing all eight, I'll address these as i%2, (i/2)%2 and (i/4)%2 to avoid typos
@@ -906,14 +915,14 @@ TVector3 AnnularFieldSim::sum_field_at(int r,int phi, int z){
   rw[1]=r0d; //1 when we're on it, 0 when we're at the other one
 
 
-  
-  if (ri[0]<rmin_roi/r_spacing){
+  //zero out if the requested l-bin is out of the roi (happens if we're on the edge of the roi) 
+  if (ri[0]<0){
     for (int i=0;i<8;i++)
       if ((i/4)%2==0)
-	skip[i]=true; // don't bother handling ri[0].
+	skip[i]=true; // don't handle contributions from ri[0].
     rw[1]=1; //and weight like we're dead-center on the outer cells.
   }
-  if (ri[1]>=rmax_roi/r_spacing){
+  if (ri[1]>=nr_roi_low){
     for (int i=0;i<8;i++)
       if ((i/4)%2==1)
 	skip[i]=true; // don't bother handling ri[1].
@@ -921,7 +930,7 @@ TVector3 AnnularFieldSim::sum_field_at(int r,int phi, int z){
   }
   
   //now repeat that structure for phi:
-  float p0=phi/(1.0*phi_spacing)-0.5; //the position in phi, in units of phi_spacing, starting from the center of the 0th bin.
+  float p0=phi/(1.0*phi_spacing)-0.5-phimin_roi_low; //the position in phi, in units of phi_spacing, starting from the center of the 0th bin.
   int p0i=floor(p0); //the integer portion of the position. -- what center is below our position?
   float p0d=p0-p0i;//the decimal portion of the position. -- how far past center are we?
   int pi[4];//the phi position of the four cell centers to consider
@@ -931,14 +940,14 @@ TVector3 AnnularFieldSim::sum_field_at(int r,int phi, int z){
   pw[0]=1-p0d; //1 when we're on it, 0 when we're at the other one.
   pw[1]=p0d; //1 when we're on it, 0 when we're at the other one
 
-  if (pi[0]<phimin_roi/phi_spacing){
+  if (pi[0]<0){
    for (int i=0;i<8;i++)
       if ((i/2)%2==0)
 	skip[i]=true; // don't bother handling phii[1].
     pw[1]=1; //and weight like we're dead-center on the high cells. 
 
   }
-  if (pi[1]>=phimax_roi/phi_spacing){
+  if (pi[1]>=nphi_roi_low){
     for (int i=0;i<8;i++)
       if ((i/2)%2==1)
 	skip[i]=true; // don't bother handling phii[1].
@@ -947,7 +956,7 @@ TVector3 AnnularFieldSim::sum_field_at(int r,int phi, int z){
 
   //and once more for z.  ooph.
   
-  float z0=z/(1.0*z_spacing)-0.5; //the position in r, in units of r_spacing, starting from the center of the 0th bin.
+  float z0=z/(1.0*z_spacing)-0.5-zmin_roi_low; //the position in r, in units of r_spacing, starting from the center of the 0th bin.
   int z0i=floor(z0); //the integer portion of the position. -- what center is below our position?
   float z0d=z0-z0i;//the decimal portion of the position. -- how far past center are we?
   //instead of listing all eight, I'll address these as i%2, (i/2)%2 and (i/4)%2 to avoid typos
@@ -960,13 +969,13 @@ TVector3 AnnularFieldSim::sum_field_at(int r,int phi, int z){
 
 
   
-  if (zi[0]<zmin_roi/z_spacing){
+  if (zi[0]<0){
     for (int i=0;i<8;i++)
       if ((i)%2==0)
 	skip[i]=true; // don't bother handling zi[0].
     zw[1]=1; //and weight like we're dead-center on the higher cells.
   }
-  if (zi[1]>=zmax_roi/z_spacing){
+  if (zi[1]>=nz_roi_low){
     for (int i=0;i<8;i++)
       if ((i)%2==1)
 	skip[i]=true; // don't bother handling zi[1].
@@ -980,14 +989,16 @@ TVector3 AnnularFieldSim::sum_field_at(int r,int phi, int z){
 	//conceptually: see if any full-res cell within the low-res cell is inside the high-res region:
 	//the high-res region includes all indices from r-(nr_high-1)/2 to r+(nr_high-1)/2.
 	//each low-res region includes all indices from ir*r_spacing to (ir+1)*r_spacing-1.
-	int lrEdge={ir*r_spacing,(ir+1)*r_spacing-1};
-	int hrEdge={r-r_highres_dist,r+r_highres_dist};
+	int lrEdge[]={ir*r_spacing,(ir+1)*r_spacing-1};
+	int hrEdge[]={r-r_highres_dist,r+r_highres_dist};
 	if(lrEdge[0]<=hrEdge[1] && hrEdge[0]<=lrEdge[1]){
 	  //if their bounds are interleaved, there is overlap, and we've already summed this region.
 	  continue;
 	} else {
 	  for (int i=0;i<8;i++){
-	    if (skip) continue;
+	    if (skip[i]) continue;
+	    //the ri, pi, and zi elements are relative to the roi, as needed for Epartial.
+	    //the ir, iphi, and iz are all absolute, as needed for q_lowres
 	    sum+=(Epartial_lowres->Get(ri[(i/4)%2],pi[(i/2)%2],zi[(i)%2],ir,iphi,iz)
 		  *q_lowres->Get(ir,iphi,iz))*zw[(i)%2]*pw[(i/2)%2]*rw[(i/4)%2];
 	  }
@@ -1102,8 +1113,8 @@ float AnnularFieldSim::RosseggerEterm(int m, int n, TVector3 at, TVector3 from){
   double z1;
   double z;
   double dz;
-  double dr;
-  double dphi;
+  double dr; 
+ double dphi;
   
   
   */

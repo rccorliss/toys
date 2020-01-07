@@ -7,50 +7,64 @@ class AnnularFieldSim{
  public:
   enum BoundsCase {InBounds,OnHighEdge, OnLowEdge,OutOfBounds}; //note that 'OnLowEdge' is qualitatively different from 'OnHighEdge'.  Low means there is a non-zero distance between the point and the edge of the bin.  High applies even if that distance is exactly zero.
 
-
-  //bad form to leave this all exposed, I know.
-
-  int nr,nphi,nz; //dimensions of internal high-res charge grid
-  TVector3 step; //step size in each direction. in the high-res grid.
+  
+  //constants of motion, dimensions, etc:
+  //
+  static constexpr float k=8.987e13;//gas electric permeability N*cm^2/C^2 in a vacuum.
+  double vdrift; //gas drift speed in cm/s
+  //double vprime; //first derivative of drift velocity at specific E
+  //double vprime2; //second derivative of drift velocity at specific E
+  float Bscale;//additional scale factor for debugging B effects. Defaults to 1.0
+  float Escale;//additional scale factor for debugging E effects. Defaults to 1.0
   float phispan;//angular span of the area in the phi direction, since TVector3 is too smart.
   float rmin, rmax;//inner and outer radii of the annulus
   float zmin, zmax;//lower and upper edges of the coordinate system in z (not fully implemented yet)
   //float phimin, phimax;//not implemented at all yet.
+  TVector3 dim;//dimensions of simulated region, in cm
 
-  //allow us to track particles only in a subset of the region, to study sections in greater detail
-  //particles will only track in indices rmin_roi<=r<rmax_roi etc.
-  int rmin_roi, rmax_roi, nr_roi;
-  int zmin_roi, zmax_roi, nz_roi;
-  int phimin_roi, phimax_roi, nphi_roi;
 
-  //allow us to handle local regions in high-res, and the rest in lower res:
-  int r_spacing, phi_spacing, z_spacing;//number of cells in the high-res grid that are ganged together (save for the last bin, which might have fewer)
-  int nr_low, nphi_low, nz_low;//dimensions of internal low-res grids.
-  int nr_high, nphi_high, nz_high;//dimensions of internal hig-res local grids.
-  MultiArray<TVector3> *Epartial_lowres;
-  MultiArray<TVector3> *Epartial_highres;
-   MultiArray<float> *q_local;
+  //variables related to the whole-volume tiling:
+  //
+  int nr,nphi,nz; //number of fundamental bins (f-bins) in each direction = dimensions of 3D array covering entire volume
+  TVector3 step; //size of an f-bin in each direction
+ 
+  
+  //variables related to the region of interest:
+  //
+  int rmin_roi, phimin_roi, zmin_roi; //lower edge of our region of interest, measured in f-bins
+  int rmax_roi, phimax_roi, zmax_roi; //excluded upper edge of our region of interest, measured in f-bins
+  int nr_roi,nphi_roi, nz_roi; //dimensions of our roi in f-bins
 
   
-  double vdrift; //gas drift speed.
-  //double omegatau; //gas propagation constant depends on field and vdrift
-  float Bscale;
-  float Escale;
+  //variables related to the high-res behavior:
+  //
+  int nr_high, nphi_high, nz_high; //dimensions, in f-bins of neighborhood of a f-bin in which we calculate the field in full resolution
 
   
-  static constexpr float k=8.987e13;//gas electric permeability N*cm^2/C^2 in a vacuum.
-   TVector3 dim;//dimensions of simulated region, in cm
-  
-  MultiArray<TVector3> *Efield; //electric field for given configuration of charge AND external field.
-  MultiArray<TVector3> *Epartial; //electric field for unit charge in given cell.
-  MultiArray<TVector3> *Eexternal; //externally applied electric field
-  MultiArray<TVector3> *Bfield; //magnetic field for system.
-  MultiArray<float> *q; //space charge
+  //variables related to the low-res behavior:
+  //
+  int r_spacing, phi_spacing, z_spacing; //number of f-bins, in each direction, to gang together to make a single low-resolution bin (l-bin)
+  int nr_low, nphi_low, nz_low; //dimensions, in l-bins, of the entire volume
+  int rmin_roi_low, phimin_roi_low, zmin_roi_low; //lowest l-bin that is at least partly in our region of interest
+  int rmax_roi_low, phimax_roi_low, zmax_roi_low; //excluded upper edge l-bin of our region of interest
+  int nr_roi_low,nphi_roi_low, nz_roi_low; //dimensions of our roi in l-bins
 
-  MultiArray<int> *rUpperBounds; //the (excluded) upper bounds of the effective rbins for each r point in the high-res grid
-  MultiArray<int> *phiUpperBounds; //the (excluded) upper bounds of the effective phibins for each phi point in the high-res grid
-  MultiArray<int> *zUpperBounds; //the (excluded) upper bounds of the effective zbins for each z point in the high-res grid
   
+  //3- and 6-dimensional arrays to handle bin and bin-to-bin data
+  //
+  MultiArray<TVector3> *Efield; //total electric field in each f-bin in the roi for given configuration of charge AND external field.
+  MultiArray<TVector3> *Epartial_highres; //electric field in each f-bin in the roi from charge in a given f-bin or summed bin in the high res region.
+  MultiArray<TVector3> *Epartial_lowres; //electric field in each l-bin in the roi from charge in a given l-bin anywhere in the volume.
+  MultiArray<TVector3> *Eexternal; //externally applied electric field in each f-bin in the roi
+  MultiArray<TVector3> *Bfield; //magnetic field in each f-bin in the roi
+  MultiArray<float> *q; //space charge in each f-bin in the whole volume
+  MultiArray<float> *q_local; //temporary holder of space charge in each f-bin and summed bin of the high-res region.
+  MultiArray<float> *q_lowres; //space charge in each l-bin. = sums over sets of f-bins.
+
+  
+  
+
+
  public:
   AnnularFieldSim(float rmin,float rmax, float dz,int r,int phi, int z, float vdr); //abbr. constructor with roi=full region
   AnnularFieldSim(float rin, float rout, float dz,
@@ -58,6 +72,12 @@ class AnnularFieldSim{
 		  int phi, int roi_phi0, int roi_phi1,
 		  int z, int roi_z0, int roi_z1,
 		  float vdr);
+  AnnularFieldSim(float in_innerRadius, float in_outerRadius, float in_outerZ,
+		  int r, int roi_r0, int roi_r1, int in_rLowSpacing, int in_rHighSize,
+		  int phi, int roi_phi0, int roi_phi1, int in_phiLowSpacing, int in_phiHighSize,
+		  int z, int roi_z0, int roi_z1,int in_zLowSpacing, int in_zHighSize,
+		  float vdr);
+  
   void load_spacecharge(TH3F *hist, float zoffset, float scalefactor);
   void setScaleFactorB(float x){Bscale=x;return;};
   void setScaleFactorE(float x){Escale=x;return;};
@@ -73,6 +93,8 @@ class AnnularFieldSim{
   TVector3 fieldIntegral(float zdest,TVector3 start);
   void populate_fieldmap();
   void  populate_lookup();
+  void  populate_highres_lookup();
+  void  populate_lowres_lookup();
   TVector3 sum_field_at(int r,int phi, int z);
   TVector3 swimToInSteps(float zdest,TVector3 start, int steps, bool interpolate);
   TVector3 swimTo(float zdest,TVector3 start, bool interpolate);
@@ -81,7 +103,6 @@ class AnnularFieldSim{
   BoundsCase GetRindexAndCheckBounds(float pos, int *r);
   BoundsCase GetPhiIndexAndCheckBounds(float pos, int *phi);
   BoundsCase GetZindexAndCheckBounds(float pos, int *z);
-  int FilterPhiIndex(int phi);
 
     float RosseggerEterm(int m, int n, TVector3 at, TVector3 from);
 

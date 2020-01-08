@@ -24,25 +24,28 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   //define a region of interest, in units of the intrinsic scale of the alice histogram:
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
   int nr=159;
+  int nr_roi_min=0;
   int nr_roi=5;
   int nphi=360;
+  int nphi_roi_min=0;
   int nphi_roi=5;
   int nz=62;
+  int nz_roi_min=0;
   int nz_roi=12;
 
-  float rmin_roi=alice_rmin;
+  float rmin_roi=alice_rmin+alice_deltar/(nr*1.0)*nr_roi_min;
   float rmax_roi=rmin_roi+alice_deltar/nr*nr_roi;
- float phimin_roi=0;
+  float phimin_roi=2*TMath::Pi()/(nphi*1.0)*nphi_roi_min;
  float phimax_roi=phimin_roi+2*TMath::Pi()/nphi*nphi_roi;
-  float zmin_roi=0;
+ float zmin_roi=alice_z/(nz*1.0)*nz_roi_min;
   float zmax_roi=zmin_roi+alice_z/nz*nz_roi;
 
-  float rmin_roi_with_buffer=alice_rmin+alice_deltar/(nr*1.0)*(0.5);
-  float rmax_roi_with_buffer=rmin_roi+alice_deltar/(nr*1.0)*(nr_roi-0.5);
-  float phimin_roi_with_buffer=2*TMath::Pi()/(nphi*1.0)*(0.5);
- float phimax_roi_with_buffer=phimin_roi+2*TMath::Pi()/(nphi*1.0)*(nphi_roi-0.5);
- float zmin_roi_with_buffer=alice_z/(nz*1.0)*(0.5);
- float zmax_roi_with_buffer=zmin_roi+alice_z/(nz*1.0)*(nz_roi-0.5);
+  float rmin_roi_with_buffer=rmin_roi+alice_deltar/(nr*1.0)*(0.5);
+  float rmax_roi_with_buffer=rmax_roi-alice_deltar/(nr*1.0)*(0.5);
+  float phimin_roi_with_buffer=phimin_roi+2*TMath::Pi()/(nphi*1.0)*(0.5);
+ float phimax_roi_with_buffer=phimax_roi-2*TMath::Pi()/(nphi*1.0)*(0.5);
+ float zmin_roi_with_buffer=zmin_roi+alice_z/(nz*1.0)*(0.5);
+ float zmax_roi_with_buffer=zmax_roi-alice_z/(nz*1.0)*(0.5);
 
  printf("r bounds are %f<%f<%f<r<%f<%f<%f\n",alice_rmin,rmin_roi,rmin_roi_with_buffer,rmax_roi_with_buffer,rmax_roi,alice_rmax);
  printf("phi bounds are %f<%f<%f<phi<%f<%f<%f\n",0.0,phimin_roi,phimin_roi_with_buffer,phimax_roi_with_buffer,phimax_roi,2*TMath::Pi());
@@ -55,9 +58,9 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   start=now;
   AnnularFieldSim *alice=
     new  AnnularFieldSim(alice_rmin,alice_rmax,alice_z,
-		  nr-reduction, 0, nr_roi,
-		  nphi-reduction, 0, nphi_roi,
-		  nz-reduction, 0, nz_roi,
+		  nr-reduction, nr_roi_min,nr_roi_min+nr_roi,
+		  nphi-reduction,nphi_roi_min, nphi_roi_min+nphi_roi,
+		  nz-reduction, nz_roi_min, nz_roi_min+nz_roi,
 		  alice_driftVel);
   //  new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,9,120,9,alice_driftVel);
    

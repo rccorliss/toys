@@ -698,19 +698,19 @@ void AnnularFieldSim::populate_highres_lookup(){
     int r_parentlow=floor((ifr-r_highres_dist)/(r_spacing*1.0));//l-bin partly enclosed in our high-res region
     int r_parenthigh=floor((ifr+r_highres_dist)/(r_spacing*1.0))+1;//definitely not enclosed in our high-res region
     int r_startpoint=r_parentlow*r_spacing;//the first f-bin of the lowest-r f-bin that our h-region touches.
-    int r_endpoint=r_parentlow*r_spacing;//the first f-bin of the lowest-r l-bin after that that our h-region does not touch.
+    int r_endpoint=r_parenthigh*r_spacing;//the first f-bin of the lowest-r l-bin after that that our h-region does not touch.
 
     for (int ifphi=phimin_roi;ifphi<phimax_roi;ifphi++){
       
-      int phi_parentlow=floor(FilterPhiBin(ifphi-phi_highres_dist)/(phi_spacing*1.0));//note this may have wrapped around
-      bool phi_parentlow_wrapped=(ifphi-phi_highrest_dist<0);
+      int phi_parentlow=floor(FilterPhiIndex(ifphi-phi_highres_dist)/(phi_spacing*1.0));//note this may have wrapped around
+      bool phi_parentlow_wrapped=(ifphi-phi_highres_dist<0);
       int phi_startpoint=phi_parentlow*phi_spacing;//the first f-bin of the lowest-z f-bin that our h-region touches.
       if (phi_parentlow_wrapped) phi_startpoint-=nphi; //if we wrapped, re-wrap us so we're negative again
       
-      int phi_parenthigh=floor(FilterPhiBin(ifphi+phi_highres_dist)/(phi_spacing*1.0))+1; //note that this may have wrapped around
-      bool phi_parenthigh_wrapped=(ifphi+phi_highrest_dist>=nphi);
-      int phi_endpoint=phi_parentlow*phi_spacing;
-      if (phi_parenthigh_wrapped) phi_endpoint+=nphi; //if we wrapped, re-wrap us so we're larger than nphi again
+      int phi_parenthigh=floor(FilterPhiIndex(ifphi+phi_highres_dist)/(phi_spacing*1.0))+1; //note that this may have wrapped around
+      bool phi_parenthigh_wrapped=(ifphi+phi_highres_dist>=nphi);
+      int phi_endpoint=phi_parenthigh*phi_spacing;
+      if (phi_parenthigh_wrapped) phi_endpoint+=nphi; //if we wrapped, re-wrap us so we're larger than nphi again.  We use these relative coords to determine the position relative to the center of our h-region.
 
       for (int ifz=zmin_roi;ifz<zmax_roi;ifz++){
 	//if(debugFlag()) printf("%d: AnnularFieldSim::populate_highres_lookup icell=(%d,%d,%d)\n",__LINE__,ifr,ifphi,ifz);
@@ -718,7 +718,7 @@ void AnnularFieldSim::populate_highres_lookup(){
 	int z_parentlow=floor((ifz-z_highres_dist)/(z_spacing*1.0));
 	int z_parenthigh=floor((ifz+z_highres_dist)/(z_spacing*1.0))+1;
 	int z_startpoint=z_parentlow*z_spacing;//the first f-bin of the lowest-z f-bin that our h-region touches.
-	int z_endpoint=z_parentlow*z_spacing;//the first f-bin of the lowest-z l-bin after that that our h-region does not touch.
+	int z_endpoint=z_parenthigh*z_spacing;//the first f-bin of the lowest-z l-bin after that that our h-region does not touch.
 
 
 	at=GetCellCenter(ifr, ifphi, ifz);
@@ -778,20 +778,20 @@ void AnnularFieldSim::populate_highres_lookup(){
 	      from=GetCellCenter(ir, phiFilt, iz);
 	      
 	      nfbinsin[rcell][phicell][zcell]++;
-	      int nc= ncellsin[rcell][phicell][zcell];
+	      int nf= nfbinsin[rcell][phicell][zcell];
 	      if (zcell!=1 || rcell!=1 || phicell!=1){
 		//we're not in the center, so deal with our weird shapes by averaging:
 	      //but Epartial is in coordinates relative to the roi
 	      if (ifphi-phimin_roi<0)printf("%d: Getting with phi=%d\n",__LINE__,ifphi-phimin_roi);
 	      currentf=Epartial_highres->Get(ifr-rmin_roi,ifphi-phimin_roi,ifz-zmin_roi,rbin,phibin,zbin);
-	      //this assumes the Epartial handles the weird cell shapes correctly
 	      //to keep this as the average, we multiply what's there back to its initial summed-but-not-divided value
 	      //then add our new value, and the divide the new sum by the total number of cells
-	      newf=(currentf*(nc-1)+calc_unit_field(at,from))*(1/(nc*1.0)); 
+	      newf=(currentf*(nf-1)+calc_unit_field(at,from))*(1/(nf*1.0)); 
 	      Epartial_highres->Set(ifr-rmin_roi,ifphi-phimin_roi,ifz-zmin_roi,rbin,phibin,zbin,newf);
 	      }else{
 		//we're in the center cell, which means any f-bin that's not on the outer edge of our region:
-		newf=calc_unit_field(at,from)
+		//calc_unit_field will return zero when at=from, so the center will be automatically zero here.
+		newf=calc_unit_field(at,from);
 		Epartial_highres->Set(ifr-rmin_roi,ifphi-phimin_roi,ifz-zmin_roi,rbin,phibin,zbin,newf);
 	      }
 
@@ -812,6 +812,7 @@ void AnnularFieldSim::populate_lowres_lookup(){
   int fr_low,fr_high,fphi_low,fphi_high,fz_low,fz_high;//edges of the outer l-bin
   int r_low,r_high,phi_low,phi_high,z_low,z_high;//edges of the inner l-bin
 
+  //todo:  add in handling if roi_low is wrap-around in phi
   for (int ifr=rmin_roi_low;ifr<rmax_roi_low;ifr++){
     fr_low=ifr*r_spacing;
     fr_high=fr_low+r_spacing-1;
@@ -819,10 +820,10 @@ void AnnularFieldSim::populate_lowres_lookup(){
     for (int ifphi=phimin_roi_low;ifphi<phimax_roi_low;ifphi++){
       fphi_low=ifphi*phi_spacing;
       fphi_high=fphi_low+phi_spacing-1;
-      if (fphi_high>=nphi) fphi_high=nphi-1;
+      if (fphi_high>=nphi) fphi_high=nphi-1; //if our phi l-bins aren't evenly spaced, we need to catch that here.
       for (int ifz=zmin_roi_low;ifz<zmax_roi_low;ifz++){
 	fz_low=ifz*z_spacing;
-	fz_high=z_low+z_spacing-1;
+	fz_high=fz_low+z_spacing-1;
 	if (fz_high>=nz) fz_high=nz-1;
 	at=GetGroupCellCenter(fr_low,fr_high,fphi_low,fphi_high,fz_low,fz_high);
 	//printf("ifr=%d, rlow=%d,rhigh=%d,r_spacing=%d\n",ifr,r_low,r_high,r_spacing);

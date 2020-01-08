@@ -102,10 +102,14 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
 
   //create the high-res, relative 'lookup' grid to compute the field in each f-bin in the roi given charge in each other nearby f-bin.
   //note that first and less elements in each direction average over multiple f-bins to match the l-bin spacing.
+  printf("AnnularFieldSim::AnnularFieldSim building Epartial_highres with  nr_roi=%d nphi_roi=%d nz_roi=%d nr_high=%d nphi_high=%d nz_high=%d =~%2.2fM TVector3 objects\n",nr_roi,nphi_roi,nz_roi,nr_high,nphi_high,nz_high,
+	 nr_roi*nphi_roi*nz_roi*nr_high*nphi_high*nz_high/(1.0e6));
+
   Epartial_highres=new MultiArray<TVector3>(nr_roi,nphi_roi,nz_roi,nr_high,nphi_high,nz_high);
   for (int i=0;i<Epartial_highres->Length();i++)
     Epartial_highres->GetFlat(i)->SetXYZ(0,0,0);
 
+  printf("AnnularFieldSim::AnnularFieldSim building q_local nr_high=%d nphi_high=%d nz_high=%d =~%2.2fM floats\n",nr_high,nphi_high,nz_high,nr_high*nphi_high*nz_high/(1.0e6));
   //create a local charge grid that we will fill with the f-bin contents and match to Epartial:
   q_local=new MultiArray<float>(nr_high,nphi_high,nz_high);
   for (int i=0;i<q_local->Length();i++)
@@ -136,6 +140,9 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
   nphi_roi_low=phimax_roi_low-phimin_roi_low;
   nz_roi_low=zmax_roi_low-zmin_roi_low;
 
+  printf("AnnularFieldSim::AnnularFieldSim building Epartial_lowres with  nr_roi_low=%d nphi_roi_low=%d nz_roi_low=%d nr_low=%d nphi_low=%d nz_low=%d =~%2.2fM TVector3 objects\n",nr_roi_low,nphi_roi_low,nz_roi_low,nr_low,nphi_low,nz_low,
+	 nr_roi_low*nphi_roi_low*nz_roi_low*nr_low*nphi_low*nz_low/(1.0e6));
+  printf("TVector is %lu bytes\n",sizeof(TVector3));
   //create the low-res, absolute 'lookup' grid to compute the field in each l-bin in the roi given charge in each other l-bin.
   Epartial_lowres=new MultiArray<TVector3>(nr_roi_low,nphi_roi_low,nz_roi_low,nr_low,nphi_low,nz_low);
   for (int i=0;i<Epartial_lowres->Length();i++)

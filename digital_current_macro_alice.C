@@ -2,7 +2,7 @@
 #include "AnnularFieldSim.h"
 R__LOAD_LIBRARY(.libs/libfieldsim)
 
-void digital_current_macro_alice(){
+void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false, char* fname="pre-hybrid_fixed_reduction_0.ttree.root"){
   printf("hello\n");
   TTime now, start;
   start=now=gSystem->Now();
@@ -20,6 +20,7 @@ void digital_current_macro_alice(){
 
 
   //define a region of interest, in units of the intrinsic scale of the alice histogram:
+  //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
   int nr=159;
   int nr_roi=5;
   int nphi=360;
@@ -51,41 +52,31 @@ void digital_current_macro_alice(){
   printf("loaded hist.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   AnnularFieldSim *alice=
-   new  AnnularFieldSim(alice_rmin,alice_rmax,alice_z,
-			nr, 0, nr_roi,
-			nphi, 0, nphi_roi,
-			nz, 0, nz_roi,
-			alice_driftVel);
-    // new AnnularFieldSim (alice_rmin,alice_rmax,alice_z,9,0,9,12,0,12,9,0,9,alice_driftVel);
-
-  /* just confusing for now
-  AnnularFieldSim *alice2=
-      new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,4,4,4,alice_driftVel);
-  */
+    new  AnnularFieldSim(alice_rmin,alice_rmax,alice_z,
+		  nr-reduction, 0, nr_roi,
+		  nphi-reduction, 0, nphi_roi,
+		  nz-reduction, 0, nz_roi,
+		  alice_driftVel);
+  //  new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,9,120,9,alice_driftVel);
+   
     // dropping half-res for test: new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,53,18,31,alice_driftVel);
     //full resolution is too big:  new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,159,360,62,alice_driftVel);
-
-  alice->UpdateEveryN(1e4);
   now=gSystem->Now();
   printf("created sim obj.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   alice->setFlatFields(0.5, alice_driftVolt/alice_z);
-  // alice2->setFlatFields(0.5, alice_driftVolt/alice_z);
   now=gSystem->Now();
   printf("set fields.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   alice->load_spacecharge(alice_average,0,alice_chargescale);
-  //alice2->load_spacecharge(alice_average,0,alice_chargescale);
   now=gSystem->Now();
   printf("loaded spacecharge.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   alice->populate_lookup();
-  //alice2->populate_lookup();
   now=gSystem->Now();
   printf("populated lookup.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   alice->populate_fieldmap();
-  //alice2->populate_fieldmap();
  now=gSystem->Now();
   printf("populated fieldmap.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
@@ -105,80 +96,53 @@ void digital_current_macro_alice(){
     testparticle[i].RotateZ((phimax_roi_with_buffer-phimin_roi_with_buffer)*(phipos/(divisor*1.0))+phimin_roi_with_buffer);
   }
 
+
+  //for this study, we load the 'out' particles from the ttree of the full-scale version, and propagate them backward:
+  if (loadOutputFromFile){
+  TFile *input=TFile::Open(fname);
+  TTree *inTree=(TTree*)input->Get("pTree");
+  TVector3 *outFromFile;
+  inTree->SetBranchAddress("out1",&outFromFile);
+  for (int i=0;i<inTree->GetEntries();i++){
+    inTree->GetEntry(i);
+    outparticle[i]=(*outFromFile)*(1/(1.0e4)); //convert back to local units.
+  }
+  input->Close();
+  }
+
   TFile *output=TFile::Open("last_macro_output.ttree.root","RECREATE");
   TVector3 orig,out1,out2,back1,back2;
   TTree pTree("pTree","Particle Tree");
   pTree.Branch("orig","TVector3",&orig);
   pTree.Branch("out1","TVector3",&out1);
-  pTree.Branch("out2","TVector3",&out2);
   pTree.Branch("back1","TVector3",&back1);
-  pTree.Branch("back2","TVector3",&back2);
 
 
   
   for (int i=0;i<nparticles;i++){
     if (!(i%100)) printf("(periodic progress...) test[%d]=(%f,%f,%f)\n",i,testparticle[i].X(),testparticle[i].Y(),testparticle[i].Z());
     orig=testparticle[i];
-    
-    out1=outparticle[i]=alice->swimToInSteps(zmax_roi,testparticle[i],600,true);
+    if (!loadOutputFromFile) outparticle[i]=alice->swimToInSteps(zmax_roi,testparticle[i],600,true);
+    out1=outparticle[i];//not generating from the swim.=alice->swimToInSteps(zmax_roi,testparticle[i],600,true);
     outx[i]=outparticle[i].X();
     outy[i]=outparticle[i].Y();
     outz[i]=outparticle[i].Z();
     
-    //out2=outparticle2[i]=alice2->swimToInSteps(zmax_roi,testparticle[i],600,true);
     //printf("out[%d]=(%f,%f,%f)\n",i,outparticle[i].X(),outparticle[i].Y(),outparticle[i].Z());
     back1=backparticle[i]=alice->swimToInSteps(testparticle[i].Z(),outparticle[i],600,true);
-    //back2=backparticle[i]=alice2->swimToInSteps(testparticle[i].Z(),outparticle2[i],600,true);
 
     //for convenience of reading, set all of the pTree in microns, not cm:
     orig=orig*1e4;//10mm/cm*1000um/mm
     out1*=1e4;//10mm/cm*1000um/mm
-    out2*=1e4;//10mm/cm*1000um/mm
     back1*=1e4;//10mm/cm*1000um/mm
-    back2*=1e4;//10mm/cm*1000um/mm
     pTree.Fill();
   }
   pTree.Write();
 
-  //  TH2F* hDeltaForward=new TH2F("hDeltaForward","xy offset of all testpoints;x offset (cm); y offset (cm)",100,-50,50,100,-50,50);
-  TH2F* hDeltaForward=new TH2F("hDeltaForward","r offset vs thrown r of all testpoints;r test (cm); r offset (cm)",100,0,350,100,-40,20);
-   TH2F* hForward=new TH2F("hForward","xy position of all drifted testpoints;x  (cm); y  (cm)",100,-500,500,100,-500,500);
-   TH2F* hBackTest=new TH2F("hBackTest","xy residual after drift and return;x  (cm); y  (cm)",500,-0.04,0.04,500,-0.04,0.04);
-    TH2F* hTest=new TH2F("hTest","xy position of all original testpoints;x  (cm); y  (cm)",100,-500,500,100,-500,500);
-    TH2F* hLargeDelta=new TH2F("hLargeDelta","xy position of testpoints that have large offsets post-drift;x  (cm); y  (cm)",100,-500,500,100,-500,500);
-    TH2F* hSmallDelta=new TH2F("hSmallDelta","xy position of testpoints that have small offsets post-drift;x  (cm); y  (cm)",100,-500,500,100,-500,500);
-    TH1F* hDeltaMag=new TH1F("hDeltaMag","magnitude of offset after drift and return;mag (cm)",500,-1,1);
-    TH2F*hDeltaR=new TH2F("hDeltaR"," drift distortion vs radius;radius (cm);offset (cm)",100,0,300,100,0,50);
-    TH2F*hDeltaR2=new TH2F("hDeltaR2"," reco distortion vs radius;radius (cm);offset (cm)",100,0,300,200,-1,1);
-    TH2F* h90_120=new TH2F("h90_120","drifted position offset in 90 vs 120 phi segments;x (cm);y (cm)",400,-1,1,400,-1,1);
-    TVector3 dtemp,dtemp2;
-  for (int i=0;i<nparticles;i++){
-    dtemp=outparticle[i]-testparticle[i];
-    dtemp2=outparticle[i]-outparticle2[i];
-    //dtemp2=backparticle[i]-testparticle[i];
-    hDeltaForward->Fill(testparticle[i].Perp(),outparticle[i].Perp()-testparticle[i].Perp());
-    hForward->Fill((outparticle[i]).X(),(outparticle[i]).Y());
-    hTest->Fill((testparticle[i]).X(),(testparticle[i]).Y());
-    hDeltaMag->Fill(dtemp2.Perp());
-    if (dtemp2.Perp()>0.05){
-      hLargeDelta->Fill(testparticle[i].X(),testparticle[i].Y());
-    } else {
-      hSmallDelta->Fill(testparticle[i].X(),testparticle[i].Y());
-    }
-    hDeltaR->Fill(testparticle[i].Perp(),dtemp.Perp());
-    //hDeltaR2->Fill(testparticle[i].Perp(),backparticle[i].Perp()-testparticle[i].Perp());
-    hDeltaR2->Fill(testparticle[i].Perp(),dtemp2.Perp());
-    h90_120->Fill(dtemp2.X(),dtemp2.Y());
 
-    
-  }
-  hBackTest->Draw("colz");
-  new TCanvas();
-  hDeltaMag->Draw("colz");
-  new TCanvas();
-  // hTest->Draw("colz");
-  //new TCanvas();
-  h90_120->Draw("colz");
+
+   
+
 
   return;
   

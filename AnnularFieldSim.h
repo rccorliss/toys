@@ -108,7 +108,7 @@ class AnnularFieldSim{
   void  populate_highres_lookup();
   void  populate_lowres_lookup();
   TVector3 sum_field_at(int r,int phi, int z);
-  TVector3 swimToInSteps(float zdest,TVector3 start, int steps, bool interpolate);
+  TVector3 swimToInSteps(float zdest,TVector3 start, int steps, bool interpolate, int *goodToStep);
   TVector3 swimTo(float zdest,TVector3 start, bool interpolate);
  
  private:

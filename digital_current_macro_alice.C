@@ -4,6 +4,8 @@ R__LOAD_LIBRARY(.libs/libfieldsim)
 
 void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false, char* fname="pre-hybrid_fixed_reduction_0.ttree.root"){
   printf("hello\n");
+  if (loadOutputFromFile) printf("loading out1 vectors from %s\n",fname);
+
   TTime now, start;
   start=now=gSystem->Now();
   printf("the time is %lu\n",(unsigned long)now);
@@ -102,34 +104,43 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   TFile *input=TFile::Open(fname);
   TTree *inTree=(TTree*)input->Get("pTree");
   TVector3 *outFromFile;
+  TVector3 *origFromFile;
   inTree->SetBranchAddress("out1",&outFromFile);
+  inTree->SetBranchAddress("orig",&origFromFile);
   for (int i=0;i<inTree->GetEntries();i++){
     inTree->GetEntry(i);
     outparticle[i]=(*outFromFile)*(1/(1.0e4)); //convert back to local units.
+    testparticle[i]=(*origFromFile)*(1/(1.0e4)); //convert back to local units.
   }
   input->Close();
   }
 
   TFile *output=TFile::Open("last_macro_output.ttree.root","RECREATE");
   TVector3 orig,out1,out2,back1,back2;
+  int goodSteps[2];
   TTree pTree("pTree","Particle Tree");
   pTree.Branch("orig","TVector3",&orig);
   pTree.Branch("out1","TVector3",&out1);
+    pTree.Branch("out1N",&goodSteps[0]);
   pTree.Branch("back1","TVector3",&back1);
+  pTree.Branch("back1N",&goodSteps[1]);
 
 
-  
+  int validToStep=500;
   for (int i=0;i<nparticles;i++){
     if (!(i%100)) printf("(periodic progress...) test[%d]=(%f,%f,%f)\n",i,testparticle[i].X(),testparticle[i].Y(),testparticle[i].Z());
     orig=testparticle[i];
-    if (!loadOutputFromFile) outparticle[i]=alice->swimToInSteps(zmax_roi,testparticle[i],600,true);
+    if (!loadOutputFromFile) outparticle[i]=alice->swimToInSteps(zmax_roi,testparticle[i],600,true, &validToStep);
     out1=outparticle[i];//not generating from the swim.=alice->swimToInSteps(zmax_roi,testparticle[i],600,true);
     outx[i]=outparticle[i].X();
     outy[i]=outparticle[i].Y();
     outz[i]=outparticle[i].Z();
+    goodSteps[0]=validToStep;
+    
     
     //printf("out[%d]=(%f,%f,%f)\n",i,outparticle[i].X(),outparticle[i].Y(),outparticle[i].Z());
-    back1=backparticle[i]=alice->swimToInSteps(testparticle[i].Z(),outparticle[i],600,true);
+    back1=backparticle[i]=alice->swimToInSteps(testparticle[i].Z(),outparticle[i],600,true,&validToStep);
+    goodSteps[1]=validToStep;
 
     //for convenience of reading, set all of the pTree in microns, not cm:
     orig=orig*1e4;//10mm/cm*1000um/mm

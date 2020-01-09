@@ -3,6 +3,7 @@
 R__LOAD_LIBRARY(.libs/libfieldsim)
 
 void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false, char* fname="pre-hybrid_fixed_reduction_0.ttree.root"){
+  //bonk.  making sure this updates to my other branch.
   printf("hello\n");
   if (loadOutputFromFile) printf("loading out1 vectors from %s\n",fname);
 
@@ -87,8 +88,8 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   start=now;
  
   //define a grid of test points:
-  const int nparticles=50*50;
-  const int divisor=50;
+  const int nparticles=100*100;
+  const int divisor=100;
   TVector3 testparticle[nparticles];
   TVector3 outparticle[nparticles];
   TVector3 outparticle2[nparticles];

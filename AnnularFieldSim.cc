@@ -551,6 +551,9 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefac
   int hrn=hist->GetNbinsY();
   int hphin=hist->GetNbinsX();
   int hzn=hist->GetNbinsZ();
+  printf("From histogram, native r dimensions: %f<r<%f, hrn (Y axis)=%d\n",hrmin,hrmax,hrn);
+  printf("From histogram, native phi dimensions: %f<phi<%f, hrn (X axis)=%d\n",hphimin,hphimax,hphin);
+  printf("From histogram, native z dimensions: %f<z<%f, hrn (Z axis)=%d\n",hzmin,hzmax,hzn);
 
   //do some computation of steps:
   float hrstep=(hrmax-hrmin)/hrn;
@@ -570,8 +573,9 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefac
   //localr*dr+rmin-hrmin=hrstep*(i+0.5)
   //i=(localr*dr+rmin-hrmin)/hrstep
 
-  float hr,hphi,hz;//the center of the histogram bin
+  float hr,hphi,hz;//the center of the histogram bin in histogram units (not indices)
   int localr,localphi,localz;//the f-bin of our local structure that contains that center.
+  //start r at the first index that corresponds to a position in our grid's r-range.
   for (int i=(rmin-hrmin)/hrstep;i<hrn;i++){
     hr=hrmin+hrstep*(i+0.5);//bin center
     localr=(hr-rmin)/step.Perp();
@@ -606,9 +610,9 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefac
 	  k=hzn;//no reason to keep looking at larger z.
 	  continue;
 	}
-	//can be simplified:  float vol=hzstep*(hphistep*(hr+hrstep)*(hr+hrstep) - hphistep*hr*hr);
+	//volume is simplified from the basic formula:  float vol=hzstep*(hphistep*(hr+hrstep)*(hr+hrstep) - hphistep*hr*hr);
 	float vol=hzstep*hphistep*(2*hr+hrstep)*hrstep;
-	float qbin=scalefactor*vol*hist->GetBinContent(hist->GetBin(j+1,i+1,k+1));
+	float qbin=scalefactor*vol*hist->GetBinContent(hist->GetBin(0+1,i+1,k+1));//RCC FLAG HERE - '0' should turn back to 'j'
 	//float qold=q->Get(localr,localphi,localz);
 	//if(debugFlag()) printf("%d: AnnularFieldSim::load_spacecharge adding Q=%f from hist(%d,%d,%d) into cell (%d,%d,%d)\n",__LINE__,qbin,i,j,k,localr,localphi,localz);
 	q->Add(localr,localphi,localz,qbin);

@@ -27,7 +27,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   int nr_roi_min=0;
   int nr_roi=5;
   int nphi=360;
-  int nphi_roi_min=0;
+  int nphi_roi_min=12;
   int nphi_roi=5;
   int nz=62;
   int nz_roi_min=0;

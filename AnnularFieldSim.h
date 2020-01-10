@@ -61,9 +61,9 @@ class AnnularFieldSim{
   MultiArray<TVector3> *Epartial_lowres; //electric field in each l-bin in the roi from charge in a given l-bin anywhere in the volume.
   MultiArray<TVector3> *Eexternal; //externally applied electric field in each f-bin in the roi
   MultiArray<TVector3> *Bfield; //magnetic field in each f-bin in the roi
-  MultiArray<float> *q; //space charge in each f-bin in the whole volume
-  MultiArray<float> *q_local; //temporary holder of space charge in each f-bin and summed bin of the high-res region.
-  MultiArray<float> *q_lowres; //space charge in each l-bin. = sums over sets of f-bins.
+  MultiArray<double> *q; //space charge in each f-bin in the whole volume
+  MultiArray<double> *q_local; //temporary holder of space charge in each f-bin and summed bin of the high-res region.
+  MultiArray<double> *q_lowres; //space charge in each l-bin. = sums over sets of f-bins.
 
   
   

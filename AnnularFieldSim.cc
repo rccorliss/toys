@@ -58,7 +58,7 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
   // printf("f-bin size:  r=%f,phi=%f, wanted %f,%f\n",step.Perp(),step.Phi(),dr/r,dphi/phi);
 
   //create an array to store the charge in each f-bin
-  q=new MultiArray<float>(nr,nphi,nz);
+  q=new MultiArray<double>(nr,nphi,nz);
   for (int i=0;i<q->Length();i++)
     *(q->GetFlat(i))=0;
   
@@ -111,7 +111,7 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
 
   printf("AnnularFieldSim::AnnularFieldSim building q_local nr_high=%d nphi_high=%d nz_high=%d =~%2.2fM floats\n",nr_high,nphi_high,nz_high,nr_high*nphi_high*nz_high/(1.0e6));
   //create a local charge grid that we will fill with the f-bin contents and match to Epartial:
-  q_local=new MultiArray<float>(nr_high,nphi_high,nz_high);
+  q_local=new MultiArray<double>(nr_high,nphi_high,nz_high);
   for (int i=0;i<q_local->Length();i++)
     *(q_local->GetFlat(i))=0;
 
@@ -149,7 +149,7 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
     Epartial_lowres->GetFlat(i)->SetXYZ(0,0,0);
 
   //create a holder for the charge in each l-bin, to save time later.
-  q_lowres=new MultiArray<float>(nr_low,nphi_low,nz_low);
+  q_lowres=new MultiArray<double>(nr_low,nphi_low,nz_low);
   for (int i=0;i<q_lowres->Length();i++)
     *(q_lowres->GetFlat(i))=0;
 
@@ -200,7 +200,7 @@ TVector3 AnnularFieldSim::calc_unit_field(TVector3 at, TVector3 from){
 
   //this could check roi bounds before returning, if things start acting funny.
   
-  const float k=8.987*1e13;//=1/(4*pi*eps0) in N*cm^2/C^2 in a vacuum. N*cm^2/C units, so that we supply space charge in coulomb units.
+  const double k=8.987*1e13;//=1/(4*pi*eps0) in N*cm^2/C^2 in a vacuum. N*cm^2/C units, so that we supply space charge in coulomb units.
   TVector3 delr=at-from;
   TVector3 field=delr; //to set the direction.
   if (delr.Mag()<ALMOST_ZERO*ALMOST_ZERO){ //note that this has blurred units -- it should scale with all three dimensions of stepsize.  For lots of phi bins, especially, this might start to read as small before it's really small.
@@ -577,8 +577,9 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefac
   int localr,localphi,localz;//the f-bin of our local structure that contains that center.
   //start r at the first index that corresponds to a position in our grid's r-range.
   for (int i=(rmin-hrmin)/hrstep;i<hrn;i++){
-    hr=hrmin+hrstep*(i+0.5);//bin center
-    localr=(hr-rmin)/step.Perp();
+    hr=hrmin+hrstep*(i+0.5);//histogram bin center in cm
+    localr=(hr-rmin)/step.Perp();//index of histogram bin center in our internal storage
+    printf("loading r=%d into charge from histogram bin %d\n",localr,i);
     if (localr<0){
       printf("Loading from histogram has r out of range! r=%f < rmin=%f\n",hr,rmin);      
       continue;
@@ -611,8 +612,8 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefac
 	  continue;
 	}
 	//volume is simplified from the basic formula:  float vol=hzstep*(hphistep*(hr+hrstep)*(hr+hrstep) - hphistep*hr*hr);
-	float vol=hzstep*hphistep*(2*hr+hrstep)*hrstep;
-	float qbin=scalefactor*vol*hist->GetBinContent(hist->GetBin(0+1,i+1,k+1));//RCC FLAG HERE - '0' should turn back to 'j'
+	double vol=hzstep*hphistep*(2*hr+hrstep)*hrstep;
+	double qbin=scalefactor*vol*hist->GetBinContent(hist->GetBin(4+1,i+1,k+1));//RCC FLAG HERE - '4' should turn back to 'j'
 	//float qold=q->Get(localr,localphi,localz);
 	//if(debugFlag()) printf("%d: AnnularFieldSim::load_spacecharge adding Q=%f from hist(%d,%d,%d) into cell (%d,%d,%d)\n",__LINE__,qbin,i,j,k,localr,localphi,localz);
 	q->Add(localr,localphi,localz,qbin);

@@ -32,7 +32,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   int nphi_roi=5;
   int nz=62;
   int nz_roi_min=0;
-  int nz_roi=12;
+  int nz_roi=2;//12;
 
   float rmin_roi=alice_rmin+alice_deltar/(nr*1.0)*nr_roi_min;
   float rmax_roi=rmin_roi+alice_deltar/nr*nr_roi;
@@ -129,6 +129,42 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   pTree.Branch("back1","TVector3",&back1);
   pTree.Branch("back1N",&goodSteps[1]);
 
+
+  //save data about the Efield:
+  TTree fTree("fTree","field Tree");
+  TVector3 pos,Efield;
+  TVector3 zero(0,0,0);
+  bool inroi;
+  float charge;
+  fTree.Branch("pos","TVector3",&pos);
+  fTree.Branch("E","TVector3",&Efield);
+  fTree.Branch("q",&charge);
+  fTree.Branch("roi",&inroi);
+
+  bool inr,inp,inz;
+  int rl,pl, zl;
+  for (int ir=0;ir<nr;ir++){
+    rl=ir-nr_roi_min;
+    inr=(rl>=0 && rl<nr_roi);
+    for (int ip=0;ip<nphi;ip++){
+      pl=ip-nphi_roi_min;
+      inp=(pl>=0 && pl<nphi_roi);     
+      for (int iz=0;iz<nz;iz++){
+	zl=iz-nz_roi_min;
+	inz=(zl>=0 && zl<nz_roi);
+	pos=alice->GetCellCenter(ir,ip,iz);
+	Efield=zero;
+	inroi=inr && inp && inz;
+	if (inroi){
+	  Efield=alice->Efield->Get(ir-nr_roi_min,ip-nphi_roi_min,iz-nz_roi_min);
+	}
+	charge=alice->q->Get(ir,ip,iz);
+	
+	fTree.Fill();
+      }
+    }
+  }
+  fTree.Write();
 
   int validToStep=500;
   for (int i=0;i<nparticles;i++){

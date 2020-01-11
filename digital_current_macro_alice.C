@@ -3,6 +3,11 @@
 R__LOAD_LIBRARY(.libs/libfieldsim)
 
 void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false, char* fname="pre-hybrid_fixed_reduction_0.ttree.root"){
+  bool useOldCalls=false;
+  if (reduction<0){
+  reduction=0;
+  useOldCalls=true;
+  }
   //bonk.  making sure this updates to my other branch.
   printf("hello\n");
   if (loadOutputFromFile) printf("loading out1 vectors from %s\n",fname);
@@ -134,10 +139,12 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   TTree fTree("fTree","field Tree");
   TVector3 pos,Efield;
   TVector3 zero(0,0,0);
+  TVector3 Eint;
   bool inroi;
   float charge;
   fTree.Branch("pos","TVector3",&pos);
   fTree.Branch("E","TVector3",&Efield);
+  fTree.Branch("Eint","TVector3",&Eint);
   fTree.Branch("q",&charge);
   fTree.Branch("roi",&inroi);
   TVector3 delr=alice->GetCellCenter(2,0,0)-alice->GetCellCenter(1,0,0);
@@ -160,11 +167,11 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 	inroi=inr && inp && inz;
 	if (inroi){
 	  Efield=alice->Efield->Get(ir-nr_roi_min,ip-nphi_roi_min,iz-nz_roi_min);
-	  posnex
 	  for (int rlocal=-10;rlocal<10;rlocal++){
 	    Eint=alice->interpolatedFieldIntegral(pos.Z()-delz/2,pos+(rlocal/10.0)*delr);//rcc getting tired.
 	    charge=alice->q->Get(ir,ip,iz);
 	    fTree.Fill();
+	  }
 	}
 	
       }
@@ -176,7 +183,14 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   for (int i=0;i<nparticles;i++){
     if (!(i%100)) printf("(periodic progress...) test[%d]=(%f,%f,%f)\n",i,testparticle[i].X(),testparticle[i].Y(),testparticle[i].Z());
     orig=testparticle[i];
-    if (!loadOutputFromFile) outparticle[i]=alice->swimToInSteps(zmax_roi,testparticle[i],600,true, &validToStep);
+    if (!loadOutputFromFile)
+      {
+	if (!useOldCalls)
+	  outparticle[i]=alice->swimToInSteps(zmax_roi,testparticle[i],600,true, &validToStep);
+	if (useOldCalls)
+	  outparticle[i]=alice->swimToInSteps(zmax_roi,testparticle[i],600,true);
+      }
+
     out1=outparticle[i];//not generating from the swim.=alice->swimToInSteps(zmax_roi,testparticle[i],600,true);
     outx[i]=outparticle[i].X();
     outy[i]=outparticle[i].Y();
@@ -185,7 +199,10 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
     
     
     //printf("out[%d]=(%f,%f,%f)\n",i,outparticle[i].X(),outparticle[i].Y(),outparticle[i].Z());
-    back1=backparticle[i]=alice->swimToInSteps(testparticle[i].Z(),outparticle[i],600,true,&validToStep);
+    if (!useOldCalls)
+      back1=backparticle[i]=alice->swimToInSteps(testparticle[i].Z(),outparticle[i],600,true,&validToStep);
+    if (useOldCalls)
+      back1=backparticle[i]=alice->swimToInSteps(testparticle[i].Z(),outparticle[i],600,true);
     goodSteps[1]=validToStep;
 
     //for convenience of reading, set all of the pTree in microns, not cm:

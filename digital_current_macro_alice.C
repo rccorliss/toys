@@ -3,11 +3,7 @@
 R__LOAD_LIBRARY(.libs/libfieldsim)
 
 void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false, char* fname="pre-hybrid_fixed_reduction_0.ttree.root"){
-  bool useOldCalls=false;
-  if (reduction<0){
-  reduction=0;
-  useOldCalls=true;
-  }
+
   //bonk.  making sure this updates to my other branch.
   printf("hello\n");
   if (loadOutputFromFile) printf("loading out1 vectors from %s\n",fname);
@@ -148,7 +144,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   fTree.Branch("q",&charge);
   fTree.Branch("roi",&inroi);
   TVector3 delr=alice->GetCellCenter(2,0,0)-alice->GetCellCenter(1,0,0);
-  float delz=alice->GetCellCenter(0,0,1)-alice->GetCellCenter(0,0,0);
+  float delz=alice->GetCellCenter(0,0,1).Z()-alice->GetCellCenter(0,0,0).Z();
   
   bool inr,inp,inz;
   int rl,pl, zl;
@@ -185,10 +181,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
     orig=testparticle[i];
     if (!loadOutputFromFile)
       {
-	if (!useOldCalls)
 	  outparticle[i]=alice->swimToInSteps(zmax_roi,testparticle[i],600,true, &validToStep);
-	if (useOldCalls)
-	  outparticle[i]=alice->swimToInSteps(zmax_roi,testparticle[i],600,true);
       }
 
     out1=outparticle[i];//not generating from the swim.=alice->swimToInSteps(zmax_roi,testparticle[i],600,true);
@@ -199,10 +192,8 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
     
     
     //printf("out[%d]=(%f,%f,%f)\n",i,outparticle[i].X(),outparticle[i].Y(),outparticle[i].Z());
-    if (!useOldCalls)
+ 
       back1=backparticle[i]=alice->swimToInSteps(testparticle[i].Z(),outparticle[i],600,true,&validToStep);
-    if (useOldCalls)
-      back1=backparticle[i]=alice->swimToInSteps(testparticle[i].Z(),outparticle[i],600,true);
     goodSteps[1]=validToStep;
 
     //for convenience of reading, set all of the pTree in microns, not cm:

@@ -172,6 +172,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 	      Eint=alice->interpolatedFieldIntegral(pos.Z()-delz/4,pos);//rcc getting tired.
 	      charge=alice->q->Get(ir,ip,iz);
 	      fTree.Fill();
+	    }
 	  }
 	}
 	

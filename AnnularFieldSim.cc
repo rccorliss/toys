@@ -466,12 +466,13 @@ TVector3 AnnularFieldSim::interpolatedFieldIntegral(float zdest,TVector3 start){
   pw[0]=pw[2]=1-p0d; //1 when we're on it, 0 when we're at the other one.
   pw[1]=pw[3]=p0d; //1 when we're on it, 0 when we're at the other one
 
-  if (pi[0]<phimin_roi){
+  //to handle wrap-around
+  if (pi[0]<phimin_roi || pi[0]>=phimax_roi){
     skip[0]=true; //don't bother handling 0 and 1 in the coordinates.
     skip[2]=true;
     pw[1]=pw[3]=1; //and weight like we're dead-center on the outer cells.
   }
-  if (pi[1]>=phimax_roi){
+  if (pi[1]>=phimax_roi || pi[1]<phimin_roi){
     skip[1]=true; //don't bother handling 2 and 3 in the coordinates.
     skip[3]=true;
     pw[0]=pw[2]=1; //and weight like we're dead-center on the inner cells.

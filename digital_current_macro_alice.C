@@ -168,8 +168,8 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 	  Efield=alice->Efield->Get(ir-nr_roi_min,ip-nphi_roi_min,iz-nz_roi_min);
 	  for (int rlocal=-10;rlocal<10;rlocal++){
 	    for (int plocal=-10;plocal<10;plocal++){
-	      pos=pos0+(rlocal)/20.0*delr+(plocal)/20*delp;
-	      Eint=alice->interpolatedFieldIntegral(pos.Z()-delz/4,pos);//rcc getting tired.
+	      pos=pos0+(rlocal)/20.0*delr+(plocal)/(20.0)*delp;
+	      Eint=alice->interpolatedFieldIntegral(pos.Z()-delz/4,pos);
 	      charge=alice->q->Get(ir,ip,iz);
 	      fTree.Fill();
 	    }
@@ -180,7 +180,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
     }
   }
   fTree.Write();
-
+  return;
   int validToStep=500;
   for (int i=0;i<nparticles;i++){
     if (!(i%100)) printf("(periodic progress...) test[%d]=(%f,%f,%f)\n",i,testparticle[i].X(),testparticle[i].Y(),testparticle[i].Z());

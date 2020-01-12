@@ -144,6 +144,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   fTree.Branch("q",&charge);
   fTree.Branch("roi",&inroi);
   TVector3 delr=alice->GetCellCenter(2,0,0)-alice->GetCellCenter(1,0,0);
+  TVector3 delp;
   float delz=alice->GetCellCenter(0,0,1).Z()-alice->GetCellCenter(0,0,0).Z();
   
   bool inr,inp,inz;
@@ -159,15 +160,18 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 	inz=(zl>=0 && zl<nz_roi);
 	pos0=alice->GetCellCenter(ir,ip,iz);
 	delr=alice->GetCellCenter(ir+1,ip,iz)-pos0;
+	delp=alice->GetCellCenter(ir,ip+1,iz)-pos0;
+
 	Efield=zero;
 	inroi=inr && inp && inz;
 	if (inroi){
 	  Efield=alice->Efield->Get(ir-nr_roi_min,ip-nphi_roi_min,iz-nz_roi_min);
 	  for (int rlocal=-10;rlocal<10;rlocal++){
-	    pos=pos0+(rlocal)/20.0*delr;
-	    Eint=alice->interpolatedFieldIntegral(pos.Z()-delz/4,pos);//rcc getting tired.
-	    charge=alice->q->Get(ir,ip,iz);
-	    fTree.Fill();
+	    for (int plocal=-10;plocal<10;plocal++){
+	      pos=pos0+(rlocal)/20.0*delr+(plocal)/20*delp;
+	      Eint=alice->interpolatedFieldIntegral(pos.Z()-delz/4,pos);//rcc getting tired.
+	      charge=alice->q->Get(ir,ip,iz);
+	      fTree.Fill();
 	  }
 	}
 	

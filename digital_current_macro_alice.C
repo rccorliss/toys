@@ -164,7 +164,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 	if (inroi){
 	  Efield=alice->Efield->Get(ir-nr_roi_min,ip-nphi_roi_min,iz-nz_roi_min);
 	  for (int rlocal=-10;rlocal<10;rlocal++){
-	    pos=pos0.Z()+(rlocal)/10.0*delr;
+	    pos=pos0+(rlocal)/10.0*delr;
 	    Eint=alice->interpolatedFieldIntegral(pos.Z()-delz/2,pos);//rcc getting tired.
 	    charge=alice->q->Get(ir,ip,iz);
 	    fTree.Fill();

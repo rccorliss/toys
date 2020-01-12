@@ -133,7 +133,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 
   //save data about the Efield:
   TTree fTree("fTree","field Tree");
-  TVector3 pos,Efield;
+  TVector3 pos0,pos,Efield;
   TVector3 zero(0,0,0);
   TVector3 Eint;
   bool inroi;
@@ -157,14 +157,15 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
       for (int iz=0;iz<nz;iz++){
 	zl=iz-nz_roi_min;
 	inz=(zl>=0 && zl<nz_roi);
-	pos=alice->GetCellCenter(ir,ip,iz);
+	pos0=alice->GetCellCenter(ir,ip,iz);
 	delr=alice->GetCellCenter(ir+1,ip,iz)-pos;
 	Efield=zero;
 	inroi=inr && inp && inz;
 	if (inroi){
 	  Efield=alice->Efield->Get(ir-nr_roi_min,ip-nphi_roi_min,iz-nz_roi_min);
 	  for (int rlocal=-10;rlocal<10;rlocal++){
-	    Eint=alice->interpolatedFieldIntegral(pos.Z()-delz/2,pos+(rlocal/10.0)*delr);//rcc getting tired.
+	    pos=pos0.Z()+(rlocal)/10.0*delr;
+	    Eint=alice->interpolatedFieldIntegral(pos.Z()-delz/2,pos);//rcc getting tired.
 	    charge=alice->q->Get(ir,ip,iz);
 	    fTree.Fill();
 	  }

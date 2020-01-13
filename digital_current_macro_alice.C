@@ -26,14 +26,14 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   //define a region of interest, in units of the intrinsic scale of the alice histogram:
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
   int nr=159;
-  int nr_roi_min=0;
+  int nr_roi_min=8;
   int nr_roi=5;
   int nphi=360;
-  int nphi_roi_min=12;
+  int nphi_roi_min=14;
   int nphi_roi=5;
   int nz=62;
   int nz_roi_min=0;
-  int nz_roi=2;//12;
+  int nz_roi=12;
 
   float rmin_roi=alice_rmin+alice_deltar/(nr*1.0)*nr_roi_min;
   float rmax_roi=rmin_roi+alice_deltar/nr*nr_roi;
@@ -130,15 +130,16 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   pTree.Branch("back1","TVector3",&back1);
   pTree.Branch("back1N",&goodSteps[1]);
 
-
   //save data about the Efield:
   TTree fTree("fTree","field Tree");
-  TVector3 pos0,pos,Efield;
+  TVector3 pos0,pos,Efield,phihat;
   TVector3 zero(0,0,0);
   TVector3 Eint;
   bool inroi;
   float charge;
   fTree.Branch("pos","TVector3",&pos);
+  fTree.Branch("phihat","TVector3",&phihat);
+
   fTree.Branch("E","TVector3",&Efield);
   fTree.Branch("Eint","TVector3",&Eint);
   fTree.Branch("q",&charge);
@@ -169,7 +170,11 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 	  for (int rlocal=-10;rlocal<10;rlocal++){
 	    for (int plocal=-10;plocal<10;plocal++){
 	      pos=pos0+(rlocal)/20.0*delr+(plocal)/(20.0)*delp;
-	      Eint=alice->interpolatedFieldIntegral(pos.Z()-delz/4,pos);
+	      phihat=pos;// build our phi position by starting with the vector in the rz plane:
+	      phihat.SetZ(0);//remove the z component so it points purely in r
+	      phihat.SetMag(1.0);//scale it to 1.0;
+	      phihat.RotateZ(TMath::Pi()/2);//rotate 90 degrees from the position vector so it now points purely in phi; 
+	      Eint=alice->interpolatedFieldIntegral(pos.Z()-delz/(4.0),pos);
 	      charge=alice->q->Get(ir,ip,iz);
 	      fTree.Fill();
 	    }
@@ -180,8 +185,9 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
     }
   }
   fTree.Write();
-  return;
-  int validToStep=500;
+
+  
+  int validToStep=-1;
   for (int i=0;i<nparticles;i++){
     if (!(i%100)) printf("(periodic progress...) test[%d]=(%f,%f,%f)\n",i,testparticle[i].X(),testparticle[i].Y(),testparticle[i].Z());
     orig=testparticle[i];

@@ -134,6 +134,8 @@ class MultiArray : public TObject{
 
    MultiArray(int a=0, int b=0, int c=0, int d=0, int e=0, int f=0){
      int n_[6];
+     for (int i=0;i<MAX_DIM;i++)
+       n[i]=0;
      n_[0]=a; n_[1]=b; n_[2]=c; n_[3]=d; n_[4]=e; n_[5]=f;
      length=1;
      dim=MAX_DIM;

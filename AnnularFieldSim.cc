@@ -614,7 +614,7 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefac
 	}
 	//volume is simplified from the basic formula:  float vol=hzstep*(hphistep*(hr+hrstep)*(hr+hrstep) - hphistep*hr*hr);
 	double vol=hzstep*hphistep*(2*hr+hrstep)*hrstep;
-	double qbin=scalefactor*vol*hist->GetBinContent(hist->GetBin(4+1,i+1,k+1));//RCC FLAG HERE - '4' should turn back to 'j'
+	double qbin=scalefactor*vol*hist->GetBinContent(hist->GetBin(j+1,i+1,k+1));
 	//float qold=q->Get(localr,localphi,localz);
 	//if(debugFlag()) printf("%d: AnnularFieldSim::load_spacecharge adding Q=%f from hist(%d,%d,%d) into cell (%d,%d,%d)\n",__LINE__,qbin,i,j,k,localr,localphi,localz);
 	q->Add(localr,localphi,localz,qbin);
@@ -678,6 +678,7 @@ void AnnularFieldSim::populate_highres_lookup(){
 
   TVector3 at(1,0,0);
   TVector3 from(1,0,0);
+  TVector3 zero(0,0,0);
 
   //populate_highres_lookup();
   int r_highres_dist=(nr_high-1)/2;
@@ -785,20 +786,28 @@ void AnnularFieldSim::populate_highres_lookup(){
 	      
 	      nfbinsin[rcell][phicell][zcell]++;
 	      int nf= nfbinsin[rcell][phicell][zcell];
+	      //coordinates relative to the region of interest:
+	      int ir_rel=ifr-rmin_roi;
+	      int iphi_rel=ifphi-phimin_roi;
+	      int iz_rel=ifz-zmin_roi;
 	      if (zcell!=1 || rcell!=1 || phicell!=1){
 		//we're not in the center, so deal with our weird shapes by averaging:
-	      //but Epartial is in coordinates relative to the roi
-	      if (ifphi-phimin_roi<0)printf("%d: Getting with phi=%d\n",__LINE__,ifphi-phimin_roi);
-	      currentf=Epartial_highres->Get(ifr-rmin_roi,ifphi-phimin_roi,ifz-zmin_roi,rbin,phibin,zbin);
-	      //to keep this as the average, we multiply what's there back to its initial summed-but-not-divided value
-	      //then add our new value, and the divide the new sum by the total number of cells
-	      newf=(currentf*(nf-1)+calc_unit_field(at,from))*(1/(nf*1.0)); 
-	      Epartial_highres->Set(ifr-rmin_roi,ifphi-phimin_roi,ifz-zmin_roi,rbin,phibin,zbin,newf);
+		//but Epartial is in coordinates relative to the roi
+		if (iphi_rel<0) printf("%d: Getting with phi=%d\n",__LINE__,iphi_rel);
+		currentf=Epartial_highres->Get(ir_rel,iphi_rel,iz_rel,rbin,phibin,zbin);
+		//to keep this as the average, we multiply what's there back to its initial summed-but-not-divided value
+		//then add our new value, and the divide the new sum by the total number of cells
+		newf=(currentf*(nf-1)+calc_unit_field(at,from))*(1/(nf*1.0)); 
+		Epartial_highres->Set(ir_rel,iphi_rel,iz_rel,rbin,phibin,zbin,newf);
 	      }else{
 		//we're in the center cell, which means any f-bin that's not on the outer edge of our region:
 		//calc_unit_field will return zero when at=from, so the center will be automatically zero here.
-		newf=calc_unit_field(at,from);
-		Epartial_highres->Set(ifr-rmin_roi,ifphi-phimin_roi,ifz-zmin_roi,rbin,phibin,zbin,newf);
+		if (ifr==rbin && ifphi==phibin && ifz==zbin){
+		  Epartial_highres->Set(ir_rel,iphi_rel,iz_rel,rbin,phibin,zbin,zero);
+		}else{ //for extra carefulness, only calc the field if it's not self-to-self.
+		  newf=calc_unit_field(at,from);
+		  Epartial_highres->Set(ir_rel,iphi_rel,iz_rel,rbin,phibin,zbin,newf);
+		}
 	      }
 
 	    }
@@ -814,7 +823,7 @@ void AnnularFieldSim::populate_lowres_lookup(){
 
   TVector3 at(1,0,0);
   TVector3 from(1,0,0);
-
+  TVector3 zero(0,0,0);
   int fr_low,fr_high,fphi_low,fphi_high,fz_low,fz_high;//edges of the outer l-bin
   int r_low,r_high,phi_low,phi_high,z_low,z_high;//edges of the inner l-bin
 
@@ -838,21 +847,30 @@ void AnnularFieldSim::populate_lowres_lookup(){
 	for (int ior=0;ior<nr_low;ior++){
 	  r_low=ior*r_spacing;
 	  r_high=r_low+r_spacing-1;
+	  int ir_rel=ifr-rmin_roi_low;
+
 	  if (r_high>=nr) r_high=nr-1;
 	  for (int iophi=0;iophi<nphi_low;iophi++){
 	    phi_low=iophi*phi_spacing;
 	    phi_high=phi_low+phi_spacing-1;
 	    if (phi_high>=nphi) phi_high=nphi-1;
+	    int iphi_rel=ifphi-phimin_roi_low;
 	    for (int ioz=0;ioz<nz_low;ioz++){
 	      z_low=ioz*z_spacing;
 	      z_high=z_low+z_spacing-1;
 	      if (z_high>=nz) z_high=nz-1;
+	      int iz_rel=ifz-zmin_roi_low;
 	      from=GetGroupCellCenter(r_low,r_high,phi_low,phi_high,z_low,z_high);
 
+		if (ifr==ior && ifphi==iophi && ifz==ioz){
+		  Epartial_lowres->Set(ir_rel,iphi_rel,iz_rel,ior,iophi,ioz,zero);
+		}else{ //for extra carefulness, only calc the field if it's not self-to-self.
+		  Epartial_lowres->Set(ir_rel,iphi_rel,iz_rel,ior,iophi,ioz,calc_unit_field(at,from));
+		}
+	      
 	      //*f[ifx][ify][ifz][iox][ioy][ioz]=cacl_unit_field(at,from);
 	      //printf("calc_unit_field...\n");
 	      //this calc's okay.
-	      Epartial_lowres->Set(ifr-rmin_roi_low,ifphi-phimin_roi_low,ifz-zmin_roi_low,ior,iophi,ioz,calc_unit_field(at,from));
 	    }
 	  }
 	}
@@ -1173,7 +1191,7 @@ TVector3 AnnularFieldSim::swimToInSteps(float zdest,TVector3 start,int steps=1, 
       if (!(goodToStep==0)) *goodToStep=i-1;
       return ret;
     }
-    ret=swimTo(start.Z()+zstep*(i+1),ret,false);
+    ret=swimTo(start.Z()+zstep*(i+1),ret,true);
   }
   
   return ret;

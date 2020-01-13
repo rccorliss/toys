@@ -33,7 +33,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   int nphi_roi=5;
   int nz=62;
   int nz_roi_min=1;
-  int nz_roi=1;
+  int nz_roi=12;
 
   float rmin_roi=alice_rmin+alice_deltar/(nr*1.0)*nr_roi_min;
   float rmax_roi=rmin_roi+alice_deltar/nr*nr_roi;
@@ -75,7 +75,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   now=gSystem->Now();
   printf("set fields.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
-  alice->load_spacecharge(alice_average,0,alice_chargescale);
+  alice->load_spacecharge(alice_average,10,alice_chargescale);
   now=gSystem->Now();
   printf("loaded spacecharge.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
@@ -192,7 +192,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 
   
   int validToStep=-1;
-  for (int i=0;i<2;i++){
+  for (int i=0;i<nparticles;i++){
     if (!(i%100)) printf("(periodic progress...) test[%d]=(%f,%f,%f)\n",i,testparticle[i].X(),testparticle[i].Y(),testparticle[i].Z());
     orig=testparticle[i];
     if (!loadOutputFromFile)

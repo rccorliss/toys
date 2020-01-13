@@ -108,7 +108,7 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
   
   
   if  (lookupCase==Full3D){
-      printf("AnnularFieldSim::AnnularFieldSim building Epartial with  nr_roi=%d nphi_roi=%d nz_roi=%d  =~%2.2fM TVector3 objects\n",nr_roi,nphi_roi,nz_roi,
+      printf("AnnularFieldSim::AnnularFieldSim building Epartial (full3D) with  nr_roi=%d nphi_roi=%d nz_roi=%d  =~%2.2fM TVector3 objects\n",nr_roi,nphi_roi,nz_roi,
 	 nr_roi*nphi_roi*nz_roi*nr*nphi*nz/(1.0e6));
 
   Epartial=new MultiArray<TVector3>(nr_roi,nphi_roi,nz_roi,nr,nphi,nz);
@@ -641,8 +641,10 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefac
   float hzstep=(hzmax-hzmin)/hzn;
 
   //calculate the useful bound in z:
-  int hnzmax=dim.Z()/hzstep; 
-  
+  int hnzmin=(zmin-hzmin)/hzstep;
+  int hnzmax=(dim.Z()-hzmin)/hzstep; 
+  printf("We are interested in z bins %d to %d,  %f<z<%f\n",(int)((zmin-hzmin)/hzstep),hnzmax,((int)((zmin-hzmin)/hzstep))*hzstep,hnzmax*hzstep);
+
 
   //clear the previous spacecharge dist:
   for (int i=0;i<q->Length();i++)
@@ -683,7 +685,7 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefac
 	localphi+=nphi;
       }
       //todo:  should add ability to take in a phi- slice only
-      for (int k=(zmin-hzmin)/hzstep;k<hnzmax;k++){
+      for (int k=hnzmin;k<hnzmax;k++){
 	hz=hzmin+hzstep*(k+0.5);//bin center,
 	localz=(hz+zoffset)/step.Z();
        
@@ -701,9 +703,9 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefac
 	//volume is simplified from the basic formula:  float vol=hzstep*(hphistep*(hr+hrstep)*(hr+hrstep) - hphistep*hr*hr);
 	double vol=hzstep*hphistep*(2*hr+hrstep)*hrstep;
 	double qbin=scalefactor*vol*hist->GetBinContent(hist->GetBin(j+1,i+1,k+1));
-	//float qold=q->Get(localr,localphi,localz);
+	float qold=q->Get(localr,localphi,localz);
 	//if(debugFlag()) printf("%d: AnnularFieldSim::load_spacecharge adding Q=%f from hist(%d,%d,%d) into cell (%d,%d,%d)\n",__LINE__,qbin,i,j,k,localr,localphi,localz);
-	q->Add(localr,localphi,localz,qbin);
+	q->Add(localr,localphi,localz,qbin+qold);
       }
     }
   }

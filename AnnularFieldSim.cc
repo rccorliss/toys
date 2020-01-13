@@ -98,12 +98,20 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
   for (int i=0;i<Bfield->Length();i++)
     Bfield->GetFlat(i)->SetXYZ(0,0,0);
 
+    if (lookupCase==Full3D){
+      printf("lookupCase==Full3D\n");
+  }else if(lookupCase==HybridRes){
+      printf("lookupCase==HybridRes\n");
+  } else if(lookupCase==PhiSlice){
+      printf("lookupCase==PhiSlice\n");
+  }
+  
   
   if  (lookupCase==Full3D){
       printf("AnnularFieldSim::AnnularFieldSim building Epartial with  nr_roi=%d nphi_roi=%d nz_roi=%d  =~%2.2fM TVector3 objects\n",nr_roi,nphi_roi,nz_roi,
-	 nr_roi*nphi_roi*nz_roi*nr_roi*nphi_roi*nz_roi/(1.0e6));
+	 nr_roi*nphi_roi*nz_roi*nr*nphi*nz/(1.0e6));
 
-  Epartial=new MultiArray<TVector3>(nr_roi,nphi_roi,nz_roi,nr_roi,nphi_roi,nz_roi);
+  Epartial=new MultiArray<TVector3>(nr_roi,nphi_roi,nz_roi,nr,nphi,nz);
   for (int i=0;i<Epartial->Length();i++)
     Epartial->GetFlat(i)->SetXYZ(0,0,0);
   //and kill the arrays we shouldn't be using:
@@ -565,7 +573,7 @@ TVector3 AnnularFieldSim::interpolatedFieldIntegral(float zdest,TVector3 start){
     startz=zdest;
     endz=start.Z();
   }
-  bool startOkay=(startBound==InBounds); //maybe todo: add handling for being just below the low edge.
+  bool startOkay=(startBound==InBounds || startBound==OnLowEdge); //maybe todo: add handling for being just below the low edge.
   bool endOkay=(endBound==InBounds || endBound==OnHighEdge); //if we just barely touch out-of-bounds on the high end, we can skip that piece of the integral
   
   if (!startOkay || !endOkay){
@@ -573,6 +581,10 @@ TVector3 AnnularFieldSim::interpolatedFieldIntegral(float zdest,TVector3 start){
     return start;
   }
 
+  if (startBound==OnLowEdge){
+    //we were just below the low edge, so we will be asked to sample a bin in z we're not actually using
+    zi++; //avoid it.  We weren't integrating anything in it anyway.
+  }
 
 
 
@@ -589,8 +601,9 @@ TVector3 AnnularFieldSim::interpolatedFieldIntegral(float zdest,TVector3 start){
       
       partialInt+=Efield->Get(ri[i]-rmin_roi,pi[i]-phimin_roi,j-zmin_roi)*step.Z();
     }
-  
+    if (startBound!=OnLowEdge){
     partialInt-=Efield->Get(ri[i]-rmin_roi,pi[i]-phimin_roi,zi-zmin_roi)*(startz-zi*step.Z());//remove the part of the low end cell we didn't travel through
+    }
     if (endz/step.Z()-zf>ALMOST_ZERO){
     partialInt+=Efield->Get(ri[i]-rmin_roi,pi[i]-phimin_roi,zf-zmin_roi)*(endz-zf*step.Z());//add the part of the high end cell we did travel through
     }
@@ -721,8 +734,14 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefac
 void AnnularFieldSim::populate_fieldmap(){
   //sum the E field at every point in the region of interest
   // remember that Efield uses relative indices
-  //printf("in pop_fieldmap, n=(%d,%d,%d)\n",nr,ny,nz);
-  
+  printf("in pop_fieldmap, n=(%d,%d,%d)\n",nr,nphi,nz);
+    if (lookupCase==Full3D){
+      printf("lookupCase==Full3D\n");
+  }else if(lookupCase==HybridRes){
+      printf("lookupCase==HybridRes\n");
+  } else if(lookupCase==PhiSlice){
+      printf("lookupCase==PhiSlice\n");
+  }
   TVector3 localF;//holder for the summed field at the current position.
   for (int ir=rmin_roi;ir<rmax_roi;ir++){
     for (int iphi=phimin_roi;iphi<phimax_roi;iphi++){
@@ -743,6 +762,14 @@ void  AnnularFieldSim::populate_lookup(){
   //  TVector3 (*f)[fx][fy][fz][ox][oy][oz]=field_;
   //printf("populating lookup for (%dx%dx%d)x(%dx%dx%d) grid\n",fx,fy,fz,ox,oy,oz);
 
+  if (lookupCase==Full3D){
+    printf("lookupCase==Full3D\n");
+  }else if(lookupCase==HybridRes){
+    printf("lookupCase==HybridRes\n");
+  } else if(lookupCase==PhiSlice){
+    printf("lookupCase==PhiSlice\n");
+  }
+  
   if (lookupCase==Full3D){
     populate_full3d_lookup();
   } else if (lookupCase==HybridRes){
@@ -1403,10 +1430,16 @@ TVector3 AnnularFieldSim::swimToInSteps(float zdest,TVector3 start,int steps=1, 
   BoundsCase zBound;
   for (int i=0;i<steps;i++){
     zBound=GetZindexAndCheckBounds(ret.Z(),&zt);
+    if (zBound==OnLowEdge){
+      //nudge it in z:
+      ret.SetZ(ret.Z()+ALMOST_ZERO);
+    }
     if (GetRindexAndCheckBounds(ret.Perp(),&rt)!=InBounds
 	|| GetPhiIndexAndCheckBounds(ret.Phi(),&pt)!=InBounds
-	|| (zBound!=InBounds && zBound!=OnHighEdge)){
-      printf("AnnularFieldSim::swimToInSteps at step %d, asked to swim particle from (%f,%f,%f) which is outside the ROI.  Returning original position.\n",i,ret.X(),ret.Y(),ret.Z());
+	|| (zBound==OutOfBounds)){
+      printf("AnnularFieldSim::swimToInSteps at step %d, asked to swim particle from (%f,%f,%f) (rphiz)=(%f,%f,%f)which is outside the ROI.\n",i,ret.X(),ret.Y(),ret.Z(),ret.Perp(),ret.Phi(),ret.Z());
+    printf(" -- %f <= r < %f \t%f <= phi < %f \t%f <= z < %f \n",rmin_roi*step.Perp()+rmin,rmax_roi*step.Perp()+rmin, phimin_roi*step.Phi(),phimax_roi*step.Phi(),zmin_roi*step.Z(),zmax_roi*step.Z());
+    printf("Returning original position.\n");
       if (!(goodToStep==0)) *goodToStep=i-1;
       return ret;
     }
@@ -1425,7 +1458,9 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate=fa
   if (GetRindexAndCheckBounds(start.Perp(),&rt)!=InBounds
       || GetPhiIndexAndCheckBounds(start.Phi(),&pt)!=InBounds
       || (zBound!=InBounds && zBound!=OnHighEdge)){
-    printf("AnnularFieldSim::swimTo asked to swim particle from (%f,%f,%f) which is outside the ROI.  Returning original position.\n",start.X(),start.Y(),start.Z());
+    printf("AnnularFieldSim::swimTo asked to swim particle from (%f,%f,%f) which is outside the ROI:\n",start.X(),start.Y(),start.Z());
+    printf(" -- %f <= r < %f \t%f <= phi < %f \t%f <= z < %f \n",rmin_roi*step.Perp(),rmax_roi*step.Perp(), phimin_roi*step.Phi(),phimax_roi*step.Phi(),zmin_roi*step.Z(),zmax_roi*step.Z());
+    printf("Returning original position.\n");
     return start;
   }
   

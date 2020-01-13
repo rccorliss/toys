@@ -106,18 +106,18 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 
   //for this study, we load the 'out' particles from the ttree of the full-scale version, and propagate them backward:
   if (loadOutputFromFile){
-  TFile *input=TFile::Open(fname);
-  TTree *inTree=(TTree*)input->Get("pTree");
-  TVector3 *outFromFile;
-  TVector3 *origFromFile;
-  inTree->SetBranchAddress("out1",&outFromFile);
-  inTree->SetBranchAddress("orig",&origFromFile);
-  for (int i=0;i<inTree->GetEntries();i++){
-    inTree->GetEntry(i);
-    outparticle[i]=(*outFromFile)*(1/(1.0e4)); //convert back to local units.
-    testparticle[i]=(*origFromFile)*(1/(1.0e4)); //convert back to local units.
-  }
-  input->Close();
+    TFile *input=TFile::Open(fname);
+    TTree *inTree=(TTree*)input->Get("pTree");
+    TVector3 *outFromFile;
+    TVector3 *origFromFile;
+    inTree->SetBranchAddress("out1",&outFromFile);
+    inTree->SetBranchAddress("orig",&origFromFile);
+    for (int i=0;i<inTree->GetEntries();i++){
+      inTree->GetEntry(i);
+      outparticle[i]=(*outFromFile)*(1/(1.0e4)); //convert back to local units.
+      testparticle[i]=(*origFromFile)*(1/(1.0e4)); //convert back to local units.
+    }
+    input->Close();
   }
 
   TFile *output=TFile::Open("last_macro_output.ttree.root","RECREATE");
@@ -192,7 +192,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 
   
   int validToStep=-1;
-  for (int i=0;i<nparticles;i++){
+  for (int i=0;i<2;i++){
     if (!(i%100)) printf("(periodic progress...) test[%d]=(%f,%f,%f)\n",i,testparticle[i].X(),testparticle[i].Y(),testparticle[i].Z());
     orig=testparticle[i];
     if (!loadOutputFromFile)

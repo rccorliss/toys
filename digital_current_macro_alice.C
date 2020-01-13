@@ -32,8 +32,8 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   int nphi_roi_min=14;
   int nphi_roi=5;
   int nz=62;
-  int nz_roi_min=0;
-  int nz_roi=12;
+  int nz_roi_min=1;
+  int nz_roi=1;
 
   float rmin_roi=alice_rmin+alice_deltar/(nr*1.0)*nr_roi_min;
   float rmax_roi=rmin_roi+alice_deltar/nr*nr_roi;
@@ -136,13 +136,15 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   TVector3 zero(0,0,0);
   TVector3 Eint;
   bool inroi;
-  float charge;
+  float charge,eintp, ep;
   fTree.Branch("pos","TVector3",&pos);
   fTree.Branch("phihat","TVector3",&phihat);
 
   fTree.Branch("E","TVector3",&Efield);
   fTree.Branch("Eint","TVector3",&Eint);
   fTree.Branch("q",&charge);
+  fTree.Branch("Eintp",&eintp);
+  fTree.Branch("Ep",&ep);
   fTree.Branch("roi",&inroi);
   TVector3 delr=alice->GetCellCenter(2,0,0)-alice->GetCellCenter(1,0,0);
   TVector3 delp;
@@ -174,8 +176,10 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 	      phihat.SetZ(0);//remove the z component so it points purely in r
 	      phihat.SetMag(1.0);//scale it to 1.0;
 	      phihat.RotateZ(TMath::Pi()/2);//rotate 90 degrees from the position vector so it now points purely in phi; 
-	      Eint=alice->interpolatedFieldIntegral(pos.Z()-delz/(4.0),pos);
+	      Eint=(alice->interpolatedFieldIntegral(pos.Z()-delz/(4.0),pos))*(4.0/delz);
 	      charge=alice->q->Get(ir,ip,iz);
+	      eintp=Eint.Dot(phihat);
+	      ep=Efield.Dot(phihat);
 	      fTree.Fill();
 	    }
 	  }

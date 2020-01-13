@@ -6,6 +6,7 @@ class TH3F;
 class AnnularFieldSim{
  public:
   enum BoundsCase {InBounds,OnHighEdge, OnLowEdge,OutOfBounds}; //note that 'OnLowEdge' is qualitatively different from 'OnHighEdge'.  Low means there is a non-zero distance between the point and the edge of the bin.  High applies even if that distance is exactly zero.
+  enum LookupCase {Full3D,HybridRes, PhiSlice};
 
   //debug items
   //
@@ -31,7 +32,7 @@ class AnnularFieldSim{
   //
   int nr,nphi,nz; //number of fundamental bins (f-bins) in each direction = dimensions of 3D array covering entire volume
   TVector3 step; //size of an f-bin in each direction
- 
+  LookupCase lookupCase; //which lookup system to instantiate and use.
   
   //variables related to the region of interest:
   //
@@ -59,6 +60,8 @@ class AnnularFieldSim{
   MultiArray<TVector3> *Efield; //total electric field in each f-bin in the roi for given configuration of charge AND external field.
   MultiArray<TVector3> *Epartial_highres; //electric field in each f-bin in the roi from charge in a given f-bin or summed bin in the high res region.
   MultiArray<TVector3> *Epartial_lowres; //electric field in each l-bin in the roi from charge in a given l-bin anywhere in the volume.
+  MultiArray<TVector3> *Epartial; //electric field for the old brute-force model.
+  MultiArray<TVector3> *Epartial_phislice; //electric field in a 2D phi-slice from the full 3D region.
   MultiArray<TVector3> *Eexternal; //externally applied electric field in each f-bin in the roi
   MultiArray<TVector3> *Bfield; //magnetic field in each f-bin in the roi
   MultiArray<double> *q; //space charge in each f-bin in the whole volume
@@ -80,7 +83,7 @@ class AnnularFieldSim{
 		  int r, int roi_r0, int roi_r1, int in_rLowSpacing, int in_rHighSize,
 		  int phi, int roi_phi0, int roi_phi1, int in_phiLowSpacing, int in_phiHighSize,
 		  int z, int roi_z0, int roi_z1,int in_zLowSpacing, int in_zHighSize,
-		  float vdr);
+		  float vdr, LookupCase in_lookupCase);
 
   //debug functions:
   void UpdateEveryN(int n){debug_printActionEveryN=n; return;};
@@ -105,9 +108,15 @@ class AnnularFieldSim{
   TVector3 fieldIntegral(float zdest,TVector3 start);
   void populate_fieldmap();
   void  populate_lookup();
+  void  populate_full3d_lookup();
   void  populate_highres_lookup();
   void  populate_lowres_lookup();
+  void  populate_phislice_lookup();
   TVector3 sum_field_at(int r,int phi, int z);
+  TVector3 sum_full3d_field_at(int r,int phi, int z);
+  TVector3 sum_local_field_at(int r,int phi, int z);
+  TVector3 sum_nonlocal_field_at(int r,int phi, int z);
+  TVector3 sum_phislice_field_at(int r, int phi, int z);
   TVector3 swimToInSteps(float zdest,TVector3 start, int steps, bool interpolate, int *goodToStep);
   TVector3 swimTo(float zdest,TVector3 start, bool interpolate);
  

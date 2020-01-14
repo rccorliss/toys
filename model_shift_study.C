@@ -7,7 +7,7 @@ void model_shift_study(){
   //plot those numbers vs reduction.
 
 
-  int ntests=12;
+  int ntests=16;
   int nominal=10;
   int mintest=-10; //relative to nominal.
   int step=2;

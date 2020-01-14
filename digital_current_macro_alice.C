@@ -75,7 +75,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   now=gSystem->Now();
   printf("set fields.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
-  alice->load_spacecharge(alice_average,24,alice_chargescale);
+  alice->load_spacecharge(alice_average,32,alice_chargescale);
   now=gSystem->Now();
   printf("loaded spacecharge.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;

@@ -22,7 +22,7 @@ QPileUp::QPileUp() {
 void QPileUp::Make() {
   // InitMaps();
   if(fDebug>0) printf("QPileUp is initializing rho map... ");
-  TH3F *fRho = new TH3F("rho","ChargeDensity [fC/cm^3];Radial [cm];Azimuthal [rad];Longitudinal [cm]",
+  TH3F *fRho = new TH3F("rho","ChargeDensity [fC/cm^3];Azimuthal [rad];Radial [cm];Longitudinal [cm]",
 			kNAzimuthalSteps,0,TMath::TwoPi(),
 			kNRadialSteps,kInnerRadius,kOutterRadius,
 		      kNLongitudinalSteps,0,+kHalfLength);
@@ -42,9 +42,9 @@ void QPileUp::Make() {
   if(fDebug>1) printf("b = %f\n",b);
   if(fDebug>1) printf("c = %f\n",c);
   for(int r=0; r!=Constants::kNRadialSteps; ++r) {
-    float dr = fRho->GetXaxis()->GetBinCenter( r+1 )/100.0; //[m]
+    float dr = fRho->GetYaxis()->GetBinCenter( r+1 )/100.0; //[m]
     for(int p=0; p!=Constants::kNAzimuthalSteps; ++p) {
-      float dp = fRho->GetYaxis()->GetBinCenter( p+1 );
+      float dp = fRho->GetXaxis()->GetBinCenter( p+1 );
       for(int z=0; z!=Constants::kNLongitudinalSteps; ++z) {
 	float dz = fRho->GetZaxis()->GetBinCenter( z+1 )/100.0; //[m]
 	float dRho = a*(1-b*TMath::Abs(dz)+c)/(dr*dr); //fC/cm^3

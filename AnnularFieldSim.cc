@@ -1,6 +1,7 @@
 #include "TVector3.h"
 #include "AnnularFieldSim.h"
 #include "TH3F.h"
+#include "TFormula.h"
 
 #define ALMOST_ZERO 0.00001
 
@@ -386,7 +387,50 @@ AnnularFieldSim::BoundsCase AnnularFieldSim::GetZindexAndCheckBounds(float pos, 
 
  
 
+TVector3 AnnularFieldSim::analyticFieldIntegral(float zdest,TVector3 start){
+  //integrates E dz, from the starting point to the selected z position.  The path is assumed to be along z for each step, with adjustments to x and y accumulated after each step.
+  //if(debugFlag()) printf("%d: AnnularFieldSim::fieldIntegral(x=%f,y=%f, z=%f) to z=%f\n\n",__LINE__,start.X(),start.Y(),start.Z(),zdest);
+  
+  int r, phi;
+  bool rOkay=  (GetRindexAndCheckBounds(start.Perp(), &r) == InBounds);
+  bool phiOkay=  (GetPhiIndexAndCheckBounds(start.Phi(), &phi) == InBounds);
 
+  if (!rOkay || !phiOkay){
+    printf("AnnularFieldSim::analyticFieldIntegral asked to integrate along (r=%f,phi=%f), index=(%d,%d), which is out of bounds.  returning starting position.\n",start.Perp(),start.Phi(),r,phi);
+    return start;
+  }
+  
+  int dir=(start.Z()>zdest?-1:1);//+1 if going to larger z, -1 if going to smaller;  if they're the same, the sense doesn't matter.
+
+  int zi, zf;
+  double startz,endz;
+  BoundsCase startBound,endBound;
+
+  //make sure 'zi' is always the smaller of the two numbers, for handling the partial-steps.
+  if (dir>0){
+    startBound=GetZindexAndCheckBounds(start.Z(),&zi); //highest cell with lower bound less than lower bound of integral
+    endBound=GetZindexAndCheckBounds(zdest,&zf); //highest cell with lower bound less than upper lower bound of integral
+    startz=start.Z();
+    endz=zdest;
+  } else{
+    endBound=GetZindexAndCheckBounds(start.Z(),&zf); //highest cell with lower bound less than lower bound of integral
+    startBound=GetZindexAndCheckBounds(zdest,&zi); //highest cell with lower bound less than upper lower bound of integral
+    startz=zdest;
+    endz=start.Z();
+  }
+  bool startOkay=(startBound==InBounds); 
+  bool endOkay=(endBound==InBounds || endBound==OnHighEdge); //if we just barely touch out-of-bounds on the high end, we can skip that piece of the integral
+  
+  if (!startOkay || !endOkay){
+    printf("AnnularFieldSim::analyticFieldIntegral asked to integrate from z=%f to %f, index=%d to %d), which is out of bounds.  returning starting position.\n",startz,endz,zi,zf);
+    return start;
+  }
+
+  TVector3 fieldInt(0,0,0);
+  //TVector3 tf;
+    
+  return dir*fieldInt;
+}
     
 
 TVector3 AnnularFieldSim::fieldIntegral(float zdest,TVector3 start){
@@ -611,6 +655,86 @@ TVector3 AnnularFieldSim::interpolatedFieldIntegral(float zdest,TVector3 start){
   }
     
   return dir*fieldInt;
+}
+
+void AnnularFieldSim::load_analytic_spacecharge(float scalefactor=1){
+  //sphenix:
+  //double ifc_radius=20;
+  //double ofc_radius=78;
+  //  double tpc_halfz=
+
+  double ifc_radius=83.5;
+  double ofc_radius=254.5;
+  double tpc_halfz=250;
+
+  double sum=ifc_radius+ofc_radius;//338 in ALICE, [3] in args
+  double prod=ifc_radius*ofc_radius;//21250.75 in ALICE [4] in args
+  double diff=ofc_radius-ofc_radius;
+  
+  TFormula vTestFunction1("f1", "[0]*(x^4 - [3] *x^3 + [4] * x^2)*cos([1]* y)^2*exp(-1* [2] * z^2)");
+  TFormula rhoTestFunction1("ff1", "[0]*(((16.0 * x^2 - 9.0 * [3] * x + 4.0*[4]) *cos([1] * y)^2 * exp(-1 *[2]*z^2)) - ((x^2 -  [3] * x + [4]) * 2 * [1]^2 * cos(2 * [1] * y) * exp(-1 *[2]*z^2)) + ((x^4 -  [3] * x^3 + [4] * x^2) * cos([1] * y)^2 * (4*[2]^2*z^2 - 2 * [2]) * exp(-1 *[2]*z^2)))");
+
+  TFormula erTestFunction1("er", " [0]*(4*x^3 - 3 * [3] *x^2 + 2 * [4] * x)*cos([1]* y)^2*exp(-1* [2] * z^2)");
+  TFormula ePhiTestFunction1("ePhi",
+			     "  [0]*(x^3 - [3] *x^2 +  [4] * x)* -1  * [1] * sin(2 * [1]* y)*exp(-1* [2] * z^2)");
+  TFormula ezTestFunction1("ez",
+			   " [0]*(x^4 - [3] *x^3 + [4] * x^2)*cos([1]* y)^2*-1*2*[2]*z*exp(-1* [2] * z^2)");
+
+  TFormula intErDzTestFunction1("intErDz",
+				" [0]*(4*x^3 - 3 * [3] *x^2 + 2 * [4] * x)*cos([1]* y)^2*((sqrt(pi)*TMath::Erf(sqrt([2]) * z))/(2 * sqrt([2]))) ");
+  TFormula intEPhiDzTestFunction1("intEPhiDz",
+				  "[0]* (x^3 - [3] *x^2 +  [4] * x)* -1  * [1] * sin(2 * [1]* y)*((sqrt(pi)*TMath::Erf(sqrt([2]) * z))/(2 * sqrt([2])))");
+  TFormula intEzDzTestFunction1("intEzDz",
+				"[0]* (x^4 - [3] *x^3 + [4] * x^2)*cos([1]* y)^2*exp(-1* [2] * z^2)");
+
+
+  double a = ofc_radius * ofc_radius;
+  a *= (diff);
+  a *= (diff);
+  a =  (1000.0 / a);
+  double b = 0.5;
+  double c = 1.0 / (((tpc_halfz) / 2.0) * ((tpc_halfz) / 2.0));
+  double d=sum;
+  double e=prod;
+  vTestFunction1.SetParameters(a, b, c, d, e);
+  rhoTestFunction1.SetParameters(a, b, c, d, e);
+
+  erTestFunction1.SetParameters(-a, b, c, d, e);
+  ePhiTestFunction1.SetParameters(-a, b, c, d, e);
+  ezTestFunction1.SetParameters(-a, b, c, d, e);
+  intErDzTestFunction1.SetParameters(-a, b, c, d, e);
+  intEPhiDzTestFunction1.SetParameters(-a, b, c, d, e);
+  intEzDzTestFunction1.SetParameters(-a, b, c, d, e);
+
+  TVector3 pos;
+  for (int ifr=0;ifr<nr;ifr++){
+    for (int ifphi=0;ifphi<nphi;ifphi++){
+      for (int ifz=0;ifz<nz;ifz++){
+	pos=GetCellCenter(ifr,ifphi,ifz);
+	q->Add(ifr,ifphi,ifz,scalefactor*rhoTestFunction1.Eval(pos.Perp(),pos.Phi(),pos.Z()));
+      }
+    }
+  }
+
+  if (lookupCase==HybridRes){
+    //go through the q array and build q_lowres.  
+    for (int i=0;i<q_lowres->Length();i++)
+      *(q_lowres->GetFlat(i))=0;
+
+    //fill our low-res
+    //note that this assumes the last bin is short or normal length, not long.
+    for (int ifr=0;ifr<nr;ifr++){
+      int r_low=ifr/r_spacing; //index of our l-bin is just the integer division of the index of our f-bin
+      for (int ifphi=0;ifphi<nphi;ifphi++){
+	int phi_low=ifphi/phi_spacing;
+	for (int ifz=0;ifz<nz;ifz++){
+	  int z_low=ifz/z_spacing;
+	  q_lowres->Add(r_low,phi_low,z_low,q->Get(ifr,ifphi,ifz));
+	}
+      }
+    }
+  }
+  return;
 }
 
 void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefactor=1){
@@ -1418,7 +1542,35 @@ TVector3 AnnularFieldSim::sum_phislice_field_at(int r,int phi, int z){
   return sum;
 }
 
+TVector3 AnnularFieldSim::swimToInAnalyticSteps(float zdest,TVector3 start,int steps=1, int *goodToStep=0){
 
+  double zdist=zdest-start.Z();
+  double zstep=zdist/steps;
+  
+  TVector3 ret=start;
+
+  int rt,pt,zt; //just placeholders for the bounds-checking.
+  BoundsCase zBound;
+  for (int i=0;i<steps;i++){
+    zBound=GetZindexAndCheckBounds(ret.Z(),&zt);
+    if (zBound==OnLowEdge){
+      //nudge it in z:
+      ret.SetZ(ret.Z()+ALMOST_ZERO);
+    }
+    if (GetRindexAndCheckBounds(ret.Perp(),&rt)!=InBounds
+	|| GetPhiIndexAndCheckBounds(ret.Phi(),&pt)!=InBounds
+	|| (zBound==OutOfBounds)){
+      printf("AnnularFieldSim::swimToInAnalyticSteps at step %d, asked to swim particle from (%f,%f,%f) (rphiz)=(%f,%f,%f)which is outside the ROI.\n",i,ret.X(),ret.Y(),ret.Z(),ret.Perp(),ret.Phi(),ret.Z());
+    printf(" -- %f <= r < %f \t%f <= phi < %f \t%f <= z < %f \n",rmin_roi*step.Perp()+rmin,rmax_roi*step.Perp()+rmin, phimin_roi*step.Phi(),phimax_roi*step.Phi(),zmin_roi*step.Z(),zmax_roi*step.Z());
+    printf("Returning original position.\n");
+      if (!(goodToStep==0)) *goodToStep=i-1;
+      return ret;
+    }
+    ret=swimTo(start.Z()+zstep*(i+1),ret,true,true);
+  }
+  
+  return ret;
+}
 
 TVector3 AnnularFieldSim::swimToInSteps(float zdest,TVector3 start,int steps=1, bool interpolate=false, int *goodToStep=0){
   //short-circuit if we're out of range:
@@ -1451,7 +1603,7 @@ TVector3 AnnularFieldSim::swimToInSteps(float zdest,TVector3 start,int steps=1, 
   return ret;
 }
 
-TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate=false){
+TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate, bool useAnalytic){
 
  //using second order langevin expansion from http://skipper.physics.sunysb.edu/~prakhar/tpc/Papers/ALICE-INT-2010-016.pdf
   //TVector3 (*field)[nr][ny][nz]=field_;
@@ -1482,7 +1634,10 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate=fa
   }
 
   TVector3 fieldInt;
-  if (interpolate){
+  //note that using analytic takes priority over interpolating todo: clean this up to use a status rther than a pair of flags
+  if (useAnalytic){
+    fieldInt=analyticFieldIntegral(zdest,start);
+  } else if (interpolate){
     fieldInt=interpolatedFieldIntegral(zdest,start);
   }else{
     fieldInt=fieldIntegral(zdest,start);

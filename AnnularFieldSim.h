@@ -94,11 +94,13 @@ class AnnularFieldSim{
 
   
   void load_spacecharge(TH3F *hist, float zoffset, float scalefactor);
+  void load_analytic_spacecharge(float scalefactor);
   void setScaleFactorB(float x){Bscale=x;return;};
   void setScaleFactorE(float x){Escale=x;return;};
   void setFlatFields(float B, float E);
 
   TVector3 calc_unit_field(TVector3 at, TVector3 from);
+  TVector3 analyticFieldIntegral(float zdest,TVector3 start);
   TVector3 interpolatedFieldIntegral(float zdest,TVector3 start);
   int FilterPhiIndex(int phi,int range); //defaults to using nphi for range.
 
@@ -117,8 +119,9 @@ class AnnularFieldSim{
   TVector3 sum_local_field_at(int r,int phi, int z);
   TVector3 sum_nonlocal_field_at(int r,int phi, int z);
   TVector3 sum_phislice_field_at(int r, int phi, int z);
+  TVector3 swimToInAnalyticSteps(float zdest,TVector3 start,int steps, int *goodToStep);
   TVector3 swimToInSteps(float zdest,TVector3 start, int steps, bool interpolate, int *goodToStep);
-  TVector3 swimTo(float zdest,TVector3 start, bool interpolate);
+  TVector3 swimTo(float zdest,TVector3 start, bool interpolate=true, bool useAnalytic=false);
  
  private:
   BoundsCase GetRindexAndCheckBounds(float pos, int *r);

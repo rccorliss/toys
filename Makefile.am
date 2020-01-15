@@ -20,6 +20,7 @@ AM_LDFLAGS = -L$(libdir) -L$(OFFLINE_MAIN)/lib
 # let me know
 ROOTDICTS = \
   AnnularFieldSim_Dict.cc \
+  AnalyticFieldModel_Dict.cc \
     QPileUp_Dict.cc
 #  CylindricalFieldSim_Dict.cc 
 #  FieldSim_Dict.cc 
@@ -34,6 +35,7 @@ if MAKEROOT6
 pcmdir = $(libdir)
 nobase_dist_pcm_DATA = \
   AnnularFieldSim_rdict.pcm \
+AnalyticFieldModel_rdict.pcm \
   QPileUp_rdict.pcm
 
 #  CylindricalFieldSim_rdict.pcm \
@@ -41,6 +43,7 @@ nobase_dist_pcm_DATA = \
 else
   ROOT5_DICTS = \
     AnnularFieldSim_Dict.cc \
+    AnalyticFieldModel_Dict.cc \
     QPileUp_Dict.cc
 
 #rcc note that these all need trailing backslashes if not commented out.
@@ -52,6 +55,7 @@ endif
 libfieldsim_la_SOURCES = \
   $(ROOTDICTS) \
   AnnularFieldSim.cc \
+  AnalyticFieldModel.cc \
   QPileUp.cc 
 
 #FieldSim.cc 
@@ -59,6 +63,7 @@ libfieldsim_la_SOURCES = \
 
 pkginclude_HEADERS = \
   AnnularFieldSim.h \
+  AnalyticFieldModel.h \
   QPileUp.h \
   Constants.h
 #  FieldSim.h  

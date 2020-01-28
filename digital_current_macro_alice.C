@@ -75,8 +75,10 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   now=gSystem->Now();
   printf("set fields.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
-  //alice->load_spacecharge(alice_average,32,alice_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
-  alice->load_analytic_spacecharge(alice_chargescale*1e9);//(float multiplier.  at multiplier=1, there is ___ total charge in the volume.
+  alice->load_spacecharge(alice_average,0,alice_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
+  //computed the correction to get the same spacecharge as in the alice histogram:
+  double alice_analytic_scale=2.474639E-08/1.076505E+06;
+  alice->load_analytic_spacecharge(alice_analytic_scale);//(float multiplier.  at multiplier=1, there is 1.076505E+06 coulombs in the ALICE volume.
   now=gSystem->Now();
   printf("loaded spacecharge.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
@@ -194,8 +196,17 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 
   
   int validToStep=-1;
+  start=gSystem->Now();
   for (int i=0;i<nparticles;i++){
-    if (!(i%100)) printf("(periodic progress...) test[%d]=(%f,%f,%f)\n",i,testparticle[i].X(),testparticle[i].Y(),testparticle[i].Z());
+    if (!(i%100)) {
+       now=gSystem->Now();
+      printf("(periodic progress...) test[%d]=(%f,%f,%f)\t dtime=%lu\n",i,testparticle[i].X(),testparticle[i].Y(),testparticle[i].Z(),(unsigned long)(now-start));
+      start=now;
+    }
+
+
+
+      
     orig=testparticle[i];
     if (!loadOutputFromFile)
       {

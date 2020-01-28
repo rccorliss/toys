@@ -624,6 +624,8 @@ void AnnularFieldSim::load_analytic_spacecharge(float scalefactor=1){
   double tpc_halfz=250;
 
   aliceModel=new AnalyticFieldModel(ifc_radius,ofc_radius,tpc_halfz,scalefactor);
+  double totalcharge=0;
+  double localcharge=0;
 
   TVector3 pos;
   for (int ifr=0;ifr<nr;ifr++){
@@ -632,11 +634,13 @@ void AnnularFieldSim::load_analytic_spacecharge(float scalefactor=1){
 	pos=GetCellCenter(ifr,ifphi,ifz);
 	double vol=step.Z()*step.Phi()*(2*(ifr*step.Perp()+rmin)+step.Perp())*step.Perp();
 	//if(debugFlag()) printf("%d: AnnularFieldSim::load_analytic_spacecharge adding Q=%f into cell (%d,%d,%d)\n",__LINE__,qbin,i,j,k,localr,localphi,localz);
-
-	q->Add(ifr,ifphi,ifz,vol*aliceModel->Rho(pos)); //scalefactor must be applied to charge _and_ field, and so is handled in the aliceModel code.
+	localcharge=vol*aliceModel->Rho(pos);
+	totalcharge+=localcharge;
+	q->Add(ifr,ifphi,ifz,localcharge); //scalefactor must be applied to charge _and_ field, and so is handled in the aliceModel code.
       }
     }
   }
+  printf("AnnularFieldSim::load_analytic_spacecharge:  Total charge Q=%E Coulombs\n",totalcharge);
 
   if (lookupCase==HybridRes){
     //go through the q array and build q_lowres.  
@@ -705,6 +709,9 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefac
   //localr*dr+rmin-hrmin=hrstep*(i+0.5)
   //i=(localr*dr+rmin-hrmin)/hrstep
 
+  double totalcharge=0;
+ 
+
   float hr,hphi,hz;//the center of the histogram bin in histogram units (not indices)
   int localr,localphi,localz;//the f-bin of our local structure that contains that center.
   //start r at the first index that corresponds to a position in our grid's r-range.
@@ -750,12 +757,17 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefac
 	//should be lower radius and higher radius.  I'm off by a 0.5 on both of those.  Oops.
 	double vol=hzstep*hphistep*(2*hr+hrstep)*hrstep;
 	double qbin=scalefactor*vol*hist->GetBinContent(hist->GetBin(j+1,i+1,k+1));
-	float qold=q->Get(localr,localphi,localz);
+	//float qold=q->Get(localr,localphi,localz);
+	totalcharge+=qbin;
 	//if(debugFlag()) printf("%d: AnnularFieldSim::load_spacecharge adding Q=%f from hist(%d,%d,%d) into cell (%d,%d,%d)\n",__LINE__,qbin,i,j,k,localr,localphi,localz);
-	q->Add(localr,localphi,localz,qbin+qold);
+	q->Add(localr,localphi,localz,qbin);
       }
     }
   }
+
+  printf("AnnularFieldSim::load_spacecharge:  Total charge Q=%E Coulombs\n",totalcharge);
+
+  
 
   if (lookupCase==HybridRes){
     //go through the q array and build q_lowres.  

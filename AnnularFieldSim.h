@@ -1,17 +1,26 @@
 #include "assert.h"
 #include "TVector3.h"
+#include "AnalyticFieldModel.h"
+
 
 template <class T> class MultiArray;
 class TH3F;
+
 class AnnularFieldSim{
  public:
   enum BoundsCase {InBounds,OnHighEdge, OnLowEdge,OutOfBounds}; //note that 'OnLowEdge' is qualitatively different from 'OnHighEdge'.  Low means there is a non-zero distance between the point and the edge of the bin.  High applies even if that distance is exactly zero.
-  enum LookupCase {Full3D,HybridRes, PhiSlice};
+  enum LookupCase {Full3D,HybridRes, PhiSlice, Analytic};
+  //Full3D = uses (nr x nphi x nz)^2 lookup table
+  //Hybrid = uses (nr x nphi x nz) x (nr_local x nphi_local x nz_local) + (nr_low x nphi_low x nz_low)^2 set of tables
+  //PhiSlice = uses (nr x 1 x nz) x (nr x nphi x nz) lookup table exploiting phi symmetry.
+  //Analytic = doesn't use lookup tables -- no memory footprint, uses analytic E field at center of each bin.
+  //    Note that this is not the same as analytic propagation, which checks the analytic field integrals in each step.
 
   //debug items
   //
   int debug_printActionEveryN;
   int debug_printCounter;
+  AnalyticFieldModel *aliceModel;
   
   //constants of motion, dimensions, etc:
   //
@@ -78,7 +87,7 @@ class AnnularFieldSim{
 		  int r, int roi_r0, int roi_r1,
 		  int phi, int roi_phi0, int roi_phi1,
 		  int z, int roi_z0, int roi_z1,
-		  float vdr);
+		  float vdr, LookupCase in_lookupCase=PhiSlice);
   AnnularFieldSim(float in_innerRadius, float in_outerRadius, float in_outerZ,
 		  int r, int roi_r0, int roi_r1, int in_rLowSpacing, int in_rHighSize,
 		  int phi, int roi_phi0, int roi_phi1, int in_phiLowSpacing, int in_phiHighSize,
@@ -109,6 +118,7 @@ class AnnularFieldSim{
   TVector3 GetWeightedCellCenter(int r, int phi, int z);
   TVector3 fieldIntegral(float zdest,TVector3 start);
   void populate_fieldmap();
+  //now handled by setting 'analytic' lookup:  void populate_analytic_fieldmap();
   void  populate_lookup();
   void  populate_full3d_lookup();
   void  populate_highres_lookup();

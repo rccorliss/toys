@@ -20,7 +20,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   const float alice_z=249.7;
   const float alice_driftVolt=-99930; //V
   const float alice_driftVel=2.58*1e6;//cm per s
-  const float alice_chargescale=8.85e-16;//their hist. has charge in units of C/cm^3 /eps0.  This is eps0 in SI+cm units so that I can multiple by the volume in cm^3 to get the right Q.
+  const double alice_chargescale=8.85e-16;//their hist. has charge in units of C/cm^3 /eps0.  This is eps0 in SI+cm units so that I can multiple by the volume in cm^3 to get the right Q.
 
 
   //define a region of interest, in units of the intrinsic scale of the alice histogram:
@@ -63,7 +63,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 		  nr-reduction, nr_roi_min,nr_roi_min+nr_roi,
 		  nphi-reduction,nphi_roi_min, nphi_roi_min+nphi_roi,
 		  nz-reduction, nz_roi_min, nz_roi_min+nz_roi,
-		  alice_driftVel);
+			 alice_driftVel, AnnularFieldSim::Analytic);
   //  new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,9,120,9,alice_driftVel);
    
     // dropping half-res for test: new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,53,18,31,alice_driftVel);
@@ -75,7 +75,8 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   now=gSystem->Now();
   printf("set fields.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
-  alice->load_spacecharge(alice_average,32,alice_chargescale);
+  //alice->load_spacecharge(alice_average,32,alice_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
+  alice->load_analytic_spacecharge(alice_chargescale*1e9);//(float multiplier.  at multiplier=1, there is ___ total charge in the volume.
   now=gSystem->Now();
   printf("loaded spacecharge.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
@@ -89,8 +90,8 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   start=now;
  
   //define a grid of test points:
-  const int nparticles=100*100;
-  const int divisor=100;
+    const int divisor=100;
+  const int nparticles=divisor*divisor;
   TVector3 testparticle[nparticles];
   TVector3 outparticle[nparticles];
   TVector3 outparticle2[nparticles];
@@ -121,10 +122,11 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   }
 
   TFile *output=TFile::Open("last_macro_output.ttree.root","RECREATE");
-  TVector3 orig,out1,out2,back1,back2;
+  TVector3 orig,outa,out1,out2,back1,back2;
   int goodSteps[2];
   TTree pTree("pTree","Particle Tree");
   pTree.Branch("orig","TVector3",&orig);
+  pTree.Branch("outa","TVector3",&outa);
   pTree.Branch("out1","TVector3",&out1);
     pTree.Branch("out1N",&goodSteps[0]);
   pTree.Branch("back1","TVector3",&back1);
@@ -197,10 +199,12 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
     orig=testparticle[i];
     if (!loadOutputFromFile)
       {
-	  outparticle[i]=alice->swimToInSteps(zmax_roi,testparticle[i],600,true, &validToStep);
+	outparticle[i]=alice->swimToInSteps(zmax_roi,testparticle[i],600,true, &validToStep);
+	  outparticle2[i]=alice->swimToInAnalyticSteps(zmax_roi,testparticle[i],600, &validToStep); //no arg for interpolation in the analytic swim, since that's trivially required
       }
 
     out1=outparticle[i];//not generating from the swim.=alice->swimToInSteps(zmax_roi,testparticle[i],600,true);
+    outa=outparticle2[i];//not generating from the swim.=alice->swimToInSteps(zmax_roi,testparticle[i],600,true);
     outx[i]=outparticle[i].X();
     outy[i]=outparticle[i].Y();
     outz[i]=outparticle[i].Z();
@@ -213,8 +217,9 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
     goodSteps[1]=validToStep;
 
     //for convenience of reading, set all of the pTree in microns, not cm:
-    orig=orig*1e4;//10mm/cm*1000um/mm
+    orig*=1e4;//10mm/cm*1000um/mm
     out1*=1e4;//10mm/cm*1000um/mm
+    outa*=1e4;
     back1*=1e4;//10mm/cm*1000um/mm
     pTree.Fill();
   }

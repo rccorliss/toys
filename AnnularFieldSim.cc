@@ -718,7 +718,7 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefac
   for (int i=(rmin-hrmin)/hrstep;i<hrn;i++){
     hr=hrmin+hrstep*(i+0.5);//histogram bin center in cm
     localr=(hr-rmin)/step.Perp();//index of histogram bin center in our internal storage
-    printf("loading r=%d into charge from histogram bin %d\n",localr,i);
+    //printf("loading r=%d into charge from histogram bin %d\n",localr,i);
     if (localr<0){
       printf("Loading from histogram has r out of range! r=%f < rmin=%f\n",hr,rmin);      
       continue;
@@ -1142,6 +1142,7 @@ void AnnularFieldSim::setFlatFields(float B, float E){
     Eexternal->GetFlat(i)->SetXYZ(0,0,E);
   for (int i=0;i<Bfield->Length();i++)
     Bfield->GetFlat(i)->SetXYZ(0,0,B);
+  Enominal=E;
   return;
 }
 
@@ -1604,10 +1605,11 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate, b
   //float fieldz=field_[in3(x,y,0,fx,fy,fz)].Z()+E.Z();// *field[x][y][zi].Z();
   double fieldz=fieldInt.Z()/zdist;// average field over the path.
   
-  double mu=vdrift/fieldz;//cm^2/(V*s);
-  double omegatau=1*mu*B.Z();//mu*Q_e*B, units cm^2/m^2
+  double mu=vdrift/fieldz;//vdrift in [cm/s], field in [V/cm] hence mu in [cm^2/(V*s)];
+  double omegatau=1*mu*B.Z();//mu*Q_e*B, mu in [cm^2/(V*s)], B in [T] hence (thanks, google) omegatau in [0.0001] = [cm^2/m^2]
   //originally the above was q*mu*B, but 'q' is really about flipping the direction of time.  if we do this, we negate both vdrift and q, so in the end we have no charge dependence -- we 'see' the charge by noting that we're asking to drift against the overall field.
-  omegatau=omegatau*1e-4;//1m/100cm * 1m/100cm to get proper unitless.
+  omegatau=omegatau*1e-4;//*1m/100cm * 1m/100cm to get proper unitless.
+  //or:  omegatau=-10*(10*B.Z())*(vdrift*1e6)/fieldz; //which is the same as my calculation up to a sign.
   //printf("omegatau=%f\n",omegatau);
   double c0=1/(1+omegatau*omegatau);
   double T1=1.0;
@@ -1615,14 +1617,28 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate, b
   double c1=c0*T1*omegatau;
   double c2=c1*T2*omegatau;
 
+  TVector3 EintOverEz=1/fieldInt.Z()*fieldInt;
+  TVector3 BintOverBz=zdist/B.Z()*B;
+
   //really this should be the integral of the ratio, not the ratio of the integrals.
   //and should be integrals over the B field, btu for now that's fixed and constant across the region, so not necessary
   //there's no reason to do this as r phi.  This is an equivalent result, since I handle everything in vectors.
-  double deltaX=c0*fieldInt.X()/fieldz+c1*fieldInt.Y()/fieldz-c1*B.Y()/B.Z()*zdist+c2*B.X()/B.Z()*zdist;
-  double deltaY=c0*fieldInt.Y()/fieldz-c1*fieldInt.X()/fieldz+c1*B.X()/B.Z()*zdist+c2*B.Y()/B.Z()*zdist;
-  double deltaZ=0; //not correct, but small?  different E leads to different drift velocity.  see linked paper.  fix eventually.
+  double deltaX=c0*EintOverEz.X()+c1*EintOverEz.Y()-c1*BintOverBz.Y()+c2*BintOverBz.X();
+  double deltaY=c0*EintOverEz.Y()-c1*EintOverEz.X()+c1*BintOverBz.X()+c2*BintOverBz.Y();
+  //strictly, for deltaZ we want to integrate v'(E)*(E-E0)dz and v''(E)*(E-E0)^2 dz, but over a short step the field is constant, and hence this can be a product of the integral and not an integral of the product:
 
+  double vprime=5000;//cm/s per V/cm, hard-coded value for 50:50.  Eventually this needs to be part of the constructor, as do most of the repeated math terms here.
+  double vdoubleprime=0; //neglecting the v'' term for now.  Fair? It's pretty linear at our operating point, and it would require adding an additional term to the field integral.
 
+  //note: as long as my step is very small, I am essentially just reading the field at a point and multiplying by the step size.
+  //hence integral of P dz, where P is a function of the fields, int|P(E(x,y,z))dz=P(int|E(x,y,z)dz/deltaZ)*deltaZ
+  //hence: , eg, int|E^2dz=(int|Edz)^2/deltaz
+  double deltaZ=vprime/vdrift*fieldInt.Z()-zdist*Enominal
+    +vdoubleprime/vdrift*(fieldInt.Z()-Enominal*zdist)*(fieldInt.Z()-Enominal*zdist)/(2*zdist)
+    -0.5/zdist*(EintOverEz.X()*EintOverEz.X()+EintOverEz.Y()*EintOverEz.Y())
+    +c1/zdist*(EintOverEz.X()*BintOverBz.Y()-EintOverEz.Y()*BintOverBz.X())
+    +c2/zdist*(EintOverEz.X()*BintOverBz.X()+EintOverEz.Y()*BintOverBz.Y())
+    +c2/zdist*(BintOverBz.X()*BintOverBz.X()+BintOverBz.Y()*BintOverBz.Y()); //missing v'' term.
   
   TVector3 dest(start.X()+deltaX,start.Y()+deltaY,zdest+deltaZ);
   

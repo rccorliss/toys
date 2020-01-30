@@ -26,13 +26,13 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   //define a region of interest, in units of the intrinsic scale of the alice histogram:
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
   int nr=159;
-  int nr_roi_min=8;
+  int nr_roi_min=0;
   int nr_roi=5;
   int nphi=360;
-  int nphi_roi_min=14;
+  int nphi_roi_min=0;
   int nphi_roi=5;
   int nz=62;
-  int nz_roi_min=1;
+  int nz_roi_min=0;
   int nz_roi=12;
 
   float rmin_roi=alice_rmin+alice_deltar/(nr*1.0)*nr_roi_min;
@@ -77,7 +77,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   start=now;
   alice->load_spacecharge(alice_average,0,alice_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
   //computed the correction to get the same spacecharge as in the alice histogram:
-  double alice_analytic_scale=2.474639E-08/1.076505E+06;
+  double alice_analytic_scale=2.474639E-08/1.076505E+06*1e12;
   alice->load_analytic_spacecharge(alice_analytic_scale);//(float multiplier.  at multiplier=1, there is 1.076505E+06 coulombs in the ALICE volume.
   now=gSystem->Now();
   printf("loaded spacecharge.  the dtime is %lu\n",(unsigned long)(now-start));
@@ -92,7 +92,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   start=now;
  
   //define a grid of test points:
-    const int divisor=100;
+    const int divisor=40;
   const int nparticles=divisor*divisor;
   TVector3 testparticle[nparticles];
   TVector3 outparticle[nparticles];
@@ -211,7 +211,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
     if (!loadOutputFromFile)
       {
 	outparticle[i]=alice->swimToInSteps(zmax_roi,testparticle[i],600,true, &validToStep);
-	  outparticle2[i]=alice->swimToInAnalyticSteps(zmax_roi,testparticle[i],600, &validToStep); //no arg for interpolation in the analytic swim, since that's trivially required
+	outparticle2[i]=alice->swimToInAnalyticSteps(zmax_roi,testparticle[i],600, &validToStep); //no arg for interpolation in the analytic swim, since that's trivially required
       }
 
     out1=outparticle[i];//not generating from the swim.=alice->swimToInSteps(zmax_roi,testparticle[i],600,true);
@@ -223,8 +223,8 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
     
     
     //printf("out[%d]=(%f,%f,%f)\n",i,outparticle[i].X(),outparticle[i].Y(),outparticle[i].Z());
- 
-      back1=backparticle[i]=alice->swimToInSteps(testparticle[i].Z(),outparticle[i],600,true,&validToStep);
+    //drift back from the analytic position:
+      back1=backparticle[i]=alice->swimToInSteps(testparticle[i].Z(),outa,600,true,&validToStep);
     goodSteps[1]=validToStep;
 
     //for convenience of reading, set all of the pTree in microns, not cm:

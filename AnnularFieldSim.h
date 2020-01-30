@@ -30,6 +30,7 @@ class AnnularFieldSim{
   //double vprime2; //second derivative of drift velocity at specific E
   float Bscale;//additional scale factor for debugging B effects. Defaults to 1.0
   float Escale;//additional scale factor for debugging E effects. Defaults to 1.0
+  float Enominal;//magnitude of the nominal field on which drift speed is based, in V/cm.
   float phispan;//angular span of the area in the phi direction, since TVector3 is too smart.
   float rmin, rmax;//inner and outer radii of the annulus
   float zmin, zmax;//lower and upper edges of the coordinate system in z (not fully implemented yet)

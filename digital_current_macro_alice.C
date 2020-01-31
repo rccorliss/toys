@@ -27,10 +27,10 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
   int nr=159;
   int nr_roi_min=0;
-  int nr_roi=5;
+  int nr_roi=1;
   int nphi=360;
-  int nphi_roi_min=0;
-  int nphi_roi=5;
+  int nphi_roi_min=5;
+  int nphi_roi=1;
   int nz=62;
   int nz_roi_min=0;
   int nz_roi=12;
@@ -90,9 +90,12 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
  now=gSystem->Now();
   printf("populated fieldmap.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
+  printf("consistency check:  integrate field along IR and OR, confirm V:\n");
+  
+	 
  
   //define a grid of test points:
-    const int divisor=40;
+    const int divisor=4;
   const int nparticles=divisor*divisor;
   TVector3 testparticle[nparticles];
   TVector3 outparticle[nparticles];
@@ -138,7 +141,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   TTree fTree("fTree","field Tree");
   TVector3 pos0,pos,Efield,phihat;
   TVector3 zero(0,0,0);
-  TVector3 Eint;
+  TVector3 Eint,EintA;
   bool inroi;
   float charge,eintp, ep;
   fTree.Branch("pos","TVector3",&pos);
@@ -146,12 +149,13 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 
   fTree.Branch("E","TVector3",&Efield);
   fTree.Branch("Eint","TVector3",&Eint);
+  fTree.Branch("EintA","TVector3",&EintA);
   fTree.Branch("q",&charge);
   fTree.Branch("Eintp",&eintp);
   fTree.Branch("Ep",&ep);
   fTree.Branch("roi",&inroi);
-  TVector3 delr=alice->GetCellCenter(2,0,0)-alice->GetCellCenter(1,0,0);
-  TVector3 delp;
+  float delr,delp;//=alice->GetCellCenter(2,0,0)-alice->GetCellCenter(1,0,0);
+  //TVector3 delp;
   float delz=alice->GetCellCenter(0,0,1).Z()-alice->GetCellCenter(0,0,0).Z();
   
   bool inr,inp,inz;
@@ -166,34 +170,40 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 	zl=iz-nz_roi_min;
 	inz=(zl>=0 && zl<nz_roi);
 	pos0=alice->GetCellCenter(ir,ip,iz);
-	delr=alice->GetCellCenter(ir+1,ip,iz)-pos0;
-	delp=alice->GetCellCenter(ir,ip+1,iz)-pos0;
+	delr=(alice->GetCellCenter(ir+1,ip,iz)).Perp()-pos0.Perp();
+	delp=(alice->GetCellCenter(ir,ip+1,iz)).Phi()-pos0.Phi();
 
 	Efield=zero;
 	inroi=inr && inp && inz;
 	if (inroi){
 	  Efield=alice->Efield->Get(ir-nr_roi_min,ip-nphi_roi_min,iz-nz_roi_min);
-	  for (int rlocal=-10;rlocal<10;rlocal++){
+	  //for (int rlocal=-10;rlocal<10;rlocal++){
+	    //int plocal=0;
+	  int rlocal=-10;
 	    for (int plocal=-10;plocal<10;plocal++){
-	      pos=pos0+(rlocal)/20.0*delr+(plocal)/(20.0)*delp;
+	      pos=pos0;
+	      pos.SetPerp(pos0.Perp()+delr/20*rlocal);
+	      pos.RotateZ(delp/20*plocal);//+(rlocal)/20.1*delr+(plocal)/(20.1)*delp;
+	      printf("trying pos=(%f,%f,%f)= rphiz(%f,%f,%f)\n",pos.X(),pos.Y(),pos.Z(),pos.Perp(),pos.Phi(),pos.Z());
 	      phihat=pos;// build our phi position by starting with the vector in the rz plane:
 	      phihat.SetZ(0);//remove the z component so it points purely in r
 	      phihat.SetMag(1.0);//scale it to 1.0;
 	      phihat.RotateZ(TMath::Pi()/2);//rotate 90 degrees from the position vector so it now points purely in phi; 
 	      Eint=(alice->interpolatedFieldIntegral(pos.Z()-delz/(4.0),pos))*(4.0/delz);
+	      EintA=(alice->analyticFieldIntegral(pos.Z()-delz/(4.0),pos))*(4.0/delz);
 	      charge=alice->q->Get(ir,ip,iz);
 	      eintp=Eint.Dot(phihat);
 	      ep=Efield.Dot(phihat);
 	      fTree.Fill();
-	    }
-	  }
+	      }
+	    //}
 	}
 	
       }
     }
   }
   fTree.Write();
-
+  return;
   
   int validToStep=-1;
   start=gSystem->Now();

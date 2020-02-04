@@ -20,7 +20,9 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   const float alice_z=249.7;
   const float alice_driftVolt=-99930; //V
   const float alice_driftVel=2.58*1e6;//cm per s
-  const double alice_chargescale=8.85e-16;//their hist. has charge in units of C/cm^3 /eps0.  This is eps0 in SI+cm units so that I can multiple by the volume in cm^3 to get the right Q.
+  const double epsilonnaught=8.854e-12;// units of C/(V*m)
+  const double eps_in_cm=epsilonnaught/100; //units of C/(V*cm)
+  const double alice_chargescale=8.85e-14;//their hist. has charge in units of C/cm^3 /eps0.  This is eps0 in (V*cm)/C units so that I can multiple by the volume in cm^3 to get Q in C.
 
 
   //define a region of interest, in units of the intrinsic scale of the alice histogram:

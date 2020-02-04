@@ -24,7 +24,8 @@ class AnnularFieldSim{
   
   //constants of motion, dimensions, etc:
   //
-  static constexpr float k=8.987e13;//gas electric permeability N*cm^2/C^2 in a vacuum.
+  //static constexpr float k=8.987e13;//=1/(4*pi*eps0) in N*cm^2/C^2 in a vacuum. N*cm^2/C units, so that we supply space charge in coulomb units.
+  static constexpr float k_perm=8.987e11;//=1/(4*pi*eps0) in (V*cm)/C in a vacuum. so that we supply space charge in Coulombs, distance in cm, and fields in V/cm
   double vdrift; //gas drift speed in cm/s
   //double vprime; //first derivative of drift velocity at specific E
   //double vprime2; //second derivative of drift velocity at specific E

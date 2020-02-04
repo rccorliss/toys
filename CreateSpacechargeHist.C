@@ -36,12 +36,15 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
   float us=1.0,ms=us*1e3,s=ms*1e3;
   float um=1e-4, mm=um*1e3, cm=mm*10,m=mm*1e3; //changed to make 'cm' 1.0, for convenience.
   float Hz=1/s, kHz=1/ms, MHz=1/us;
+  float V=1;
   //used two ways:  1) to apply units to variables when defined
   //                2) to divide by certain units so that those variables are expressed in those units.
-  
-  float vIon=16.0*um/us;
-  float ampGain=1e4;
-  float ampIBFfrac=0.01;
+
+  float ionMobility=3.37*cm*cm/V/s;
+  float vIon=ionMobility*400*V;
+  //float vIon=16.0*um/us;
+  float ampGain=2e3;
+  float ampIBFfrac=0.02;
   float ionsPerEle=ampGain*ampIBFfrac;
   float mbRate=22*kHz;
   float z_rdo=105.5*cm;

@@ -119,7 +119,7 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
   Epartial_phislice=new MultiArray<TVector3>(1);
   Epartial_phislice->GetFlat(0)->SetXYZ(0,0,0);
   q_lowres=new MultiArray<double>(1);
-  *(q_lowres->GetFlat(0))=0;
+  (q_lowres->GetFlat(0))=0;
   q_local=new MultiArray<double>(1);
   *(q_local->GetFlat(0))=0;
 
@@ -230,14 +230,13 @@ TVector3 AnnularFieldSim::calc_unit_field(TVector3 at, TVector3 from){
 
   //this could check roi bounds before returning, if things start acting funny.
   
-  const double k=8.987*1e13;//=1/(4*pi*eps0) in N*cm^2/C^2 in a vacuum. N*cm^2/C units, so that we supply space charge in coulomb units.
   TVector3 delr=at-from;
   TVector3 field=delr; //to set the direction.
   if (delr.Mag()<ALMOST_ZERO*ALMOST_ZERO){ //note that this has blurred units -- it should scale with all three dimensions of stepsize.  For lots of phi bins, especially, this might start to read as small before it's really small.
     //do nothing.  the vector is already zero, which will be our approximation.
     //field.SetMag(0);//no contribution if we're in the same cell. -- but root warns if trying to resize something of magnitude zero.
   } else{
-    field.SetMag(k*1/(delr*delr));//scalar product on the bottom.
+    field.SetMag(k_perm*1/(delr*delr));//scalar product on the bottom.
   }
   //printf("calc_unit_field at (%2.2f,%2.2f,%2.2f) from  (%2.2f,%2.2f,%2.2f).  Mag=%2.4fe-9\n",at.x(),at.Y(),at.Z(),from.X(),from.Y(),from.Z(),field.Mag()*1e9);
   

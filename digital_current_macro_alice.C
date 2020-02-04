@@ -78,7 +78,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   alice->load_spacecharge(alice_average,0,alice_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
   //computed the correction to get the same spacecharge as in the alice histogram:
   double alice_analytic_scale=2.474639E-08/1.076505E+06*1e12;
-  alice->load_analytic_spacecharge(alice_analytic_scale);//(float multiplier.  at multiplier=1, there is 1.076505E+06 coulombs in the ALICE volume.
+  alice->load_analytic_spacecharge(alice_analytic_scale*1e6);//(float multiplier.  at multiplier=1, there is 1.076505E+06 coulombs in the ALICE volume.
   now=gSystem->Now();
   printf("loaded spacecharge.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
@@ -184,7 +184,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 	      pos=pos0;
 	      pos.SetPerp(pos0.Perp()+delr/20*rlocal);
 	      pos.RotateZ(delp/20*plocal);//+(rlocal)/20.1*delr+(plocal)/(20.1)*delp;
-	      printf("trying pos=(%f,%f,%f)= rphiz(%f,%f,%f)\n",pos.X(),pos.Y(),pos.Z(),pos.Perp(),pos.Phi(),pos.Z());
+	      //printf("trying pos=(%f,%f,%f)= rphiz(%f,%f,%f)\n",pos.X(),pos.Y(),pos.Z(),pos.Perp(),pos.Phi(),pos.Z());
 	      phihat=pos;// build our phi position by starting with the vector in the rz plane:
 	      phihat.SetZ(0);//remove the z component so it points purely in r
 	      phihat.SetMag(1.0);//scale it to 1.0;

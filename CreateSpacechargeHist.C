@@ -128,7 +128,7 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
 	//compute the bin volume:
 	int bin=hCharge->FindBin(phi,r/(cm),zprim/(cm));
 	double hr=hCharge->GetYaxis()->GetBinLowEdge(bin);
-	double vol=(hzstep*hphistep*(2*hr+hrstep)*hrstep)/cm/cm/cm;
+	double vol=(hzstep*hphistep*(hr+hrstep*0.5)*hrstep)/cm/cm/cm;
 
 	hCharge->Fill(phi,r/(cm),zprim/(cm),ne/vol); //primary ion, drifted by t0, in cm
 	hCharge->Fill(phi,r/(cm),zibf/(cm),ne*ionsPerEle/vol); //amp ion, drifted by t0, in cm

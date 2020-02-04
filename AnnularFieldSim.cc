@@ -755,7 +755,7 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefac
 	}
 	//volume is simplified from the basic formula:  float vol=hzstep*(hphistep*(hr+hrstep)*(hr+hrstep) - hphistep*hr*hr);
 	//should be lower radius and higher radius.  I'm off by a 0.5 on both of those.  Oops.
-	double vol=hzstep*hphistep*(2*hr+hrstep)*hrstep;
+	double vol=hzstep*hphistep*(hr+0.5*hrstep)*hrstep;
 	double qbin=scalefactor*vol*hist->GetBinContent(hist->GetBin(j+1,i+1,k+1));
 	//float qold=q->Get(localr,localphi,localz);
 	totalcharge+=qbin;

@@ -27,7 +27,9 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
   
   PHG4HitContainer *eleHits=new PHG4HitContainer();
   printf("eleHits pointer is %p\n",(void *)eleHits);
-  T->SetBranchAddress("DST.TPC.G4HIT_TPC",&eleHits);
+  //older data:  T->SetBranchAddress("DST.TPC.G4HIT_TPC",&eleHits);
+  //newer data:
+  T->SetBranchAddress("DST#TPC#G4HIT_TPC",&eleHits);
   printf("after set-address, eleHits pointer is %p\n",(void *)eleHits);
 
 

@@ -5,8 +5,8 @@
 #basename="G4Hits_sHijing_9-11fm_"
 
 #at rcas:
-dir="/sphenix/sim/sim01/sphnxpro/sHijing/2019-07-28/fm_9-11/"
-basename="G4Hits_sHijing_9-11fm_"
+#dir="/sphenix/sim/sim01/sphnxpro/sHijing/2019-07-28/fm_9-11/"
+#basename="G4Hits_sHijing_9-11fm_"
 #note that these two sims have different naming conventions for the TPC hits!  Must change the .C code to match.
 #new sim:
 dir="/sphenix/sim/sim01/sphnxpro/Geant4-10.05.p01/fm_0-12/FTFP_BERT_HP/"

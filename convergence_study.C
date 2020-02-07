@@ -7,7 +7,7 @@ void convergence_study(){
   //plot those numbers vs reduction.
 
   int first_sample=1;
-  int last_sample=40;
+  int last_sample=99;
   int n_samples=last_sample-first_sample+1;
   float red[n_samples];
   float sigmared[n_samples];
@@ -15,22 +15,35 @@ void convergence_study(){
   float deltarphi[n_samples];
   float sigmar[n_samples];
   float sigmarphi[n_samples];
+  float deltarF[n_samples];
+  float deltarphiF[n_samples];
 
   TFile *f;
   TTree *t;
   TH1F *hR;
   TH1F *hRphi;
+  TH1F *hRfrac;
+  TH1F *hRphiFrac;
   for (int i=0;i<n_samples;i++){
-    f=TFile::Open(Form("analytic_fixed_reduction_1e8scale_%d.ttree.root",i+first_sample));
+    f=TFile::Open(Form("output/analytic_fixed_fraction_f%d.ttree.root",i+first_sample));
+    printf("loading file %d\n",i);
+    assert(f->IsOpen());
     t=(TTree*)f->Get("pTree");
     t->Draw("(out1.Perp()-outa.Perp())>>histR");
     t->Draw("(out1.Phi()-outa.Phi())*orig.Perp()>>histRphi");
     hR=(TH1F*)gDirectory->Get("histR");
     hRphi=(TH1F*)gDirectory->Get("histRphi");
-
+   t->Draw("(out1.Perp()-outa.Perp())/(outa.Perp()-orig.Perp())>>histRfrac");
+    t->Draw("(out1.Phi()-outa.Phi())/(outa.Phi()-orig.Phi())>>histRphiFrac");
+    hR=(TH1F*)gDirectory->Get("histR");
+    hRphi=(TH1F*)gDirectory->Get("histRphi");
+    hRfrac=(TH1F*)gDirectory->Get("histRfrac");
+    hRphiFrac=(TH1F*)gDirectory->Get("histRphiFrac");
     deltar[i]=hR->GetMean();
+    deltarF[i]=hRfrac->GetMean();
     sigmar[i]=hR->GetRMS();
     deltarphi[i]=hRphi->GetMean();
+    deltarphiF[i]=hRphiFrac->GetMean();
     sigmarphi[i]=hRphi->GetRMS();
     red[i]=i+first_sample;
     sigmared[i]=0;
@@ -41,15 +54,32 @@ void convergence_study(){
 
   
  TGraphErrors *getemp;
-  TMultiGraph *mgtemp=new TMultiGraph();
-  mgtemp->SetTitle("r and r*phi residual for varying reco grid sizes;grid reduction;residual(um)");
+ TMultiGraph *mgtemp;
+ mgtemp=new TMultiGraph();
+  mgtemp->SetTitle("r and r*phi residual for varying reco grid sizes;fraction of nominal grid;residual(um)");
   getemp=new TGraphErrors(n_samples,red,deltar,sigmared,sigmar);
-  getemp->SetTitle("r diff (um);reduction;(um)");
+  getemp->SetTitle("r diff (um);fraction of nominal grid;(um)");
   getemp->SetMarkerColor(kRed);
   getemp->SetMarkerStyle(kStar);
   mgtemp->Add(getemp);
   getemp=new TGraphErrors(n_samples,red,deltarphi,sigmared,sigmarphi);
-  getemp->SetTitle("r*(phi diff) (um);reduction;(um)");
+  getemp->SetTitle("r*(phi diff) (um);fraction of nominal grid;(um)");
+   getemp->SetMarkerColor(kBlue);
+  getemp->SetMarkerStyle(kStar);
+  mgtemp->Add(getemp);
+  mgtemp->Draw("AC*");
+
+ TCanvas *c2 =  new TCanvas();
+ c2->cd();
+   mgtemp=new TMultiGraph();
+  mgtemp->SetTitle("r/driftr and phi/driftphi residual for varying reco grid sizes;fraction of nominal grid;residual(um)");
+  getemp=new TGraphErrors(n_samples,red,deltarF,sigmared,sigmar);
+  getemp->SetTitle("r diff/r drift;fraction of nominal grid;(um)");
+  getemp->SetMarkerColor(kRed);
+  getemp->SetMarkerStyle(kStar);
+  mgtemp->Add(getemp);
+  getemp=new TGraphErrors(n_samples,red,deltarphiF,sigmared,sigmarphi);
+  getemp->SetTitle("(phi diff/ phi drift;fraction of nominal grid;(um)");
    getemp->SetMarkerColor(kBlue);
   getemp->SetMarkerStyle(kStar);
   mgtemp->Add(getemp);

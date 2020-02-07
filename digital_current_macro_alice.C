@@ -29,13 +29,16 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
   int nr=159;
   int nr_roi_min=0;
-  int nr_roi=1;
+  int nr_roi=5;
+  int nr_roi_max=nr_roi_min+nr_roi;
   int nphi=360;
-  int nphi_roi_min=5;
-  int nphi_roi=1;
+  int nphi_roi_min=0;
+  int nphi_roi=5;
+  int nphi_roi_max=nphi_roi_min+nphi_roi;
   int nz=62;
   int nz_roi_min=0;
   int nz_roi=12;
+  int nz_roi_max=nz_roi_min+nz_roi;
 
   float rmin_roi=alice_rmin+alice_deltar/(nr*1.0)*nr_roi_min;
   float rmax_roi=rmin_roi+alice_deltar/nr*nr_roi;
@@ -51,8 +54,36 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
  float zmin_roi_with_buffer=zmin_roi+alice_z/(nz*1.0)*(0.5);
  float zmax_roi_with_buffer=zmax_roi-alice_z/(nz*1.0)*(0.5);
 
+
+
+ 
+
  printf("r bounds are %f<%f<%f<r<%f<%f<%f\n",alice_rmin,rmin_roi,rmin_roi_with_buffer,rmax_roi_with_buffer,rmax_roi,alice_rmax);
  printf("phi bounds are %f<%f<%f<phi<%f<%f<%f\n",0.0,phimin_roi,phimin_roi_with_buffer,phimax_roi_with_buffer,phimax_roi,2*TMath::Pi());
+
+ //now that we've set certain bounds, re-define the size of the simulation per our reduction factor:
+ if (reduction==0){
+   //do nothing
+ }else if (reduction>0){
+   //reduce all dimensions by the specified amount:
+   nr=nr-reduction;
+   nphi=nphi-reduction;
+   nz=nz-reduction;
+ } else if (reduction<0){
+   //scale all dimensions by the specified amount in percent:
+   nr=ceil(-nr*reduction*0.01);
+   nphi=ceil(-nphi*reduction*0.01);
+   nz=ceil(-nz*reduction*0.01);
+ }
+ //make sure we didn't break anything:
+   if (nr<1)nr=1;
+   if (nphi<1)nphi=1;
+   if (nz<1)nz=1;
+   if (nr_roi_max>nr)nr_roi_max=nr;
+   if (nphi_roi_max>nphi)nphi_roi_max=nphi;
+   if (nz_roi_max>nz)nz_roi_max=nz;
+
+
  
   //get the ALICE histogram
   TFile *f=TFile::Open("InputSCDensityHistograms_8000events.root");
@@ -62,9 +93,9 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   start=now;
   AnnularFieldSim *alice=
     new  AnnularFieldSim(alice_rmin,alice_rmax,alice_z,
-		  nr-reduction, nr_roi_min,nr_roi_min+nr_roi,
-		  nphi-reduction,nphi_roi_min, nphi_roi_min+nphi_roi,
-		  nz-reduction, nz_roi_min, nz_roi_min+nz_roi,
+		  nr, nr_roi_min,nr_roi_max,
+		  nphi,nphi_roi_min, nphi_roi_max,
+		  nz, nz_roi_min, nz_roi_max,
 			 alice_driftVel, AnnularFieldSim::Analytic);
   //  new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,9,120,9,alice_driftVel);
    
@@ -79,8 +110,8 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   start=now;
   alice->load_spacecharge(alice_average,0,alice_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
   //computed the correction to get the same spacecharge as in the alice histogram:
-  double alice_analytic_scale=2.474639E-08/1.076505E+06*1e12;
-  alice->load_analytic_spacecharge(alice_analytic_scale*1e6);//(float multiplier.  at multiplier=1, there is 1.076505E+06 coulombs in the ALICE volume.
+  double alice_analytic_scale=1.237320E-06/1.076505E+06;//1e3;//2.474639E-08/1.076505E+06*1e12;
+  alice->load_analytic_spacecharge(alice_analytic_scale);//(float multiplier.  at multiplier=1, there is 1.076505E+06 coulombs in the ALICE volume.
   now=gSystem->Now();
   printf("loaded spacecharge.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
@@ -93,11 +124,24 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   printf("populated fieldmap.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   printf("consistency check:  integrate field along IR and OR, confirm V:\n");
-  
-	 
+
+  if (reduction==0){
+    TH3F* hAnCharge=new TH3F("hAnCharge","hAnCharge;phi;r;z",360,0,6.281,159,alice_rmin,alice_rmax,62,0,alice_z);
+    int rh,ph,zh;
+    for (int i=0;i<hAnCharge->GetNcells();i++){
+      hAnCharge->GetBinXYZ(i,ph,rh,zh);
+      hAnCharge->Fill(0.0,0.0,0.0,0.0);
+      hAnCharge->SetBinContent(i,alice->q->Get(rh%nr,ph%nphi,zh%nz));
+    }
+    hAnCharge->Project3D("XZ")->Draw("colz");
+    TCanvas *ct=new TCanvas();
+    hAnCharge->Project3D("YZ")->Draw("colz");
+    ct=new TCanvas();
+    hAnCharge->Project3D("YX")->Draw("colz");
+  }
  
   //define a grid of test points:
-    const int divisor=4;
+  const int divisor=100;
   const int nparticles=divisor*divisor;
   TVector3 testparticle[nparticles];
   TVector3 outparticle[nparticles];
@@ -162,10 +206,10 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   
   bool inr,inp,inz;
   int rl,pl, zl;
-  for (int ir=nr_roi_min;ir<nr_roi_min+nr_roi;ir++){
+  for (int ir=nr_roi_min;ir<nr_roi_max;ir++){
     rl=ir-nr_roi_min;
     inr=(rl>=0 && rl<nr_roi);
-    for (int ip=nphi_roi_min;ip<nphi_roi_min+nphi_roi;ip++){
+    for (int ip=nphi_roi_min;ip<nphi_roi_max;ip++){
       pl=ip-nphi_roi_min;
       inp=(pl>=0 && pl<nphi_roi);     
       for (int iz=0;iz<nz;iz++){
@@ -205,14 +249,15 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
     }
   }
   fTree.Write();
-  return;
+  //return;
   
   int validToStep=-1;
   start=gSystem->Now();
   for (int i=0;i<nparticles;i++){
-    if (!(i%100)) {
+    if (!(i%(997))) {
        now=gSystem->Now();
-      printf("(periodic progress...) test[%d]=(%f,%f,%f)\t dtime=%lu\n",i,testparticle[i].X(),testparticle[i].Y(),testparticle[i].Z(),(unsigned long)(now-start));
+       printf("(periodic progress...) test[%d]=(%f,%f,%f) to %f\t dtime=%lu\n",
+	      i,testparticle[i].X(),testparticle[i].Y(),testparticle[i].Z(),zmax_roi,(unsigned long)(now-start));
       start=now;
     }
 

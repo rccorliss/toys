@@ -119,7 +119,7 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
   Epartial_phislice=new MultiArray<TVector3>(1);
   Epartial_phislice->GetFlat(0)->SetXYZ(0,0,0);
   q_lowres=new MultiArray<double>(1);
-  (q_lowres->GetFlat(0))=0;
+  *(q_lowres->GetFlat(0))=0;
   q_local=new MultiArray<double>(1);
   *(q_local->GetFlat(0))=0;
 
@@ -1638,7 +1638,8 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate, b
     +c1/zdist*(EintOverEz.X()*BintOverBz.Y()-EintOverEz.Y()*BintOverBz.X())
     +c2/zdist*(EintOverEz.X()*BintOverBz.X()+EintOverEz.Y()*BintOverBz.Y())
     +c2/zdist*(BintOverBz.X()*BintOverBz.X()+BintOverBz.Y()*BintOverBz.Y()); //missing v'' term.
-  
+
+  deltaZ=0;//temporary removal.
   TVector3 dest(start.X()+deltaX,start.Y()+deltaY,zdest+deltaZ);
   
   return dest;

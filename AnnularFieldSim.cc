@@ -40,6 +40,7 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
   vdrift=vdr;
   rmin=in_innerRadius; rmax=in_outerRadius;
   zmin=0;zmax=in_outerZ;
+  zero_vector.SetXYZ(0,0,0);
 
  //define the size of the volume:
   dim.SetXYZ(1,0,0);
@@ -1498,6 +1499,9 @@ TVector3 AnnularFieldSim::swimToInAnalyticSteps(float zdest,TVector3 start,int s
   double zstep=zdist/steps;
   
   TVector3 ret=start;
+  TVector3 accumulated_distortion(0,0,0);
+  TVector3 accumulated_drift(0,0,0);
+  TVector3 drift_step(0,0,zstep);
 
   int rt,pt,zt; //just placeholders for the bounds-checking.
   BoundsCase zBound;
@@ -1510,20 +1514,70 @@ TVector3 AnnularFieldSim::swimToInAnalyticSteps(float zdest,TVector3 start,int s
     if (GetRindexAndCheckBounds(ret.Perp(),&rt)!=InBounds
 	|| GetPhiIndexAndCheckBounds(ret.Phi(),&pt)!=InBounds
 	|| (zBound==OutOfBounds)){
-      printf("AnnularFieldSim::swimToInAnalyticSteps at step %d, asked to swim particle from (%f,%f,%f) (rphiz)=(%f,%f,%f)which is outside the ROI.\n",i,ret.X(),ret.Y(),ret.Z(),ret.Perp(),ret.Phi(),ret.Z());
-    printf(" -- %f <= r < %f \t%f <= phi < %f \t%f <= z < %f \n",rmin_roi*step.Perp()+rmin,rmax_roi*step.Perp()+rmin, phimin_roi*step.Phi(),phimax_roi*step.Phi(),zmin_roi*step.Z(),zmax_roi*step.Z());
-    printf("Returning original position.\n");
+      printf("AnnularFieldSim::swimToInAnalyticSteps at step %d,"
+	     "asked to swim particle from (%f,%f,%f) (rphiz)=(%f,%f,%f)which is outside the ROI.\n",
+	     i,ret.X(),ret.Y(),ret.Z(),ret.Perp(),ret.Phi(),ret.Z());
+      printf(" -- %f <= r < %f \t%f <= phi < %f \t%f <= z < %f \n",
+	     rmin_roi*step.Perp()+rmin,rmax_roi*step.Perp()+rmin,
+	     phimin_roi*step.Phi(),phimax_roi*step.Phi(),
+	     zmin_roi*step.Z(),zmax_roi*step.Z());
+    printf("Returning last valid position.\n");
       if (!(goodToStep==0)) *goodToStep=i-1;
       return ret;
     }
     //printf("AnnularFieldSim::swimToInAnalyticSteps at step %d, asked to swim particle from (%f,%f,%f) (rphiz)=(%f,%f,%f).\n",i,ret.X(),ret.Y(),ret.Z(),ret.Perp(),ret.Phi(),ret.Z());
-    ret=swimTo(start.Z()+zstep*(i+1),ret,true,true);
+    //rcc note: once I put the z distoriton back in, I need to check that ret.Z+zstep is still in bounds:
+    accumulated_distortion+=GetStepDistortion(ret.Z()+zstep,ret,true,true);
+    accumulated_drift+=drift_step;
+
+    //this seems redundant, but if the distortions are small they may lose precision and stop actually changing the position when step size is small.  This allows them to accumulate separately so they can grow properly:
+    ret=start+accumulated_distortion+accumulated_drift;
+
   }
   
   return ret;
 }
 
 TVector3 AnnularFieldSim::swimToInSteps(float zdest,TVector3 start,int steps=1, bool interpolate=false, int *goodToStep=0){
+  //short-circuit if we're out of range:
+  
+  double zdist=zdest-start.Z();
+  double zstep=zdist/steps;
+  
+  TVector3 ret=start;
+  TVector3 accumulated_distortion(0,0,0);
+  TVector3 accumulated_drift(0,0,0);
+  TVector3 drift_step(0,0,zstep);
+
+  int rt,pt,zt; //just placeholders for the bounds-checking.
+  BoundsCase zBound;
+  for (int i=0;i<steps;i++){
+    zBound=GetZindexAndCheckBounds(ret.Z(),&zt);
+    if (zBound==OnLowEdge){
+      //nudge it in z:
+      ret.SetZ(ret.Z()+ALMOST_ZERO);
+    }
+    if (GetRindexAndCheckBounds(ret.Perp(),&rt)!=InBounds
+	|| GetPhiIndexAndCheckBounds(ret.Phi(),&pt)!=InBounds
+	|| (zBound==OutOfBounds)){
+      printf("AnnularFieldSim::swimToInSteps at step %d, asked to swim particle from (%f,%f,%f) (rphiz)=(%f,%f,%f)which is outside the ROI.\n",i,ret.X(),ret.Y(),ret.Z(),ret.Perp(),ret.Phi(),ret.Z());
+    printf(" -- %f <= r < %f \t%f <= phi < %f \t%f <= z < %f \n",rmin_roi*step.Perp()+rmin,rmax_roi*step.Perp()+rmin, phimin_roi*step.Phi(),phimax_roi*step.Phi(),zmin_roi*step.Z(),zmax_roi*step.Z());
+    printf("Returning original position.\n");
+      if (!(goodToStep==0)) *goodToStep=i-1;
+      return ret;
+    }
+
+   accumulated_distortion+=GetStepDistortion(start.Z()+zstep*(i+1),ret,true,false);
+    accumulated_drift+=drift_step;
+
+    //this seems redundant, but if the distortions are small they may lose precision and stop actually changing the position when step size is small.  This allows them to accumulate separately so they can grow properly:
+    ret=start+accumulated_distortion+accumulated_drift;
+  }
+  
+  return ret;
+}
+
+TVector3 AnnularFieldSim::OldSwimToInSteps(float zdest,TVector3 start,int steps=1, bool interpolate=false, int *goodToStep=0){
   //short-circuit if we're out of range:
   
   double zdist=zdest-start.Z();
@@ -1573,9 +1627,6 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate, b
   //todo: get this from a field map
   TVector3 B=Bfield->Get(0,0,0)*Bscale;//static field in tesla T=Vs/m^2
   
-  //int x=start.X()/step.X();
-  //int y=start.Y()/step.Y();
-  //int zi=start.Z()/step.Z();
   double zdist=zdest-start.Z();
 
   //short-circuit if there's no travel length:
@@ -1603,6 +1654,7 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate, b
   
   //float fieldz=field_[in3(x,y,0,fx,fy,fz)].Z()+E.Z();// *field[x][y][zi].Z();
   double fieldz=fieldInt.Z()/zdist;// average field over the path.
+  //double fieldz=Enominal; // ideal field over path.
   
   double mu=vdrift/fieldz;//vdrift in [cm/s], field in [V/cm] hence mu in [cm^2/(V*s)];
   double omegatau=1*mu*B.Z();//mu*Q_e*B, mu in [cm^2/(V*s)], B in [T] hence (thanks, google) omegatau in [0.0001] = [cm^2/m^2]
@@ -1611,12 +1663,14 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate, b
   //or:  omegatau=-10*(10*B.Z())*(vdrift*1e6)/fieldz; //which is the same as my calculation up to a sign.
   //printf("omegatau=%f\n",omegatau);
   double c0=1/(1+omegatau*omegatau);
-  double T1=1.0;
-  double T2=1.0;
-  double c1=c0*T1*omegatau;
-  double c2=c1*T2*omegatau;
+  double langevin_T1=1.0;
+  double langevin_T2=1.0;
+  double T1om=langevin_T1*omegatau;
+  double T2om2=langevin_T2*omegatau*langevin_T2*omegatau;
+  double c1=T1om/(1+T1om*T1om);
+  double c2=T2om2/(1+T2om2);
 
-  TVector3 EintOverEz=1/fieldInt.Z()*fieldInt;
+  TVector3 EintOverEz=1/fieldz*fieldInt; //integral of E/E_z= integral of E / integral of E_z * delta_z
   TVector3 BintOverBz=zdist/B.Z()*B;
 
   //really this should be the integral of the ratio, not the ratio of the integrals.
@@ -1625,6 +1679,9 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate, b
   double deltaX=c0*EintOverEz.X()+c1*EintOverEz.Y()-c1*BintOverBz.Y()+c2*BintOverBz.X();
   double deltaY=c0*EintOverEz.Y()-c1*EintOverEz.X()+c1*BintOverBz.X()+c2*BintOverBz.Y();
   //strictly, for deltaZ we want to integrate v'(E)*(E-E0)dz and v''(E)*(E-E0)^2 dz, but over a short step the field is constant, and hence this can be a product of the integral and not an integral of the product:
+
+
+  
 
   double vprime=5000;//cm/s per V/cm, hard-coded value for 50:50.  Eventually this needs to be part of the constructor, as do most of the repeated math terms here.
   double vdoubleprime=0; //neglecting the v'' term for now.  Fair? It's pretty linear at our operating point, and it would require adding an additional term to the field integral.
@@ -1639,13 +1696,147 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate, b
     +c2/zdist*(EintOverEz.X()*BintOverBz.X()+EintOverEz.Y()*BintOverBz.Y())
     +c2/zdist*(BintOverBz.X()*BintOverBz.X()+BintOverBz.Y()*BintOverBz.Y()); //missing v'' term.
 
+  if (0){
+   printf("swimTo:  (c0,c1,c2)=(%E,%E,%E)\n",c0,c1,c2);
+    printf("swimTo:  EintOverEz==(%E,%E,%E)\n",EintOverEz.X(),EintOverEz.Y(),EintOverEz.Z());
+    printf("swimTo:  BintOverBz==(%E,%E,%E)\n",BintOverBz.X(),BintOverBz.Y(),BintOverBz.Z());    
+    printf("swimTo: (%2.4f,%2.4f,%2.4f) to z=%2.4f\n",start.X(),start.Y(), start.Z(),zdest);
+    printf("swimTo: fieldInt=(%E,%E,%E)\n",fieldInt.X(),fieldInt.Y(),fieldInt.Z());
+    printf("swimTo: delta=(%E,%E,%E)\n",deltaX,deltaY,deltaZ);
+  }
+  //   printf("swimTo: delta=(%E,%E,%E)\n",deltaX,deltaY,deltaZ);
+
+  if (abs(deltaX)<1E-20){
+    printf("swimTo produced a very small deltaX: %E\n",deltaX);
+    assert(1==2);
+
+   }
+  
   deltaZ=0;//temporary removal.
+
+
+  
   TVector3 dest(start.X()+deltaX,start.Y()+deltaY,zdest+deltaZ);
   
   return dest;
   
 }
 
+
+TVector3 AnnularFieldSim::GetStepDistortion(float zdest,TVector3 start, bool interpolate, bool useAnalytic){
+  //getting the distortion instead of the post-step position allows us to accumulate small deviations from the original position that might be lost in the large number
+
+  
+ //using second order langevin expansion from http://skipper.physics.sunysb.edu/~prakhar/tpc/Papers/ALICE-INT-2010-016.pdf
+  //TVector3 (*field)[nr][ny][nz]=field_;
+  int rt,pt,zt; //just placeholders
+  BoundsCase zBound=GetZindexAndCheckBounds(start.Z(),&zt);
+  if (GetRindexAndCheckBounds(start.Perp(),&rt)!=InBounds
+      || GetPhiIndexAndCheckBounds(start.Phi(),&pt)!=InBounds
+      || (zBound!=InBounds && zBound!=OnHighEdge)){
+    printf("AnnularFieldSim::swimTo asked to swim particle from (%f,%f,%f) which is outside the ROI:\n",start.X(),start.Y(),start.Z());
+    printf(" -- %f <= r < %f \t%f <= phi < %f \t%f <= z < %f \n",rmin_roi*step.Perp(),rmax_roi*step.Perp(), phimin_roi*step.Phi(),phimax_roi*step.Phi(),zmin_roi*step.Z(),zmax_roi*step.Z());
+    printf("Returning original position.\n");
+    return start;
+  }
+  
+  //set the direction of the external fields.
+  //todo: get this from a field map
+  TVector3 B=Bfield->Get(0,0,0)*Bscale;//static field in tesla T=Vs/m^2
+  
+  double zdist=zdest-start.Z();
+
+  //short-circuit if there's no travel length:
+  if (TMath::Abs(zdist)<ALMOST_ZERO*step.Z()){
+    printf("Asked  particle from (%f,%f,%f) to z=%f, which is a distance of %fcm.  Returning zero.\n",start.X(),start.Y(),start.Z(), zdest,zdist);
+    return zero_vector;
+  }
+
+  TVector3 fieldInt;
+  //note that using analytic takes priority over interpolating todo: clean this up to use a status rther than a pair of flags
+  if (useAnalytic){
+    fieldInt=analyticFieldIntegral(zdest,start);
+  } else if (interpolate){
+    fieldInt=interpolatedFieldIntegral(zdest,start);
+  }else{
+    fieldInt=fieldIntegral(zdest,start);
+  }
+
+  if (abs(fieldInt.Z())<ALMOST_ZERO){
+    printf("GetStepDistortion is attempting to swim with no drift field:\n");
+    printf("GetStepDistortion: (%2.4f,%2.4f,%2.4f) to z=%2.4f\n",start.X(),start.Y(), start.Z(),zdest);
+    printf("GetStepDistortion: fieldInt=(%E,%E,%E)\n",fieldInt.X(),fieldInt.Y(),fieldInt.Z());
+    assert(1==2);
+  }
+  
+  //float fieldz=field_[in3(x,y,0,fx,fy,fz)].Z()+E.Z();// *field[x][y][zi].Z();
+  double fieldz=fieldInt.Z()/zdist;// average field over the path.
+  //double fieldz=Enominal; // ideal field over path.
+  
+  double mu=vdrift/fieldz;//vdrift in [cm/s], field in [V/cm] hence mu in [cm^2/(V*s)];
+  double omegatau=1*mu*B.Z();//mu*Q_e*B, mu in [cm^2/(V*s)], B in [T] hence (thanks, google) omegatau in [0.0001] = [cm^2/m^2]
+  //originally the above was q*mu*B, but 'q' is really about flipping the direction of time.  if we do this, we negate both vdrift and q, so in the end we have no charge dependence -- we 'see' the charge by noting that we're asking to drift against the overall field.
+  omegatau=omegatau*1e-4;//*1m/100cm * 1m/100cm to get proper unitless.
+  //or:  omegatau=-10*(10*B.Z())*(vdrift*1e6)/fieldz; //which is the same as my calculation up to a sign.
+  //printf("omegatau=%f\n",omegatau);
+  double c0=1/(1+omegatau*omegatau);
+  double langevin_T1=1.0;
+  double langevin_T2=1.0;
+  double T1om=langevin_T1*omegatau;
+  double T2om2=langevin_T2*omegatau*langevin_T2*omegatau;
+  double c1=T1om/(1+T1om*T1om);
+  double c2=T2om2/(1+T2om2);
+
+  TVector3 EintOverEz=1/fieldz*fieldInt; //integral of E/E_z= integral of E / integral of E_z * delta_z
+  TVector3 BintOverBz=zdist/B.Z()*B;
+
+  //really this should be the integral of the ratio, not the ratio of the integrals.
+  //and should be integrals over the B field, btu for now that's fixed and constant across the region, so not necessary
+  //there's no reason to do this as r phi.  This is an equivalent result, since I handle everything in vectors.
+  double deltaX=c0*EintOverEz.X()+c1*EintOverEz.Y()-c1*BintOverBz.Y()+c2*BintOverBz.X();
+  double deltaY=c0*EintOverEz.Y()-c1*EintOverEz.X()+c1*BintOverBz.X()+c2*BintOverBz.Y();
+  //strictly, for deltaZ we want to integrate v'(E)*(E-E0)dz and v''(E)*(E-E0)^2 dz, but over a short step the field is constant, and hence this can be a product of the integral and not an integral of the product:
+
+
+  
+
+  double vprime=5000;//cm/s per V/cm, hard-coded value for 50:50.  Eventually this needs to be part of the constructor, as do most of the repeated math terms here.
+  double vdoubleprime=0; //neglecting the v'' term for now.  Fair? It's pretty linear at our operating point, and it would require adding an additional term to the field integral.
+
+  //note: as long as my step is very small, I am essentially just reading the field at a point and multiplying by the step size.
+  //hence integral of P dz, where P is a function of the fields, int|P(E(x,y,z))dz=P(int|E(x,y,z)dz/deltaZ)*deltaZ
+  //hence: , eg, int|E^2dz=(int|Edz)^2/deltaz
+  double deltaZ=vprime/vdrift*fieldInt.Z()-zdist*Enominal
+    +vdoubleprime/vdrift*(fieldInt.Z()-Enominal*zdist)*(fieldInt.Z()-Enominal*zdist)/(2*zdist)
+    -0.5/zdist*(EintOverEz.X()*EintOverEz.X()+EintOverEz.Y()*EintOverEz.Y())
+    +c1/zdist*(EintOverEz.X()*BintOverBz.Y()-EintOverEz.Y()*BintOverBz.X())
+    +c2/zdist*(EintOverEz.X()*BintOverBz.X()+EintOverEz.Y()*BintOverBz.Y())
+    +c2/zdist*(BintOverBz.X()*BintOverBz.X()+BintOverBz.Y()*BintOverBz.Y()); //missing v'' term.
+
+  if (0){
+   printf("GetStepDistortion:  (c0,c1,c2)=(%E,%E,%E)\n",c0,c1,c2);
+    printf("GetStepDistortion:  EintOverEz==(%E,%E,%E)\n",EintOverEz.X(),EintOverEz.Y(),EintOverEz.Z());
+    printf("GetStepDistortion:  BintOverBz==(%E,%E,%E)\n",BintOverBz.X(),BintOverBz.Y(),BintOverBz.Z());    
+    printf("GetStepDistortion: (%2.4f,%2.4f,%2.4f) to z=%2.4f\n",start.X(),start.Y(), start.Z(),zdest);
+    printf("GetStepDistortion: fieldInt=(%E,%E,%E)\n",fieldInt.X(),fieldInt.Y(),fieldInt.Z());
+    printf("GetStepDistortion: delta=(%E,%E,%E)\n",deltaX,deltaY,deltaZ);
+  }
+
+  if (abs(deltaX)<1E-20){
+    printf("GetStepDistortion produced a very small deltaX: %E\n",deltaX);
+    assert(1==2);
+
+   }
+  
+  deltaZ=0;//temporary removal.
+
+
+  
+  TVector3 shift(deltaX,deltaY,deltaZ);
+  
+  return shift;
+  
+}
 
 float AnnularFieldSim::RosseggerEterm(int m, int n, TVector3 at, TVector3 from){
   //from eqn 5.68 in Rossegger thesis, p 111.

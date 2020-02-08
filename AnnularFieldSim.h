@@ -24,6 +24,7 @@ class AnnularFieldSim{
   
   //constants of motion, dimensions, etc:
   //
+  TVector3 zero_vector; //a shorthand way to return a vectorial zero.
   //static constexpr float k=8.987e13;//=1/(4*pi*eps0) in N*cm^2/C^2 in a vacuum. N*cm^2/C units, so that we supply space charge in coulomb units.
   static constexpr float k_perm=8.987e11;//=1/(4*pi*eps0) in (V*cm)/C in a vacuum. so that we supply space charge in Coulombs, distance in cm, and fields in V/cm
   double vdrift; //gas drift speed in cm/s
@@ -133,7 +134,9 @@ class AnnularFieldSim{
   TVector3 sum_phislice_field_at(int r, int phi, int z);
   TVector3 swimToInAnalyticSteps(float zdest,TVector3 start,int steps, int *goodToStep);
   TVector3 swimToInSteps(float zdest,TVector3 start, int steps, bool interpolate, int *goodToStep);
+  TVector3 OldSwimToInSteps(float zdest,TVector3 start, int steps, bool interpolate, int *goodToStep);
   TVector3 swimTo(float zdest,TVector3 start, bool interpolate=true, bool useAnalytic=false);
+  TVector3 GetStepDistortion(float zdest,TVector3 start, bool interpolate=true, bool useAnalytic=false);
  
  private:
   BoundsCase GetRindexAndCheckBounds(float pos, int *r);

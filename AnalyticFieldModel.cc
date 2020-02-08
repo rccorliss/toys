@@ -4,7 +4,7 @@
 #include "AnalyticFieldModel.h"
 
 AnalyticFieldModel::AnalyticFieldModel(float _ifc_radius, float _ofc_radius, float _z_max, float scalefactor){
-  double ifc_radius=_ifc_radius;
+ double ifc_radius=_ifc_radius;
   double ofc_radius=_ofc_radius;
   double tpc_halfz=_z_max;
   
@@ -16,7 +16,8 @@ AnalyticFieldModel::AnalyticFieldModel(float _ifc_radius, float _ofc_radius, flo
   double a = ofc_radius * ofc_radius;
   a *= (diff);
   a *= (diff);
-  a =  (1000.0 / a);
+  //a =  a/1000.0;
+  a=1 / a;
   a *= scalefactor;
   double b = 0.5;
   double c = 1.0 / (((tpc_halfz) / 2.0) * ((tpc_halfz) / 2.0));
@@ -71,8 +72,9 @@ TVector3 AnalyticFieldModel::E(TVector3 pos){//field as a function of position
 	       
   
 double AnalyticFieldModel::Rho(TVector3 pos){//charge density as a function of position
+ const double alice_chargescale=8.85e-14;//their rho has charge density in units of C/cm^3 /eps0.  This is eps0 in (V*cm)/C units so that I can multiple by the volume in cm^3 to get Q in C.
   //at phi=0, phi is the +Y position, Perp is the +X direction and Z is Z.
-  return rhoTestFunction1->Eval(pos.Perp(),pos.Phi(),pos.Z());
+  return alice_chargescale*rhoTestFunction1->Eval(pos.Perp(),pos.Phi(),pos.Z());
 }
 
 TVector3 AnalyticFieldModel::Eint(float zfinal, TVector3 pos){//field integral from 'pos' to z-position zfinal.

@@ -69,7 +69,7 @@ class Rossegger
   double Munk[NumberOfOrders][NumberOfOrders];    //  Munk array from Rossegger
 
   TH2 *Tags;
-  TH2 *hLimu;
+  TH2 *hLimu, *hKimu;
   std::map<std::string, TH3*> Grid;
 
 };

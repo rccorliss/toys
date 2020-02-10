@@ -18,4 +18,4 @@ Plot[Evaluate[
 Table[Rnk[mu,n,1.2,2.1],{n,1,5,1}]],{mu,0,100}]
 
 
-Table[Re[Limu[mu,x]],{mu,0.01,4,0.4},{x,0,1.5,0.3}]
+Table[Re[Limu[mu,x]],{mu,1,100,1},{x,0,1.5,0.1}]

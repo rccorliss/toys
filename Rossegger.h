@@ -33,17 +33,20 @@ class Rossegger
 
   void Verbosity(int v) {verbosity=v;}
   double Rmn (int m, int n, double r);  //Rmn function from Rossegger
+  double Rmn_for_zeroes (int m, double x);  //Rmn function from Rossegger, as used to find Betamn zeroes.
   double Rmn1(int m, int n, double r);  //Rmn1 function from Rossegger
   double Rmn2(int m, int n, double r);  //Rmn2 function from Rossegger
   double RPrime(int m, int n, double a, double r);  // RPrime function from Rossegger
   
   double Rnk(int n, int k, double r);  //Rnk function from Rossegger
+  double Rnk_for_zeroes(int n, double mu);  //Rnk function from Rossegger, as used to find munk zeroes.
+
+  double Limu(double mu, double x); //Bessel functions of purely imaginary order
+  double Kimu(double mu, double x); //Bessel functions of purely imaginary order
 
   double Ez  (double r, double phi, double z, double r1, double phi1, double z1);
   double Er  (double r, double phi, double z, double r1, double phi1, double z1);
   double Ephi(double r, double phi, double z, double r1, double phi1, double z1);
-
-  void Tweak(bool t) {tweak = t;}
 
  protected:
   bool fByFile;
@@ -55,16 +58,18 @@ class Rossegger
 
   double MinimumDR, MinimumDPHI, MinimumDZ;
 
+  double FindNextZero(double xstart, double epsilon, int order, double (Rossegger::*func)(int, double));  // Routine to find zeroes of func.
   void FindBetamn(double epsilon);  // Routine used to fill the Betamn array with resolution epsilon...
   void FindMunk(double epsilon);    // Routine used to fill the Munk array with resolution epsilon...
+
+  void LoadCsvToHist(TH2* hist, char* filename);
 
   double Betamn[NumberOfOrders][NumberOfOrders];  //  Betamn array from Rossegger
   double N2mn[NumberOfOrders][NumberOfOrders];    //  N2mn array from Rossegger
   double Munk[NumberOfOrders][NumberOfOrders];    //  Munk array from Rossegger
-  double ByFileER(double r, double phi, double z, double r1, double phi1, double z1);
-  double ByFileEZ(double r, double phi, double z, double r1, double phi1, double z1);
 
   TH2 *Tags;
+  TH2 *hLimu;
   std::map<std::string, TH3*> Grid;
 
 };

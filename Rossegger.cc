@@ -24,6 +24,7 @@ using namespace TMath;
 #define in(order,x) boost::math::cyl_bessel_i(order,x)
 //Modified Bessel Function of the second kind K_n(x):
 #define kn(order,x) boost::math::cyl_bessel_k(order,x)
+#define limu(im_order,x) Rossegger::Limu(im_order,x)
 
 /*
   This is a modified/renamed copy of Carlos and Tom's "Spacecharge" class, modified to use boost instead of fortran routines, and with phi terms added.
@@ -51,6 +52,38 @@ Rossegger::Rossegger(double InnerRadius, double OuterRadius, double Rdo_Z)
   return ;
 }
 
+double Rossegger::FindNextZero(double xstart,double epsilon,int order, int func(int, double)){
+    
+  double previous=func(order,xstart);
+  double x=xstart+epsilon;
+  double value=previous;
+  while (! (  (value == 0) || (value<0 && previous>0) || (value>0 && previous<0)) ){
+    	  //  Rossegger equation 5.12
+    value = func(order, x);
+    if (value == 0) cout << "hit it exactly!  Go buy a lottery ticket!" << endl;
+    if ( (value == 0) || (value<0 && previous>0) || (value>0 && previous<0))
+      {
+	//when we go from one sign to the other, we have bracketed the zero
+	//the following is mathematically equivalent to finding the delta
+	//between the x of our previous value and the point where we cross the axis
+	//then returning x0=x_old+delta
+	double slope = (value-previous)/epsilon;
+	double intercept =  value - slope*x;
+	double x0  = -intercept/slope;
+	if (verbosity) cout << " " << x0 << "," << x0;
+	return x0;
+      }
+    previous = value;
+    x+=epsilon;
+  }
+  cout <<"logic break!\n";
+  asser(1==2);
+  return 0;
+
+}
+
+
+  
 
 void Rossegger::FindBetamn(double epsilon)
 {
@@ -61,18 +94,34 @@ void Rossegger::FindBetamn(double epsilon)
       if (verbosity) cout << endl << m;
       int n=0;  //  !!!  Off by one from Rossegger convention  !!!
       double x=epsilon;
+      for (int n=0;n<NumberOfOrders;n++){
+	x=FindNextZero(x,epsilon,m,Rossegger::Rmn_for_zeroes);
+	Betamn[m][n]=x/b;
+	x+=epsilon;
+      }
+      /* the old way:
+
       double previous = jn(m,x)*yn(m,l*x) - jn(m,l*x)*yn(m,x);
+
+      //step through the value of Rossegger 5.12 in epsilon steps.
+      //When the sign changes, interpolate between the last two points
+      //and call and call that our
+      //zero
       while (n < NumberOfOrders)
 	{
 	  //  Rossegger equation 5.12
 	  double value = jn(m,x)*yn(m,l*x) - jn(m,l*x)*yn(m,x);
 	  //if (verbosity) cout << " " << value;
-	  if (value == 0) cout << "FFFFFFUUUUUUUUUUU......" << endl;
+	  if (value == 0) cout << "hit it exactly!  Go buy a lottery ticket!" << endl;
 	  if ( (value == 0) || (value<0 && previous>0) || (value>0 && previous<0))
 	    {
-	      double slp = (value-previous)/epsilon;
-	      double cpt =  value - slp*x;
-	      double x0  = -cpt/slp;
+	      //when we go from one sign to the other, we have bracketed the zero
+	      //the following is mathematically equivalent to finding the delta
+	      //between the x of our previous value and the point where we cross the axis
+	      //then returning x0=x_old+delta
+	      double slope = (value-previous)/epsilon;
+	      double intercept =  value - slope*x;
+	      double x0  = -intercept/slope;
 
 	      Betamn[m][n] = x0/b;
 	      if (verbosity) cout << " " << x0 << "," << Betamn[m][n];
@@ -81,6 +130,7 @@ void Rossegger::FindBetamn(double epsilon)
 	  previous = value;
 	  x+=epsilon;
 	}
+      */
     }
 
 
@@ -121,9 +171,20 @@ void Rossegger::FindMunk(double epsilon)
   cout << "Done." << endl;
 }
 
+ double Rossegger::Limu(double mu, double x){
+   //could use Griddit?
+   return 0;
+ }
+ double Rossegger::Kimu(double mu, double x){
+   //could use Griddit?
+   return 0;
+ }
 
-double Rossegger::Rmn(int m, int n, double r)
-{
+ double Rossegger::Rmn_for_zeroes(int m, double x){
+   double lx = a*x/b;
+   return jn(m,x)*yn(m,lx) - jn(m,lx)*yn(m,x);
+ }
+double Rossegger::Rmn(int m, int n, double r){
   if (verbosity) cout << "Determine Rmn("<<m<<","<<n<<","<<r<<") = ";
 
   //  Check input arguments for sanity...
@@ -225,6 +286,14 @@ double Rossegger::RPrime(int m, int n, double ref, double r)
   return R;
 }
 
+double Rossegger::Rnk_for_zeroes(int n, double mu){
+
+  double BetaN=(n+1)*pi/L;
+    //  Rossegger Equation 5.46
+  //       Rnk(r) = Limu_nk (BetaN a) Kimu_nk (BetaN b) - Kimu_nk(BetaN a) Limu_nk (BetaN b)
+
+  return limu(munk,BetaN*a)*kimu(munk,BetaN*b)- kimu(munk,BetaN*a)*limu(munk,BetaN*b);
+}
 double Rossegger::Rnk(int n, int k, double r)
 {
  //  Check input arguments for sanity...
@@ -237,10 +306,12 @@ double Rossegger::Rnk(int n, int k, double r)
       cout << "Invalid arguments Rnk("<<n<<","<<k<<","<<r<<")" << endl;;
       return 0;
     }
-
-  //  Rossegger Equation 5.45
+  double BetaN=(n+1)*pi/L;
+   //  Rossegger Equation 5.45
   //       Rnk(r) = Limu_nk (BetaN a) Kimu_nk (BetaN r) - Kimu_nk(BetaN a) Limu_nk (BetaN r)
-  return 0;
+
+
+  return limu(munk,BetaN*a)*kimu(munk,BetaN*r)- kimu(munk,BetaN*a)*limu(munk,BetaN*r);
 
 }
 

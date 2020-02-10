@@ -29,15 +29,15 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
   int nr=159;
   int nr_roi_min=0;
-  int nr_roi=5;
+  int nr_roi=nr;
   int nr_roi_max=nr_roi_min+nr_roi;
   int nphi=360;
   int nphi_roi_min=0;
-  int nphi_roi=5;
+  int nphi_roi=nphi;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
   int nz=62;
   int nz_roi_min=0;
-  int nz_roi=12;
+  int nz_roi=nz;
   int nz_roi_max=nz_roi_min+nz_roi;
 
   float rmin_roi=alice_rmin+alice_deltar/(nr*1.0)*nr_roi_min;
@@ -206,6 +206,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   
   bool inr,inp,inz;
   int rl,pl, zl;
+  if (0)
   for (int ir=nr_roi_min;ir<nr_roi_max;ir++){
     rl=ir-nr_roi_min;
     inr=(rl>=0 && rl<nr_roi);
@@ -278,7 +279,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
     outz[i]=outparticle[i].Z();
     goodSteps[0]=validToStep;
     TVector3 delta=out1-testparticle[i];
-    printf("delta1=(%E,%E,%E)\n",delta.X(),delta.Y(),delta.Z());
+    //printf("delta1=(%E,%E,%E)\n",delta.X(),delta.Y(),delta.Z());
     //printf("out[%d]=(%f,%f,%f)\n",i,outparticle[i].X(),outparticle[i].Y(),outparticle[i].Z());
     //drift back from the analytic position:
       back1=backparticle[i]=alice->swimToInSteps(testparticle[i].Z(),outa,600,true,&validToStep);

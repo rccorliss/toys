@@ -1683,13 +1683,13 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate, b
 
   
 
-  double vprime=5000;//cm/s per V/cm, hard-coded value for 50:50.  Eventually this needs to be part of the constructor, as do most of the repeated math terms here.
+  double vprime=5000/100;//cm/s per V/cm, hard-coded value for 50:50.  Eventually this needs to be part of the constructor, as do most of the repeated math terms here.
   double vdoubleprime=0; //neglecting the v'' term for now.  Fair? It's pretty linear at our operating point, and it would require adding an additional term to the field integral.
 
   //note: as long as my step is very small, I am essentially just reading the field at a point and multiplying by the step size.
   //hence integral of P dz, where P is a function of the fields, int|P(E(x,y,z))dz=P(int|E(x,y,z)dz/deltaZ)*deltaZ
   //hence: , eg, int|E^2dz=(int|Edz)^2/deltaz
-  double deltaZ=vprime/vdrift*fieldInt.Z()-zdist*Enominal
+  double deltaZ=vprime/vdrift*(fieldInt.Z()-zdist*Enominal)
     +vdoubleprime/vdrift*(fieldInt.Z()-Enominal*zdist)*(fieldInt.Z()-Enominal*zdist)/(2*zdist)
     -0.5/zdist*(EintOverEz.X()*EintOverEz.X()+EintOverEz.Y()*EintOverEz.Y())
     +c1/zdist*(EintOverEz.X()*BintOverBz.Y()-EintOverEz.Y()*BintOverBz.X())
@@ -1712,7 +1712,7 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate, b
 
    }
   
-  deltaZ=0;//temporary removal.
+  //deltaZ=0;//temporary removal.
 
 
   
@@ -1770,11 +1770,12 @@ TVector3 AnnularFieldSim::GetStepDistortion(float zdest,TVector3 start, bool int
   }
   
   //float fieldz=field_[in3(x,y,0,fx,fy,fz)].Z()+E.Z();// *field[x][y][zi].Z();
-  double fieldz=fieldInt.Z()/zdist;// average field over the path.
+  double EfieldZ=fieldInt.Z()/zdist;// average field over the path.
+  double BfieldZ=B.Z();
   //double fieldz=Enominal; // ideal field over path.
   
-  double mu=vdrift/fieldz;//vdrift in [cm/s], field in [V/cm] hence mu in [cm^2/(V*s)];
-  double omegatau=1*mu*B.Z();//mu*Q_e*B, mu in [cm^2/(V*s)], B in [T] hence (thanks, google) omegatau in [0.0001] = [cm^2/m^2]
+  double mu=vdrift/EfieldZ;//vdrift in [cm/s], field in [V/cm] hence mu in [cm^2/(V*s)];
+  double omegatau=1*mu*BfieldZ;//mu*Q_e*B, mu in [cm^2/(V*s)], B in [T] hence (thanks, google) omegatau in [0.0001] = [cm^2/m^2]
   //originally the above was q*mu*B, but 'q' is really about flipping the direction of time.  if we do this, we negate both vdrift and q, so in the end we have no charge dependence -- we 'see' the charge by noting that we're asking to drift against the overall field.
   omegatau=omegatau*1e-4;//*1m/100cm * 1m/100cm to get proper unitless.
   //or:  omegatau=-10*(10*B.Z())*(vdrift*1e6)/fieldz; //which is the same as my calculation up to a sign.
@@ -1787,8 +1788,8 @@ TVector3 AnnularFieldSim::GetStepDistortion(float zdest,TVector3 start, bool int
   double c1=T1om/(1+T1om*T1om);
   double c2=T2om2/(1+T2om2);
 
-  TVector3 EintOverEz=1/fieldz*fieldInt; //integral of E/E_z= integral of E / integral of E_z * delta_z
-  TVector3 BintOverBz=zdist/B.Z()*B;
+  TVector3 EintOverEz=1/EfieldZ*fieldInt; //integral of E/E_z= integral of E / integral of E_z * delta_z
+  TVector3 BintOverBz=1/BfieldZ*B;
 
   //really this should be the integral of the ratio, not the ratio of the integrals.
   //and should be integrals over the B field, btu for now that's fixed and constant across the region, so not necessary
@@ -1800,13 +1801,13 @@ TVector3 AnnularFieldSim::GetStepDistortion(float zdest,TVector3 start, bool int
 
   
 
-  double vprime=5000;//cm/s per V/cm, hard-coded value for 50:50.  Eventually this needs to be part of the constructor, as do most of the repeated math terms here.
+  double vprime=5000/100;//cm/s per V/cm, hard-coded value for 50:50.  Eventually this needs to be part of the constructor, as do most of the repeated math terms here.
   double vdoubleprime=0; //neglecting the v'' term for now.  Fair? It's pretty linear at our operating point, and it would require adding an additional term to the field integral.
 
   //note: as long as my step is very small, I am essentially just reading the field at a point and multiplying by the step size.
   //hence integral of P dz, where P is a function of the fields, int|P(E(x,y,z))dz=P(int|E(x,y,z)dz/deltaZ)*deltaZ
   //hence: , eg, int|E^2dz=(int|Edz)^2/deltaz
-  double deltaZ=vprime/vdrift*fieldInt.Z()-zdist*Enominal
+  double deltaZ=vprime/vdrift*(fieldInt.Z()-zdist*Enominal)
     +vdoubleprime/vdrift*(fieldInt.Z()-Enominal*zdist)*(fieldInt.Z()-Enominal*zdist)/(2*zdist)
     -0.5/zdist*(EintOverEz.X()*EintOverEz.X()+EintOverEz.Y()*EintOverEz.Y())
     +c1/zdist*(EintOverEz.X()*BintOverBz.Y()-EintOverEz.Y()*BintOverBz.X())
@@ -1828,7 +1829,7 @@ TVector3 AnnularFieldSim::GetStepDistortion(float zdest,TVector3 start, bool int
 
    }
   
-  deltaZ=0;//temporary removal.
+  //deltaZ=0;//temporary removal.
 
 
   

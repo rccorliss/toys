@@ -5,6 +5,7 @@
 
 template <class T> class MultiArray;
 class TH3F;
+class Rossegger;
 
 class AnnularFieldSim{
  public:
@@ -38,6 +39,7 @@ class AnnularFieldSim{
   float zmin, zmax;//lower and upper edges of the coordinate system in z (not fully implemented yet)
   //float phimin, phimax;//not implemented at all yet.
   TVector3 dim;//dimensions of simulated region, in cm
+  Rossegger *green;//stand-alone class to compute greens functions.
 
 
   //variables related to the whole-volume tiling:

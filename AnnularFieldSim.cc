@@ -3,6 +3,7 @@
 #include "TH3F.h"
 #include "TFormula.h"
 #include "AnalyticFieldModel.h"
+#include "Rossegger.h"
 
 #define ALMOST_ZERO 0.00001
 
@@ -48,6 +49,13 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
   dim.SetPhi(0);
   phispan=2*TMath::Pi();
   dim.SetZ(in_outerZ);
+
+  //set the green's functions model:
+  //UseFreeSpaceGreens();
+  //blah
+  //green=0;
+  green=new Rossegger(rmin,rmax,zmax);
+  //step.SetXYZ(green->Rmn(1,1,1),0,0);
   
 
   //load parameters of the whole-volume tiling
@@ -230,18 +238,27 @@ TVector3 AnnularFieldSim::calc_unit_field(TVector3 at, TVector3 from){
   //if doing cylindrical calcs with different boundary conditions, this needs to change.
 
   //this could check roi bounds before returning, if things start acting funny.
-  
-  TVector3 delr=at-from;
-  TVector3 field=delr; //to set the direction.
-  if (delr.Mag()<ALMOST_ZERO*ALMOST_ZERO){ //note that this has blurred units -- it should scale with all three dimensions of stepsize.  For lots of phi bins, especially, this might start to read as small before it's really small.
-    //do nothing.  the vector is already zero, which will be our approximation.
-    //field.SetMag(0);//no contribution if we're in the same cell. -- but root warns if trying to resize something of magnitude zero.
-  } else{
-    field.SetMag(k_perm*1/(delr*delr));//scalar product on the bottom.
+
+  TVector3 field(0,0,0);
+  //if the green's function class is not present use free space:
+  if (green==0){
+    TVector3 delr=at-from;
+    field=delr; //to set the direction.
+    if (delr.Mag()<ALMOST_ZERO*ALMOST_ZERO){ //note that this has blurred units -- it should scale with all three dimensions of stepsize.  For lots of phi bins, especially, this might start to read as small before it's really small.
+      //do nothing.  the vector is already zero, which will be our approximation.
+      //field.SetMag(0);//no contribution if we're in the same cell. -- but root warns if trying to resize something of magnitude zero.
+    } else{
+      field.SetMag(k_perm*1/(delr*delr));//scalar product on the bottom.
+    }
+    //printf("calc_unit_field at (%2.2f,%2.2f,%2.2f) from  (%2.2f,%2.2f,%2.2f).  Mag=%2.4fe-9\n",at.x(),at.Y(),at.Z(),from.X(),from.Y(),from.Z(),field.Mag()*1e9);
+  }else{
+    double Er=green->Er(at.Perp(),at.Phi(),at.Z(),from.Perp(),from.Phi(),from.Z());
+    double Ez=green->Ez(at.Perp(),at.Phi(),at.Z(),from.Perp(),from.Phi(),from.Z());
+    double Ephi=green->Ephi(at.Perp(),at.Phi(),at.Z(),from.Perp(),from.Phi(),from.Z());
+    field.SetXYZ(Er,Ephi,Ez); //now this is correct if our test point is at y=0 (hence phi=0);
+    field.RotateZ(at.Phi());//rotate to the coordinates of our 'at' point.
   }
-  //printf("calc_unit_field at (%2.2f,%2.2f,%2.2f) from  (%2.2f,%2.2f,%2.2f).  Mag=%2.4fe-9\n",at.x(),at.Y(),at.Z(),from.X(),from.Y(),from.Z(),field.Mag()*1e9);
-  
-  return field;
+    return field;
 }
 int AnnularFieldSim::FilterPhiIndex(int phi,int range=-1){
   if (range<0) range=nphi; //default input is range=-1.  in that case, use the intrinsic resolution of the q grid.

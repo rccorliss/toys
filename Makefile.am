@@ -36,6 +36,7 @@ pcmdir = $(libdir)
 nobase_dist_pcm_DATA = \
   AnnularFieldSim_rdict.pcm \
 AnalyticFieldModel_rdict.pcm \
+Rossegger_rdict.pcm \
   QPileUp_rdict.pcm
 
 #  CylindricalFieldSim_rdict.pcm \
@@ -44,6 +45,7 @@ else
   ROOT5_DICTS = \
     AnnularFieldSim_Dict.cc \
     AnalyticFieldModel_Dict.cc \
+    Rossegger_Dict.cc \
     QPileUp_Dict.cc
 
 #rcc note that these all need trailing backslashes if not commented out.
@@ -56,6 +58,7 @@ libfieldsim_la_SOURCES = \
   $(ROOTDICTS) \
   AnnularFieldSim.cc \
   AnalyticFieldModel.cc \
+  Rossegger.cc \
   QPileUp.cc 
 
 #FieldSim.cc 
@@ -64,6 +67,7 @@ libfieldsim_la_SOURCES = \
 pkginclude_HEADERS = \
   AnnularFieldSim.h \
   AnalyticFieldModel.h \
+  Rossegger.h \
   QPileUp.h \
   Constants.h
 #  FieldSim.h  

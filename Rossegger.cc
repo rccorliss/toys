@@ -11,7 +11,7 @@
 //#include "/usr/local/include/complex_bessel.h"
 #include <boost/math/special_functions.hpp> //covers all the special functions.
 
-#include "TH2F.h"
+#include "TH2D.h"
 #include "TH3.h"
 
 using namespace std;
@@ -44,14 +44,15 @@ Rossegger::Rossegger(double InnerRadius, double OuterRadius, double Rdo_Z)
   pi = 2.0 * asin(1.0);
   cout << pi << endl;
 
+ 
+  char limufile[]="limu_table.csv";
+  char kimufile[]="kimu_table.csv";
+  LoadCsvToHist(&hLimu,limufile);
+  LoadCsvToHist(&hKimu,kimufile);
+  cout << "hKimu is real, see:" <<  hKimu->GetXaxis()->GetNbins() << endl;
+  FindMunk(0.01);
   FindBetamn(0.0001);
-  FindMunk(0.0001);
-
-  char limufile[]="table.csv";
-  //char kimufile[]="table.csv";
-  LoadCsvToHist(hLimu,limufile);
-  //LoadCsvToHist(hKimu,kimufile);
-  
+ 
 
   cout << "Rossegger object initialized as follows:" << endl;
   cout << "  Inner Radius = " << a << " cm." << endl;
@@ -59,7 +60,6 @@ Rossegger::Rossegger(double InnerRadius, double OuterRadius, double Rdo_Z)
   cout << "  Half  Length = " << L << " cm." << endl;
   cout << "  Limu Dataset = " << limufile << endl;
 
-  assert(1==2);
   return ;
 }
 
@@ -68,6 +68,7 @@ double Rossegger::FindNextZero(double xstart,double epsilon,int order, double (R
   double previous=(this->*func)(order,xstart);
   double x=xstart+epsilon;
   double value=previous;
+	 
   while (! (  (value == 0) || (value<0 && previous>0) || (value>0 && previous<0)) ){
     	  //  Rossegger equation 5.12
     value = (this->*func)(order, x);
@@ -82,6 +83,12 @@ double Rossegger::FindNextZero(double xstart,double epsilon,int order, double (R
 	double intercept =  value - slope*x;
 	double x0  = -intercept/slope;
 	if (verbosity>1) cout << " " << x0 << "," << endl;
+	double n0=  (this->*func)(order, x-epsilon);
+	double n1= (this->*func)(order, x+epsilon);
+	if ((n0<0 && n1<0)||(n0>0 && n1>0)){
+	  printf("neighbors on both sides have the same sign.  Check your function resolution!\n");
+	}
+ 
 	return x0;
       }
     previous = value;
@@ -149,16 +156,21 @@ void Rossegger::FindMunk(double epsilon)
   // since a and b are fixed, R_nk is a function solely of mu_nk and n.
   // for each 'n' we wish to find the a set of k mu_n's that result in R_nk=0
 
-
-  cout << "Now filling the Mu[n][k] Array..."<<endl;
   for (int n=0; n<NumberOfOrders; n++)//  !!!  Off by one from Rossegger convention  !!!
     {
       if (verbosity) cout << "Filling Mu["<<n<<"][k]..." << endl;
       double x=epsilon;
       for (int k=0;k<NumberOfOrders;k++){
-	x=0;//FindNextZero(x,epsilon,n,Rossegger::Rnk_for_zeroes);
+	x=FindNextZero(x,epsilon,n,&Rossegger::Rnk_for_zeroes);
 	Munk[n][k]=x;
 	x+=epsilon;
+	if (verbosity>0) {
+	  printf("Mu[%d][%d]=%E\n",n,k,Munk[n][k]);	  
+	  printf("adjacent values are Rnk[mu-epsilon]=%E\tRnk[mu+epsilon]=%E\n",
+		 Rnk_for_zeroes(n,x-epsilon),Rnk_for_zeroes(n,x+epsilon));
+	  printf("values of argument to limu and kimu are %f and %f\n",
+		 (n+1)*pi/L*a,(n+1)*pi/L*b);
+	}
       }
     }
   cout << "Done." << endl;
@@ -168,18 +180,56 @@ void Rossegger::FindMunk(double epsilon)
  double Rossegger::Limu(double mu, double x){
    //defined in Rossegger eqn 5.44, also a canonical 'satisfactory companion' to Kimu.
    //could use Griddit?
+   if (verbosity>1) {
+     printf("Limu::mu=%f,x=%f\n",mu,x);
+     printf("limu axis bounds= mu:(%f to %f) x:(%f to %f)\n",
+	    hLimu->GetXaxis()->GetXmin(),hLimu->GetXaxis()->GetXmax(),
+	    hLimu->GetYaxis()->GetXmin(),hLimu->GetYaxis()->GetXmax());
+   }
    int xbin=hLimu->GetXaxis()->FindBin(mu);
-   if (xbin<1 || xbin>hLimu->GetXaxis()->GetNbins()) assert(1==3);
+
+   if (xbin<1 || xbin>hLimu->GetXaxis()->GetNbins()) {
+     printf("Limu::mu=%f,x=%f is out of bounds\n",mu,x);
+     printf("Limu axis bounds= mu:(%f to %f) x:(%f to %f)\n",
+	    hLimu->GetXaxis()->GetXmin(),hLimu->GetXaxis()->GetXmax(),
+	    hLimu->GetYaxis()->GetXmin(),hLimu->GetYaxis()->GetXmax());
+     assert(1==3);
+   }
    int ybin=hLimu->GetYaxis()->FindBin(x);
-   if (ybin<1 || ybin>hLimu->GetYaxis()->GetNbins()) assert(1==3);
+   if (ybin<1 || ybin>hLimu->GetYaxis()->GetNbins()) {
+     printf("Limu::mu=%f,x=%f is out of bounds\n",mu,x);
+     printf("Limu axis bounds= mu:(%f to %f) x:(%f to %f)\n",
+	    hLimu->GetXaxis()->GetXmin(),hLimu->GetXaxis()->GetXmax(),
+	    hLimu->GetYaxis()->GetXmin(),hLimu->GetYaxis()->GetXmax());
+     assert(1==3);
+   }
+
    return hLimu->GetBinContent(xbin,ybin); //this should really be interpolating, but we'll deal with that later.
  }
  double Rossegger::Kimu(double mu, double x){
    //could use Griddit?
+   if (verbosity>1) {
+     printf("Kimu::mu=%f,x=%f\n",mu,x);
+   }
    int xbin=hKimu->GetXaxis()->FindBin(mu);
-   if (xbin<1 || xbin>hKimu->GetXaxis()->GetNbins()) assert(1==3);
+   if (verbosity>1) {
+	printf("Kimu:: ybin=%d\n",xbin);
+   }
+   if (xbin<1 || xbin>hKimu->GetXaxis()->GetNbins()) {
+     printf("Kimu::mu=%f,x=%f is out of bounds\n",mu,x);
+     printf("Kimu axis bounds= mu:(%f to %f) x:(%f to %f)\n",
+	    hKimu->GetXaxis()->GetXmin(),hKimu->GetXaxis()->GetXmax(),
+	    hKimu->GetYaxis()->GetXmin(),hKimu->GetYaxis()->GetXmax());
+     assert(1==3);
+   }
    int ybin=hKimu->GetYaxis()->FindBin(x);
-   if (ybin<1 || ybin>hKimu->GetYaxis()->GetNbins()) assert(1==3);
+   if (ybin<1 || ybin>hKimu->GetYaxis()->GetNbins()) {
+     printf("Kimu::mu=%f,x=%f is out of bounds\n",mu,x);
+     printf("Kimu axis bounds= mu:(%f to %f) x:(%f to %f)\n",
+	    hKimu->GetXaxis()->GetXmin(),hKimu->GetXaxis()->GetXmax(),
+	    hKimu->GetYaxis()->GetXmin(),hKimu->GetYaxis()->GetXmax());
+     assert(1==3);
+   }
    return hKimu->GetBinContent(xbin,ybin); //this should really be interpolating, but we'll deal with that later.
  }
 
@@ -291,7 +341,7 @@ double Rossegger::RPrime(int m, int n, double ref, double r)
 }
 
 double Rossegger::Rnk_for_zeroes(int n, double mu){
-
+  if (verbosity>1) printf("Rnk_for_zeroes called with n=%d,mu=%f\n",n,mu);
   double BetaN=(n+1)*pi/L;
     //  Rossegger Equation 5.46
   //       Rnk(r) = Limu_nk (BetaN a) Kimu_nk (BetaN b) - Kimu_nk(BetaN a) Limu_nk (BetaN b)
@@ -461,21 +511,60 @@ double Rossegger::Ephi(double r, double phi, double z, double r1, double phi1, d
 }
 
 
-void Rossegger::LoadCsvToHist(TH2* hist, char* sourcefile){
-  cout << "trying to load" << sourcefile << endl;
+void Rossegger::LoadCsvToHist(TH2** hist, char* sourcefile){
+  cout << "trying to load " << sourcefile << endl;
   std::ifstream inf(sourcefile);
   string line;
   string token;
+  printf("opened.\n");
+  printf("status? %d\n",inf.is_open()?1:0);
+  //    inf>>line;
+  //  printf("%s\n",line.c_str());
 
-  //stringstream lineparser;
-  double val[]={-12345,-12345,-12345};
-  double mu, x, f; 
-  delete hist; // get rid of it if we already had it around.
-  hist=new TH2F(sourcefile,sourcefile,10,0.5,10.5,15,0.05,1.55);//for now hard code the limits
+  double val[3];//={-12345,-12345,-12345};
+  double mu, x, f;
+  
+  //delete hist; // get rid of it if we already had it around.
+
+  //read the histogram bounds from the file:
+  string axisname[2];
+  double firstelement[2];
+  double lastelement[2];
+  int nsteps[2];
+  double stepsize[2];
+  double lbound[2];
+  double ubound[2];
+  for (int i=0;(i<2 && !inf.eof());i++){
+    inf>>line;
+    cout << line << endl;
+    //printf("%s\n",line.c_str());
+    stringstream lineparser(line);
+    getline(lineparser,token,',');
+    axisname[i]=token;
+    getline(lineparser,token,',');
+    firstelement[i]=std::stod(token);
+    getline(lineparser,token,',');
+    lastelement[i]=std::stod(token);
+    getline(lineparser,token,',');
+    nsteps[i]=std::stoi(token);
+    stepsize[i]=(lastelement[i]-firstelement[i])/(nsteps[i]-1);
+    lbound[i]=firstelement[i]-stepsize[i]/2;
+    ubound[i]=lastelement[i]+stepsize[i]/2;
+    printf("loaded axis=%s,limits=%f,%f,steps=%d from file\n",axisname[i].c_str(),firstelement[i],lastelement[i],nsteps[i]);
+
+  }
+
+  
+
+  
+  *hist=new TH2D(sourcefile,Form("%s;%s;%s",sourcefile,axisname[0].c_str(),axisname[1].c_str()),
+		nsteps[0],lbound[0],ubound[0],
+		nsteps[1],lbound[1],ubound[1]);
+  printf("hist has name %s, xaxis bins=%d\n",(*hist)->GetName(),(*hist)->GetXaxis()->GetNbins());
   int nlines=0;
   while (!inf.eof()){
     inf>>line;//mu>>x>>val;
-    printf("%s\n",line.c_str());
+    //printf("%s\n",line.c_str());
     stringstream lineparser(line);
     for (int i=0;i<3;i++){
       getline(lineparser,token,',');
@@ -487,7 +576,7 @@ void Rossegger::LoadCsvToHist(TH2* hist, char* sourcefile){
     x=val[1];
     f=val[2];
     //printf("loaded %f,%f,%f from file\n",mu,x,f);
-    hist->Fill(mu,x,f);
+    (*hist)->Fill(mu,x,f);
     nlines++;
     //if(nlines>100) assert(1==2);
   }

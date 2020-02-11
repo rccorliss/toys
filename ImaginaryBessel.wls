@@ -15,8 +15,8 @@ Rnk[munk_,n_,aL_,bL_]:=(Limu[munk,n*\[Pi]*aL]*BesselK[I*munk,n*\[Pi]*bL]
 
 
 (* run the previous block, then this block to export limu and kimu tables with the specified range and number of entries *)
-With[{mumin=0.5,mumax=4,muN=5,
-      xmin=0.5,xmax=3.0,xN=6},
+With[{mumin=0.0001,mumax=80,muN=400,
+      xmin=0.2,xmax=80.0,xN=100},
      {Export[StringJoin[NotebookDirectory[],"limu_table.csv"],
              StringJoin[StringJoin["mu,",ToString[mumin],",",ToString[mumax],",",ToString[muN],"\n"],
                        StringJoin["x,",ToString[xmin],",",ToString[xmax],",",ToString[xN],"\n"],
@@ -26,7 +26,7 @@ With[{mumin=0.5,mumax=4,muN=5,
                                             1](*close Flatten arguments*),
                                     "CSV"](*close ExportString arguments*)
                       ](*close StringJoin arguments*)
-             ],(*close Export arguments -- limu stable now written*)
+             ,"CSV","TextDelimiters"->""],(*close Export arguments -- limu stable now written*)
       Export[StringJoin[NotebookDirectory[],"kimu_table.csv"],
             StringJoin[StringJoin["mu,",ToString[mumin],",",ToString[mumax],",",ToString[muN],"\n"],
                        StringJoin["x,",ToString[xmin],",",ToString[xmax],",",ToString[xN],"\n"],
@@ -36,9 +36,39 @@ With[{mumin=0.5,mumax=4,muN=5,
                                             1](*close Flatten arguments*),
                                     "CSV"](*close ExportString arguments*)
                       ](*close StringJoin arguments*)
-             ](*close Export arguments -- kimu stable now written*)
+             ,"CSV","TextDelimiters"->""](*close Export arguments -- kimu stable now written*)
       }
     ]
+
+
+With[{mumin=0.0001,mumax=80,muN=400,
+      xmin=0.2,xmax=80.0,xN=100},
+     {limutable=OpenWrite[StringJoin[NotebookDirectory[],"limu_table.csv"]];
+      Write[limutable,StringJoin["mu,",ToString[mumin],",",ToString[mumax],",",ToString[muN]]];
+      Write[limutable,StringJoin["x,",ToString[xmin],",",ToString[xmax],",",ToString[xN]];
+                       ExportString[Flatten[Table[{mu,x,Re[Limu[mu,x]]},
+                                                   {x,xmin,xmax,(xmax-xmin)/(xN-1)},
+                                                   {mu,mumin,mumax,(mumax-mumin)/(muN-1)}],
+                                            1](*close Flatten arguments*),
+                                    "CSV"](*close ExportString arguments*)
+                      ](*close StringJoin arguments*)
+             ,"CSV","TextDelimiters"->""],(*close Export arguments -- limu stable now written*)
+      Export[StringJoin[NotebookDirectory[],"kimu_table.csv"],
+            StringJoin[StringJoin["mu,",ToString[mumin],",",ToString[mumax],",",ToString[muN],"\n"],
+                       StringJoin["x,",ToString[xmin],",",ToString[xmax],",",ToString[xN],"\n"],
+                       ExportString[Flatten[Table[{mu,x,Re[BesselK[I*mu,x]]},
+                                                   {x,xmin,xmax,(xmax-xmin)/(xN-1)},
+                                                   {mu,mumin,mumax,(mumax-mumin)/(muN-1)}],
+                                            1](*close Flatten arguments*),
+                                    "CSV"](*close ExportString arguments*)
+                      ](*close StringJoin arguments*)
+             ,"CSV","TextDelimiters"->""](*close Export arguments -- kimu stable now written*)
+      }
+    ]
+
+
+(*remaining items are for debugging.*)
+
 
 
 Plot[Evaluate[

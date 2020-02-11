@@ -22,6 +22,7 @@
 #include <map>
 
 class TH2;
+class TH2D;
 class TH3;
 
 class Rossegger
@@ -62,14 +63,15 @@ class Rossegger
   void FindBetamn(double epsilon);  // Routine used to fill the Betamn array with resolution epsilon...
   void FindMunk(double epsilon);    // Routine used to fill the Munk array with resolution epsilon...
 
-  void LoadCsvToHist(TH2* hist, char* filename);
+  void LoadCsvToHist(TH2** hist, char* filename);
 
   double Betamn[NumberOfOrders][NumberOfOrders];  //  Betamn array from Rossegger
   double N2mn[NumberOfOrders][NumberOfOrders];    //  N2mn array from Rossegger
   double Munk[NumberOfOrders][NumberOfOrders];    //  Munk array from Rossegger
 
   TH2 *Tags;
-  TH2 *hLimu, *hKimu;
+  TH2 *hLimu;
+  TH2 *hKimu;
   std::map<std::string, TH3*> Grid;
 
 };

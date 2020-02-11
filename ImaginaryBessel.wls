@@ -21,12 +21,21 @@ Table[Rnk[mu,n,1.2,2.1],{n,5,10,1}]],{mu,30,100}]
 Export["limu_table.csv",ExportString[Table[{mu,x,Re[Limu[mu,x]]},{x,0.1,1.5,0.1},{mu,1,10,1}],"CSV"]]
 
 
-Flatten[Table[{mu,x,Re[Limu[mu,x]]},{x,0.1,1.5,0.1},{mu,1,10,1}],1]
+mumin=1
+mumax=2
+muN=3
+muStep=(mumax-mumin)/muN
+StringJoin["mu,",ToString[mumin],",",ToString[mumax],",",ToString[muN]]
+ExportString[Flatten[Table[{"mu",mumin,mumax,muN},{muN,1,1,1}],1],"CSV"]
+StringJoin[StringJoin["mu,",ToString[mumin],",",ToString[mumax],",",ToString[muN],"\n"],ExportString[Flatten[Table[{mu,x,Re[Limu[mu,x]]},{x,0.5,1.5,0.5},{mu,2,10,4}],1],"CSV"]]
 
 
 Print[NotebookDirectory[],"hello"]
 
 
 Export[StringJoin[NotebookDirectory[],"limu_table.csv"],
-       ExportString[Flatten[Table[{mu,x,Re[Limu[mu,x]]},{x,0.1,1.5,0.1},{mu,1,10,1}],1],"CSV"],
+       ExportString[Flatten[Table[{mu,x,Re[Limu[mu,x]]},{mu,0.5,20,0.5},{x,0.05,3.0,0.05}],1],"CSV"],
+       "CSV"]
+Export[StringJoin[NotebookDirectory[],"kimu_table.csv"],
+       ExportString[Flatten[Table[{mu,x,Re[BesselK[I*mu,x]]},{mu,0.5,20,0.5},{x,0.05,3.0,0.05}],1],"CSV"],
        "CSV"]

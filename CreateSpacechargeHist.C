@@ -116,7 +116,7 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
     //eventually I ought to roll a random number for each bunch crossing and use that to detemrine the number of events, but for now I just take one per minbiasRate.
     //must be sure to convert the incoming positions into local units.
     //load prim*
-    //printf("loading eve=%d\n",i);
+    printf("loading eve=%d\n",i);
     float t0=(i+istart)/mbRate;
     driftedZ=t0*vIon;//drift position in local units
     PHG4HitContainer::ConstRange range=eleHits->getHits();

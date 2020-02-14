@@ -129,7 +129,7 @@ void Rossegger::FindBetamn(double epsilon)
 	  //N2mn[m][n] *= (jn(m,Betamn[m][n]*a)*jn(m,Betamn[m][n]*a)/jn(m,Betamn[m][n]*b)/jn(m,Betamn[m][n]*b) - 1.0);
 	  double jna_over_jnb=jn(m,Betamn[m][n]*a)/jn(m,Betamn[m][n]*b);
 	  N2mn[m][n] *= (jna_over_jnb*jna_over_jnb-1.0);
-	  //rcc note!  in eq 5.17, N2nm is set with betamn[m][n].  this is reversed here.  Not sure if important.
+	  //rcc note!  in eq 5.17, N2nm is set with betamn[m][n], but from context that looks to be a typo.  The order is mn everywhere else
 	  if (verbosity>1) cout << "m: " << m << " n: " << n << " N2[m][n]: " << N2mn[m][n];
 	  double integral=0.0;
 	  double step = 0.01;
@@ -173,6 +173,32 @@ void Rossegger::FindMunk(double epsilon)
 	}
       }
     }
+
+  //  Now fill in the N2nk array...
+  for (int n=0; n<NumberOfOrders; n++)
+    {
+      for (int k=0; k<NumberOfOrders; k++)
+	{
+	  //  Rossegger Equation 5.48
+	  //  Integral of R_nk(r)*R_ns(r) dr/r= delta_ks*N2nk
+	  //  note that unlike N2mn, there is no convenient shortcut here.
+	  double integral=0.0;
+	  double step = 0.01;
+
+	      for (double r=a; r<b; r+=step){
+		integral += Rnk(n,k,r)*Rnk(n,k,r)/r*step;
+	      }
+	  if (verbosity>1)
+	    {	      cout << " Int: " << integral << endl;
+	    }
+	  N2nk[n][k] = integral;
+	  if (verbosity>1) cout << "n: " << n << " k: " << k << " N2nk[n][k]: " << N2nk[n][n];
+
+	}
+    }
+
+
+  
   cout << "Done." << endl;
   return;
 }
@@ -341,6 +367,7 @@ double Rossegger::RPrime(int m, int n, double ref, double r)
 }
 
 double Rossegger::Rnk_for_zeroes(int n, double mu){
+  //unlike Rossegger, we count 'k' and 'n' from zero.
   if (verbosity>1) printf("Rnk_for_zeroes called with n=%d,mu=%f\n",n,mu);
   double BetaN=(n+1)*pi/L;
     //  Rossegger Equation 5.46
@@ -484,6 +511,7 @@ double Rossegger::Er(double r, double phi, double z, double r1, double phi1, dou
 
 double Rossegger::Ephi(double r, double phi, double z, double r1, double phi1, double z1)
 {
+  //compute field at rphiz from charge at r1phi1z1
   //  Check input arguments for sanity...
   int error=0;
   if (r<a    || r>b)         error=1;
@@ -506,7 +534,42 @@ double Rossegger::Ephi(double r, double phi, double z, double r1, double phi1, d
     }
 
   double G=0;
-  //cout << "Ephi = " << G << endl;
+  //Rossegger Eqn. 5.66:
+  for (int k=0; k<NumberOfOrders; k++) //off by one from Rossegger convention!
+    {
+      if (verbosity) cout << "\nk=" << k;
+      for (int n=0; n<NumberOfOrders; n++) //off by one from Rossegger convention!
+	{
+	  if (verbosity) cout << " n=" << n;
+	  double BetaN = (n+1)*pi/L;	  
+	  double term = 1/L;
+	  if (verbosity) cout << " 1/L=" << term; 
+	  term *= sin(BetaN*z)*sin(BetaN*z1);
+	  if (verbosity) cout << " *sinsin=" << term; 
+	  term *= Rnk(n,k,r)*Rnk(n,k,r1)/N2nk[n][k];
+	  if (verbosity) cout << " *rnkrnk/nnknnk=" << term; 
+	  if (phi<phi1)
+	    {
+	      term *=  sinh(Munk[n][k]*pi*(phi1-phi));
+	      //term *=  Munk[n][k]*sinh(Munk[n][k]*pi*(phi1-phi));
+	      //this originally has a factor of Munk in front, but that cancels with one in the denominator
+	    }
+	  else
+	    {
+	      term *=  -sinh(Munk[n][k]*pi*(phi-phi1));
+	      //term *=  -Munk[n][k]*sinh(Munk[n][k]*pi*(phi-phi1));
+	      //this originally has a factor of Munk in front, but that cancels with one in the denominator
+	    }
+	  if (verbosity) cout << " *sinh=" << term;
+	  term *= 1/(sinh(pi*Munk[n][k]));
+	  //term *= 1/(Munk[n][k]*sinh(pi*Munk[n][k]));
+	      //this originally has a factor of Munk in front, but that cancels with one in the numerator
+	  G += term;
+	  if (verbosity) cout << "  /sinh=" << term << " G=" << G << endl;
+	}
+    }
+  if (verbosity) cout << "Ephi = " << G << endl;
+ 
   return G;
 }
 

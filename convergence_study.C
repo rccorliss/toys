@@ -30,7 +30,7 @@ void convergence_study(){
     assert(f->IsOpen());
     t=(TTree*)f->Get("pTree");
     t->Draw("(out1.Perp()-outa.Perp())>>histR");
-    t->Draw("(out1.Phi()-outa.Phi())*orig.Perp()>>histRphi");
+    t->Draw("(out1.Phi()-outa.Phi())*orig.Perp()>>histRphi","(out1.Phi()-outa.Phi()<3.14)");
     hR=(TH1F*)gDirectory->Get("histR");
     hRphi=(TH1F*)gDirectory->Get("histRphi");
    t->Draw("(out1.Perp()-outa.Perp())/(outa.Perp()-orig.Perp())>>histRfrac");
@@ -67,7 +67,7 @@ void convergence_study(){
    getemp->SetMarkerColor(kBlue);
   getemp->SetMarkerStyle(kStar);
   mgtemp->Add(getemp);
-  mgtemp->Draw("AC*");
+  mgtemp->Draw("A*");
 
  TCanvas *c2 =  new TCanvas();
  c2->cd();

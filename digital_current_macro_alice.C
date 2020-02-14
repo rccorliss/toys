@@ -12,7 +12,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   start=now=gSystem->Now();
   printf("the time is %lu\n",(unsigned long)now);
 
-
+  /*
   //load the ALICE space charge model
   const float alice_rmin=83.5;
   const float alice_rmax=254.5;
@@ -23,15 +23,32 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   const double epsilonnaught=8.854e-12;// units of C/(V*m)
   const double eps_in_cm=epsilonnaught/100; //units of C/(V*cm)
   const double alice_chargescale=8.85e-14;//their hist. has charge in units of C/cm^3 /eps0.  This is eps0 in (V*cm)/C units so that I can multiple by the volume in cm^3 to get Q in C.
+const char scmapfilename[]="InputSCDensityHistograms_8000events.root";
+const char scmaphistname[]="inputSCDensity3D_8000_avg";
+  */
+
+    //load the sPHENIX space charge model
+  //ooph.  I'm paying now for naming this the 'alice' macro, and giving all these underscores...
+  const float alice_rmin=20.0;
+  const float alice_rmax=78.0;
+  float alice_deltar=alice_rmax-alice_rmin;
+  const float alice_z=105.5;
+  const float alice_driftVolt=-400*105.5; //V
+  const float alice_driftVel=8.0*1e6;//cm per s
+  const double epsilonnaught=8.854e-12;// units of C/(V*m)
+  const double eps_in_cm=epsilonnaught/100; //units of C/(V*cm)
+  const double alice_chargescale=1;//our hist. has charge in units of C/cm^3, so we do not need a multiplier.
+  const char scmapfilename[]="G4Hits_new_1500.sum.hist.root";
+  const char scmaphistname[]="sphenix_minbias_charge";
 
 
   //define a region of interest, in units of the intrinsic scale of the alice histogram:
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
-  int nr=159;
+  int nr=10;//159 nominal
   int nr_roi_min=0;
   int nr_roi=nr;
   int nr_roi_max=nr_roi_min+nr_roi;
-  int nphi=360;
+  int nphi=12;//360 nominal
   int nphi_roi_min=0;
   int nphi_roi=nphi;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
@@ -85,9 +102,9 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 
 
  
-  //get the ALICE histogram
-  TFile *f=TFile::Open("InputSCDensityHistograms_8000events.root");
-  TH3F* alice_average=(TH3F*)f->Get("inputSCDensity3D_8000_avg");
+  //get the SC density histogram
+  TFile *f=TFile::Open(scmapfilename);
+  TH3F* alice_average=(TH3F*)f->Get(scmaphistname);
   now=gSystem->Now();
   printf("loaded hist.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
@@ -96,7 +113,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 		  nr, nr_roi_min,nr_roi_max,
 		  nphi,nphi_roi_min, nphi_roi_max,
 		  nz, nz_roi_min, nz_roi_max,
-			 alice_driftVel, AnnularFieldSim::Analytic);
+			 alice_driftVel, AnnularFieldSim::PhiSlice);
   //  new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,9,120,9,alice_driftVel);
    
     // dropping half-res for test: new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,53,18,31,alice_driftVel);
@@ -108,10 +125,15 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   now=gSystem->Now();
   printf("set fields.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
+  alice->load_rossegger();
+   now=gSystem->Now();
+    printf("load rossegger greens functions.  the dtime is %lu\n",(unsigned long)(now-start));
+  start=now;
   alice->load_spacecharge(alice_average,0,alice_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
   //computed the correction to get the same spacecharge as in the alice histogram:
-  double alice_analytic_scale=1.237320E-06/9.526278E-11;
-  alice->load_analytic_spacecharge(alice_analytic_scale);
+  //todo: make the analytic scale proportional to the alice_chargescale.
+  //double alice_analytic_scale=1.237320E-06/9.526278E-11;
+  //alice->load_analytic_spacecharge(alice_analytic_scale);
   now=gSystem->Now();
   printf("loaded spacecharge.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
@@ -139,7 +161,8 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
     ct=new TCanvas();
     hAnCharge->Project3D("YX")->Draw("colz");
   }
- 
+
+  return;
   //define a grid of test points:
   const int divisor=100;
   const int nparticles=divisor*divisor;

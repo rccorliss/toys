@@ -1,11 +1,11 @@
 #include "assert.h"
 #include "TVector3.h"
 #include "AnalyticFieldModel.h"
+#include "Rossegger.h"
 
 
 template <class T> class MultiArray;
 class TH3F;
-class Rossegger;
 
 class AnnularFieldSim{
  public:
@@ -112,11 +112,13 @@ class AnnularFieldSim{
   void setScaleFactorB(float x){Bscale=x;return;};
   void setScaleFactorE(float x){Escale=x;return;};
   void setFlatFields(float B, float E);
+  void load_rossegger(){  green=new Rossegger(rmin,rmax,zmax); return;};
 
   TVector3 calc_unit_field(TVector3 at, TVector3 from);
   TVector3 analyticFieldIntegral(float zdest,TVector3 start);
   TVector3 interpolatedFieldIntegral(float zdest,TVector3 start);
-  int FilterPhiIndex(int phi,int range); //defaults to using nphi for range.
+  double FilterPhiPos(double phi); //puts phi in 0<phi<2pi
+  int FilterPhiIndex(int phi,int range); //puts phi in bin range 0<phi<range.  defaults to using nphi for range.
 
   TVector3 GetCellCenter(int r, int phi, int z);
   TVector3 GetGroupCellCenter(int r0, int r1, int phi0, int phi1, int z0, int z1);

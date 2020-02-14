@@ -53,10 +53,7 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
   //set the green's functions model:
   //UseFreeSpaceGreens();
   //blah
-  //green=0;
-  green=new Rossegger(rmin,rmax,zmax);
-  //step.SetXYZ(green->Rmn(1,1,1),0,0);
-  
+  green=0;  
 
   //load parameters of the whole-volume tiling
   nr=r;nphi=phi;nz=z; //number of fundamental bins (f-bins) in each direction
@@ -259,6 +256,17 @@ TVector3 AnnularFieldSim::calc_unit_field(TVector3 at, TVector3 from){
     field.RotateZ(at.Phi());//rotate to the coordinates of our 'at' point.
   }
     return field;
+}
+
+double AnnularFieldSim::FilterPhiPos(double phi){
+  double p=phi;
+  if (p>=phispan){//rcc here
+    p-=2*TMath::Pi();
+  }
+  if (p<0){
+    p+=2*TMath::Pi();
+  }
+  return p;
 }
 int AnnularFieldSim::FilterPhiIndex(int phi,int range=-1){
   if (range<0) range=nphi; //default input is range=-1.  in that case, use the intrinsic resolution of the q grid.

@@ -43,7 +43,7 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
   //                2) to divide by certain units so that those variables are expressed in those units.
 
   float ionMobility=3.37*cm*cm/V/s;
-  float vIon=ionMobility*400*V;
+  float vIon=ionMobility*400*V/cm;
   //float vIon=16.0*um/us;
   float ampGain=2e3;
   float ampIBFfrac=0.02;
@@ -68,7 +68,15 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
   int nphi=360;
   int nz=110;
   TH3D *hCharge=new TH3D("sphenix_minbias_charge","SC (ions) per cm^3;phi (rad);r (cm);z (cm)",nphi,0,6.28319,nr,rmin/cm,rmax/cm,110,0,z_rdo/cm);
-  TH3D *hChargeLong=new TH3D("sphenix_minbias_charge_long","SC (ions) per cm^3;phi (rad);r (cm);z (cm)",nphi,0,6.28319,nr,rmin/cm,rmax/cm,2*110,0,2*z_rdo/cm);
+  TH3D *hPrimary=new TH3D("sphenix_minbias_primary","Primary (ions) per cm^3;phi (rad);r (cm);z (cm)",nphi,0,6.28319,nr,rmin/cm,rmax/cm,2*110,0,2*z_rdo/cm);
+  TH3D *hIBF=new TH3D("sphenix_minbias_IBF","IBF (ions) per cm^3;phi (rad);r (cm);z (cm)",nphi,0,6.28319,nr,rmin/cm,rmax/cm,2*110,0,2*z_rdo/cm);
+  TH3D *hPrimaryNoDrift=new TH3D("sphenix_minbias_raw","Undrifted Primary (ions) per cm^3;phi (rad);r (cm);z (cm)",nphi,0,6.28319,nr,rmin/cm,rmax/cm,2*110,0,2*z_rdo/cm);
+
+	hPrimary->Fill(phi,r/(cm),zprim/(cm),ne/vol);
+	hIBF->Fill(phi,r/(cm),zibf/(cm),ne*ionsPerEle/vol);
+	hPrimaryNoDrift->Fill(phi,r/(cm),z/(cm),ne/vol);
+
+  
   //TH3D *hChargeBack=new TH3D("sphenix_minbias_charge_backward","SC (ions) per cm^3;phi (rad);r (cm);z (cm)",nphi,0,6.28319,nr,rmin/cm,rmax/cm,110,0,z_rdo/cm);
   double hrstep=(rmax-rmin)/cm/nr;
   double hphistep=6.28319/nphi;
@@ -139,7 +147,10 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
 	double vol=(hzstep*hphistep*(hr+hrstep*0.5)*hrstep)/cm/cm/cm;
 
 	hCharge->Fill(phi,r/(cm),zprim/(cm),ne/vol); //primary ion, drifted by t0, in cm
-	hChargeLong->Fill(phi,r/(cm),zibf/(cm),ne*ionsPerEle/vol); //amp ion, drifted by t0, in cm
+	hCharge->Fill(phi,r/(cm),zibf/(cm),ne*ionsPerEle/vol); //amp ion, drifted by t0, in cm
+	hPrimary->Fill(phi,r/(cm),zprim/(cm),ne/vol);
+	hIBF->Fill(phi,r/(cm),zibf/(cm),ne*ionsPerEle/vol);
+	hPrimaryNoDrift->Fill(phi,r/(cm),z/(cm),ne/vol);
 	if (saveTree){
 	  rawHits->Fill();
 	}

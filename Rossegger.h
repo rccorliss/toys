@@ -68,6 +68,7 @@ class Rossegger
   double Betamn[NumberOfOrders][NumberOfOrders];  //  Betamn array from Rossegger
   double N2mn[NumberOfOrders][NumberOfOrders];    //  N2mn array from Rossegger
   double Munk[NumberOfOrders][NumberOfOrders];    //  Munk array from Rossegger
+  double N2nk[NumberOfOrders][NumberOfOrders];    //  N2nk array from Rossegger
 
   TH2 *Tags;
   TH2 *hLimu;

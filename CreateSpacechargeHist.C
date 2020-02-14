@@ -82,6 +82,7 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
 
   //to fully populate the detector half, we need events covering t0=0 to t0=z_rdo/vIon.  These occur at mbRate, so:
   printf("vIon=%f cm/s\tz=%f cm\t rate=%f kHz\n ==> need z/v*r=%f events to cover the detector. T has %d entries.\n",vIon/(cm/s),z_rdo/(cm),mbRate/(kHz),(z_rdo/vIon*mbRate), neve);
+  printf("IBF per measured e: %f , e per GeV deposited: %f\n", ionsPerEle,Tpc_ElectronsPerGeV);
   
   float x,y,z,zibf,zprim;
   float r,phi;
@@ -156,6 +157,9 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
   }
   outfile->cd();
   hCharge->Write();
+  hPrimary->Write();
+  hIBF->Write();
+  hPrimaryNoDrift->Write();
   if (saveTree){
     rawHits->Write();
   }

@@ -60,7 +60,7 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
   double Tpc_NTot = 0.90 * Ne_NTotal + 0.10 * CF4_NTotal;
   double Tpc_dEdx = 0.90 * Ne_dEdx + 0.10 * CF4_dEdx;
   double Tpc_ElectronsPerKeV = Tpc_NTot / Tpc_dEdx;
-  double Tpc_ElectronsPerGeV = Tpc_NTot / Tpc_dEdx*1e6 /(cm); //input as electrons per gev per cm.
+  double Tpc_ElectronsPerGeV = Tpc_NTot / Tpc_dEdx*1e6; //electrons per gev.
 
   
   TFile *outfile=TFile::Open(Form("%s.rcc_sc.hist.root",filename),"RECREATE");

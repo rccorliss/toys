@@ -72,10 +72,6 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
   TH3D *hIBF=new TH3D("sphenix_minbias_IBF","IBF (ions) per cm^3;phi (rad);r (cm);z (cm)",nphi,0,6.28319,nr,rmin/cm,rmax/cm,2*110,0,2*z_rdo/cm);
   TH3D *hPrimaryNoDrift=new TH3D("sphenix_minbias_raw","Undrifted Primary (ions) per cm^3;phi (rad);r (cm);z (cm)",nphi,0,6.28319,nr,rmin/cm,rmax/cm,2*110,0,2*z_rdo/cm);
 
-	hPrimary->Fill(phi,r/(cm),zprim/(cm),ne/vol);
-	hIBF->Fill(phi,r/(cm),zibf/(cm),ne*ionsPerEle/vol);
-	hPrimaryNoDrift->Fill(phi,r/(cm),z/(cm),ne/vol);
-
   
   //TH3D *hChargeBack=new TH3D("sphenix_minbias_charge_backward","SC (ions) per cm^3;phi (rad);r (cm);z (cm)",nphi,0,6.28319,nr,rmin/cm,rmax/cm,110,0,z_rdo/cm);
   double hrstep=(rmax-rmin)/cm/nr;

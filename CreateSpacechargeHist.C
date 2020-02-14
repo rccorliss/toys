@@ -139,7 +139,7 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
 	zibf=z_rdo-driftedZ;
 	if (phi<0) phi+=6.28319;
 	//compute the bin volume:
-	int bin=hCharge->FindBin(phi,r/(cm),zprim/(cm));
+	int bin=hCharge->GetYaxis()->FindBin(r/(cm));
 	double hr=hCharge->GetYaxis()->GetBinLowEdge(bin);
 	double vol=(hzstep*hphistep*(hr+hrstep*0.5)*hrstep)/cm/cm/cm;
 

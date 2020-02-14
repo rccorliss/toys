@@ -1,4 +1,4 @@
-#if 1
+#if 0
 #include "/osx_sphenix/coresoftware/simulation/g4simulation/g4main/PHG4HitContainer.h"
 #include "/osx_sphenix/coresoftware/simulation/g4simulation/g4main/PHG4Hit.h"
 #else

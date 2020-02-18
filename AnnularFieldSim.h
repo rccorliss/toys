@@ -10,12 +10,16 @@ class TH3F;
 class AnnularFieldSim{
  public:
   enum BoundsCase {InBounds,OnHighEdge, OnLowEdge,OutOfBounds}; //note that 'OnLowEdge' is qualitatively different from 'OnHighEdge'.  Low means there is a non-zero distance between the point and the edge of the bin.  High applies even if that distance is exactly zero.
-  enum LookupCase {Full3D,HybridRes, PhiSlice, Analytic};
+  enum LookupCase {Full3D,HybridRes, PhiSlice, Analytic, NoLookup};
   //Full3D = uses (nr x nphi x nz)^2 lookup table
   //Hybrid = uses (nr x nphi x nz) x (nr_local x nphi_local x nz_local) + (nr_low x nphi_low x nz_low)^2 set of tables
   //PhiSlice = uses (nr x 1 x nz) x (nr x nphi x nz) lookup table exploiting phi symmetry.
   //Analytic = doesn't use lookup tables -- no memory footprint, uses analytic E field at center of each bin.
   //    Note that this is not the same as analytic propagation, which checks the analytic field integrals in each step.
+  //NoLookup = Don't build any structures -- effectively ignores any calculated spacecharge field
+  enum ChargeCase {FromFile, AnalyticSpacecharge, NoSpacecharge};//load from file, load from AnalyticFieldModel, or set to zero.
+  //note that if we set to Zero, we skip the lookup step.
+
 
   //debug items
   //
@@ -31,9 +35,8 @@ class AnnularFieldSim{
   double vdrift; //gas drift speed in cm/s
   //double vprime; //first derivative of drift velocity at specific E
   //double vprime2; //second derivative of drift velocity at specific E
-  float Bscale;//additional scale factor for debugging B effects. Defaults to 1.0
-  float Escale;//additional scale factor for debugging E effects. Defaults to 1.0
   float Enominal;//magnitude of the nominal field on which drift speed is based, in V/cm.
+  float Bnominal;//magnitude of the nominal magnetic field on which drift speed is based, in Tesla.
   float phispan;//angular span of the area in the phi direction, since TVector3 is too smart.
   float rmin, rmax;//inner and outer radii of the annulus
   float zmin, zmax;//lower and upper edges of the coordinate system in z (not fully implemented yet)
@@ -47,6 +50,7 @@ class AnnularFieldSim{
   int nr,nphi,nz; //number of fundamental bins (f-bins) in each direction = dimensions of 3D array covering entire volume
   TVector3 step; //size of an f-bin in each direction
   LookupCase lookupCase; //which lookup system to instantiate and use.
+  ChargeCase chargeCase; //which charge model to use
   
   //variables related to the region of interest:
   //
@@ -87,6 +91,7 @@ class AnnularFieldSim{
 
 
  public:
+  //constructors with history for backwards compatibility
   AnnularFieldSim(float rmin,float rmax, float dz,int r,int phi, int z, float vdr); //abbr. constructor with roi=full region
   AnnularFieldSim(float rin, float rout, float dz,
 		  int r, int roi_r0, int roi_r1,
@@ -98,6 +103,11 @@ class AnnularFieldSim{
 		  int phi, int roi_phi0, int roi_phi1, int in_phiLowSpacing, int in_phiHighSize,
 		  int z, int roi_z0, int roi_z1,int in_zLowSpacing, int in_zHighSize,
 		  float vdr, LookupCase in_lookupCase);
+  AnnularFieldSim(float in_innerRadius, float in_outerRadius, float in_outerZ,
+				 int r, int roi_r0, int roi_r1, int in_rLowSpacing, int in_rHighSize,
+				 int phi, int roi_phi0, int roi_phi1, int in_phiLowSpacing, int in_phiHighSize,
+				 int z, int roi_z0, int roi_z1,int in_zLowSpacing, int in_zHighSize,
+				   float vdr,LookupCase in_lookupCase, ChargeCase in_chargeCase);
 
   //debug functions:
   void UpdateEveryN(int n){debug_printActionEveryN=n; return;};
@@ -109,21 +119,21 @@ class AnnularFieldSim{
   
   void load_spacecharge(TH3F *hist, float zoffset, float scalefactor);
   void load_analytic_spacecharge(float scalefactor);
-  void setScaleFactorB(float x){Bscale=x;return;};
-  void setScaleFactorE(float x){Escale=x;return;};
+  void setNominalB(float x){Bnominal=x;return;};
+  void seNominalE(float x){Enominal=x;return;};
   void setFlatFields(float B, float E);
   void load_rossegger(){  green=new Rossegger(rmin,rmax,zmax); return;};
 
   TVector3 calc_unit_field(TVector3 at, TVector3 from);
-  TVector3 analyticFieldIntegral(float zdest,TVector3 start);
-  TVector3 interpolatedFieldIntegral(float zdest,TVector3 start);
+  TVector3 analyticFieldIntegral(float zdest,TVector3 start, MultiArray<TVector3> *field);
+  TVector3 interpolatedFieldIntegral(float zdest,TVector3 start, MultiArray<TVector3> *field);
   double FilterPhiPos(double phi); //puts phi in 0<phi<2pi
   int FilterPhiIndex(int phi,int range); //puts phi in bin range 0<phi<range.  defaults to using nphi for range.
 
   TVector3 GetCellCenter(int r, int phi, int z);
   TVector3 GetGroupCellCenter(int r0, int r1, int phi0, int phi1, int z0, int z1);
   TVector3 GetWeightedCellCenter(int r, int phi, int z);
-  TVector3 fieldIntegral(float zdest,TVector3 start);
+  TVector3 fieldIntegral(float zdest,TVector3 start, MultiArray<TVector3> *field);
   void populate_fieldmap();
   //now handled by setting 'analytic' lookup:  void populate_analytic_fieldmap();
   void  populate_lookup();

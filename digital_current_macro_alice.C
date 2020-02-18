@@ -44,11 +44,11 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
 
   //define a region of interest, in units of the intrinsic scale of the alice histogram:
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
-  int nr=10;//159 nominal
+  int nr=159;//159 nominal
   int nr_roi_min=0;
   int nr_roi=nr;
   int nr_roi_max=nr_roi_min+nr_roi;
-  int nphi=12;//360 nominal
+  int nphi=360;//360 nominal
   int nphi_roi_min=0;
   int nphi_roi=nphi;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
@@ -127,15 +127,15 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
   now=gSystem->Now();
   printf("set fields.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
-  alice->load_rossegger();
+  //alice->load_rossegger();
    now=gSystem->Now();
     printf("load rossegger greens functions.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   alice->load_spacecharge(alice_average,0,alice_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
   //computed the correction to get the same spacecharge as in the alice histogram:
   //todo: make the analytic scale proportional to the alice_chargescale.
-  //double alice_analytic_scale=1.237320E-06/9.526278E-11;
-  //alice->load_analytic_spacecharge(alice_analytic_scale);
+  double alice_analytic_scale=1.237320E-06/9.526278E-11;
+  alice->load_analytic_spacecharge(alice_analytic_scale);
   now=gSystem->Now();
   printf("loaded spacecharge.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
@@ -150,11 +150,12 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
   printf("consistency check:  integrate field along IR and OR, confirm V:\n");
 
   if (reduction==0){
-    TH3F* hAnCharge=new TH3F("hAnCharge","hAnCharge;phi;r;z",360,0,6.281,159,alice_rmin,alice_rmax,62,0,alice_z);
+    TH3F* hAnCharge=new TH3F("hAnCharge","hAnCharge;phi;r;z",nphi,0,6.281,nr,alice_rmin,alice_rmax,nz,0,alice_z);
+    hAnCharge->Fill(0.0,0.0,0.0,0.0); //prime it so it draws correctly
+
     int rh,ph,zh;
     for (int i=0;i<hAnCharge->GetNcells();i++){
       hAnCharge->GetBinXYZ(i,ph,rh,zh);
-      hAnCharge->Fill(0.0,0.0,0.0,0.0);
       hAnCharge->SetBinContent(i,alice->q->Get(rh%nr,ph%nphi,zh%nz));
     }
     hAnCharge->Project3D("XZ")->Draw("colz");

@@ -395,6 +395,11 @@ TVector3 AnnularFieldSim::analyticFieldIntegral(float zdest,TVector3 start, Mult
   bool rOkay=  (GetRindexAndCheckBounds(start.Perp(), &r) == InBounds);
   bool phiOkay=  (GetPhiIndexAndCheckBounds(start.Phi(), &phi) == InBounds);
 
+  //bool isE=(field==Efield);
+  //bool isB=(field==Bfield);
+  
+  //printf("anaFieldInt:  isE=%d, isB=%d, start=(%f,%f,%f)\n",isE,isB,start.X(),start.Y(),start.Z());
+  
   if (!rOkay || !phiOkay){
     printf("AnnularFieldSim::analyticFieldIntegral asked to integrate along (r=%f,phi=%f), index=(%d,%d), which is out of bounds.  returning starting position.\n",start.Perp(),start.Phi(),r,phi);
     return start;
@@ -557,6 +562,11 @@ TVector3 AnnularFieldSim::GetWeightedCellCenter(int r, int phi, int z){
 TVector3 AnnularFieldSim::interpolatedFieldIntegral(float zdest,TVector3 start, MultiArray<TVector3> *field){
   //printf("AnnularFieldSim::interpolatedFieldIntegral(x=%f,y=%f, z=%f)\n",start.X(),start.Y(),start.Z());
 
+  // bool isE=(field==Efield);
+  //bool isB=(field==Bfield);
+  
+  //printf("interpFieldInt:  isE=%d, isB=%d, start=(%f,%f,%f)\n",isE,isB,start.X(),start.Y(),start.Z());
+  
 
   float r0=(start.Perp()-rmin)/step.Perp()-0.5; //the position in r, in units of step, starting from the center of the 0th bin.
   int r0i=floor(r0); //the integer portion of the position. -- what center is below our position?
@@ -628,8 +638,8 @@ TVector3 AnnularFieldSim::interpolatedFieldIntegral(float zdest,TVector3 start, 
   bool endOkay=(endBound==InBounds || endBound==OnHighEdge); //if we just barely touch out-of-bounds on the high end, we can skip that piece of the integral
   
   if (!startOkay || !endOkay){
-    printf("AnnularFieldSim::InterpolatedFieldIntegral asked to integrate from z=%f to %f, index=%d to %d), which is out of bounds.  returning starting position.\n",startz,endz,zi,zf);
-    return start;
+    printf("AnnularFieldSim::InterpolatedFieldIntegral asked to integrate from z=%f to %f, index=%d to %d), which is out of bounds.  returning zero\n",startz,endz,zi,zf);
+    return zero_vector;
   }
 
   if (startBound==OnLowEdge){
@@ -1945,13 +1955,13 @@ TVector3 AnnularFieldSim::GetStepDistortion(float zdest,TVector3 start, bool int
     printf("GetStepDistortion: delta=(%E,%E,%E)\n",deltaX,deltaY,deltaZ);
   }
 
-  if (abs(deltaX)<1E-20){
+  if (abs(deltaX)<1E-20 && !(chargeCase==NoSpacecharge)){
     printf("GetStepDistortion produced a very small deltaX: %E\n",deltaX);
     assert(1==2);
 
    }
   
-  //deltaZ=0;//temporary removal.
+  deltaZ=0;//temporary removal.
 
 
   

@@ -105,10 +105,10 @@ class AnnularFieldSim{
 		  int z, int roi_z0, int roi_z1,int in_zLowSpacing, int in_zHighSize,
 		  float vdr, LookupCase in_lookupCase);
   AnnularFieldSim(float in_innerRadius, float in_outerRadius, float in_outerZ,
-				 int r, int roi_r0, int roi_r1, int in_rLowSpacing, int in_rHighSize,
-				 int phi, int roi_phi0, int roi_phi1, int in_phiLowSpacing, int in_phiHighSize,
-				 int z, int roi_z0, int roi_z1,int in_zLowSpacing, int in_zHighSize,
-				   float vdr,LookupCase in_lookupCase, ChargeCase in_chargeCase);
+		  int r, int roi_r0, int roi_r1, int in_rLowSpacing, int in_rHighSize,
+		  int phi, int roi_phi0, int roi_phi1, int in_phiLowSpacing, int in_phiHighSize,
+		  int z, int roi_z0, int roi_z1,int in_zLowSpacing, int in_zHighSize,
+		  float vdr,LookupCase in_lookupCase, ChargeCase in_chargeCase);
 
   //debug functions:
   void UpdateEveryN(int n){debug_printActionEveryN=n; return;};

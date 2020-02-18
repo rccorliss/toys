@@ -110,10 +110,10 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
   start=now;
   AnnularFieldSim *alice=
     new  AnnularFieldSim(alice_rmin,alice_rmax,alice_z,
-		  nr, nr_roi_min,nr_roi_max,
-		  nphi,nphi_roi_min, nphi_roi_max,
-		  nz, nz_roi_min, nz_roi_max,
-			 alice_driftVel, AnnularFieldSim::PhiSlice);
+			 nr, nr_roi_min,nr_roi_max,1,2,
+			 nphi,nphi_roi_min, nphi_roi_max,1,2,
+			 nz, nz_roi_min, nz_roi_max,1,2,
+			 alice_driftVel, AnnularFieldSim::PhiSlice, AnnularFieldSim::NoSpacecharge);
   //  new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,9,120,9,alice_driftVel);
    
     // dropping half-res for test: new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,53,18,31,alice_driftVel);
@@ -122,6 +122,8 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
   printf("created sim obj.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   alice->setFlatFields(0.5, alice_driftVolt/alice_z);
+  // alice->loadBfield("sPHENIX.2d.root","fieldmap");
+  // alice->loadEfield("externalEfield.ttree.root","fTree");
   now=gSystem->Now();
   printf("set fields.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
@@ -162,7 +164,7 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
     hAnCharge->Project3D("YX")->Draw("colz");
   }
 
-  return;
+  // return;
   //define a grid of test points:
   const int divisor=100;
   const int nparticles=divisor*divisor;

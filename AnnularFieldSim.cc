@@ -2,6 +2,8 @@
 #include "AnnularFieldSim.h"
 #include "TH3F.h"
 #include "TFormula.h"
+#include "TTree.h"
+#include "TFile.h"
 #include "AnalyticFieldModel.h"
 #include "Rossegger.h"
 
@@ -711,6 +713,91 @@ void AnnularFieldSim::load_analytic_spacecharge(float scalefactor=1){
   }
   return;
 }
+
+void AnnularFieldSim::loadEfield(const char *filename, char *treename){
+    //prep variables so that loadField can just iterate over the tree entries and fill our selected tree agnostically
+
+  TFile fieldFile(filename,"READ");
+  TTree *fTree=(TTree*)(fieldFile.Get(treename));
+  float r,z,phi; //coordinates
+  float fr,fz,fphi; //field components at that coordinate
+  fTree->SetBranchAddress("r",&r);
+  fTree->SetBranchAddress("er",&fr);
+  fTree->SetBranchAddress("z",&z);
+  fTree->SetBranchAddress("ez",&fz);
+  //phi would go here if we had it.
+  phi=fphi=0; //no phi components yet.
+  loadField(&Efield,fTree,&r,0,&z,&fr,&fphi,&fz);
+  return;
+  
+}
+void AnnularFieldSim::loadBfield(const char *filename, char *treename){
+  //prep variables so that loadField can just iterate over the tree entries and fill our selected tree agnostically
+  TFile fieldFile(filename,"READ");
+  TTree *fTree=(TTree*)(fieldFile.Get(treename));
+  float r,z,phi; //coordinates
+  float fr,fz,fphi; //field components at that coordinate
+  fTree->SetBranchAddress("r",&r);
+  fTree->SetBranchAddress("br",&fr);
+  fTree->SetBranchAddress("z",&z);
+  fTree->SetBranchAddress("bz",&fz);
+  //phi would go here if we had it.
+  phi=fphi=0; //no phi components yet.
+  loadField(&Bfield,fTree,&r,0,&z,&fr,&fphi,&fz);
+  return;
+  
+}
+
+void AnnularFieldSim::loadField(MultiArray<TVector3> **field, TTree *source, float *rptr, float *phiptr, float *zptr, float *frptr,  float *fphiptr,  float *fzptr){
+  //we're loading a tree of unknown size and spacing -- and possibly uneven spacing -- into our local data.
+  //formally, we might want to interpolate or otherwise weight, but for now, carve this into our usual bins, and average, similar to the way we load spacecharge.
+
+  bool phiSymmetry=(phiptr==0); //if the phi pointer is zero, assume phi symmetry.
+
+  TH3F *htEntries=new TH3F("htentries","num of entries in the field loading",nphi,0,TMath::Pi()*2.0,nr,rmin,rmax, nz,zmin,zmax);
+  TH3F *htSum[3];
+  char axis[]="rpz";
+  for (int i=0;i<3;i++){
+    htSum[i]=new TH3F(Form("htsum%d",i),Form("sum of %c-axis entries in the field loading",*(axis+i)),nphi,0,TMath::Pi()*2.0,nr,rmin,rmax, nz,zmin,zmax);
+  }
+  
+  int nEntries=source->GetEntries();
+  for (int i=0;i<nEntries;i++){ //could probably do this with an iterator
+    source->GetEntry(i);
+    if (!phiSymmetry){
+      htEntries->Fill(*phiptr,*rptr,*zptr);//for legacy reasons this histogram, like others, goes phi-r-z.
+      htSum[0]->Fill(*phiptr,*rptr,*zptr,*frptr);
+      htSum[1]->Fill(*phiptr,*rptr,*zptr,*fphiptr);
+      htSum[2]->Fill(*phiptr,*rptr,*zptr,*fzptr);
+    } else {
+      for (int j=0;j<nphi;j++){
+	htEntries->Fill(j*step.Phi(),*rptr,*zptr);//for legacy reasons this histogram, like others, goes phi-r-z.
+	htSum[0]->Fill(j*step.Phi(),*rptr,*zptr,*frptr);
+	htSum[1]->Fill(j*step.Phi(),*rptr,*zptr,*fphiptr);
+	htSum[2]->Fill(j*step.Phi(),*rptr,*zptr,*fzptr);
+      }
+    }
+  }
+  //now we just divide and fill our local plots (which should eventually be stored as histograms, probably) with the values from each hist cell:
+  for (int i=0;i<nphi;i++){
+    for (int j=0;j<nr;j++){
+      for (int k=0;k<nz;k++){
+	TVector3 cellcenter=GetCellCenter(j,i,k);
+	int bin=htEntries->FindBin(FilterPhiPos(cellcenter.Phi()),cellcenter.Perp(),cellcenter.Z());
+	TVector3 fieldvec(htSum[0]->GetBinContent(bin),htSum[1]->GetBinContent(bin),htSum[2]->GetBinContent(bin));
+	fieldvec=fieldvec*(1.0/htEntries->GetBinContent(bin));
+	//have to rotate this to the proper direction.
+	fieldvec.RotateZ(FilterPhiPos(cellcenter.Phi()));//rcc caution.  Does this rotation shift the sense of 'up'?
+	(*field)->Set(j,i,k,fieldvec);
+      }
+    }
+  }
+	
+  return; 
+
+}
+
+
 
 void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefactor=1){
   //load spacecharge densities from a histogram, where scalefactor translates into local units

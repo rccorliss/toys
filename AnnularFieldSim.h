@@ -6,6 +6,7 @@
 
 template <class T> class MultiArray;
 class TH3F;
+class TTree;
 
 class AnnularFieldSim{
  public:
@@ -122,10 +123,17 @@ class AnnularFieldSim{
   void setNominalB(float x){Bnominal=x;return;};
   void seNominalE(float x){Enominal=x;return;};
   void setFlatFields(float B, float E);
+  void loadEfield(const char *filename, char *treename);
+  void loadBfield(const char *filename, char *treename);
+  void loadField(MultiArray<TVector3> **field, TTree *source, float *rptr, float *phiptr, float *zptr, float *frptr,  float *fphiptr,  float *fzptr);
+  
   void load_rossegger(){  green=new Rossegger(rmin,rmax,zmax); return;};
 
   TVector3 calc_unit_field(TVector3 at, TVector3 from);
+  TVector3 analyticFieldIntegral(float zdest,TVector3 start){return analyticFieldIntegral( zdest, start, Efield);};
+
   TVector3 analyticFieldIntegral(float zdest,TVector3 start, MultiArray<TVector3> *field);
+  TVector3 interpolatedFieldIntegral(float zdest,TVector3 start){return interpolatedFieldIntegral( zdest, start, Efield);};
   TVector3 interpolatedFieldIntegral(float zdest,TVector3 start, MultiArray<TVector3> *field);
   double FilterPhiPos(double phi); //puts phi in 0<phi<2pi
   int FilterPhiIndex(int phi,int range); //puts phi in bin range 0<phi<range.  defaults to using nphi for range.

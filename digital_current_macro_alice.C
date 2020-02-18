@@ -13,69 +13,70 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   printf("the time is %lu\n",(unsigned long)now);
 
   /*
-  //load the ALICE space charge model
-  const float alice_rmin=83.5;
-  const float alice_rmax=254.5;
-  float alice_deltar=alice_rmax-alice_rmin;
-  const float alice_z=249.7;
-  const float alice_driftVolt=-99930; //V
-  const float alice_driftVel=2.58*1e6;//cm per s
+  //load the TPC space charge model
+  const float tpc_rmin=83.5;
+  const float tpc_rmax=254.5;
+  float tpc_deltar=tpc_rmax-tpc_rmin;
+  const float tpc_z=249.7;
+  const float tpc_driftVolt=-99930; //V
+  const float tpc_driftVel=2.58*1e6;//cm per s
+  const float tpc_magField=0.5;//T
   const double epsilonnaught=8.854e-12;// units of C/(V*m)
   const double eps_in_cm=epsilonnaught/100; //units of C/(V*cm)
-  const double alice_chargescale=8.85e-14;//their hist. has charge in units of C/cm^3 /eps0.  This is eps0 in (V*cm)/C units so that I can multiple by the volume in cm^3 to get Q in C.
+  const double tpc_chargescale=8.85e-14;//their hist. has charge in units of C/cm^3 /eps0.  This is eps0 in (V*cm)/C units so that I can multiple by the volume in cm^3 to get Q in C.
 const char scmapfilename[]="InputSCDensityHistograms_8000events.root";
 const char scmaphistname[]="inputSCDensity3D_8000_avg";
   */
 
     //load the sPHENIX space charge model
-  //ooph.  I'm paying now for naming this the 'alice' macro, and giving all these underscores...
-  const float alice_rmin=20.0;
-  const float alice_rmax=78.0;
-  float alice_deltar=alice_rmax-alice_rmin;
-  const float alice_z=105.5;
-  const float alice_driftVolt=-400*105.5; //V
-  const float alice_driftVel=8.0*1e6;//cm per s
+  const float tpc_rmin=20.0;
+  const float tpc_rmax=78.0;
+  float tpc_deltar=tpc_rmax-tpc_rmin;
+  const float tpc_z=105.5;
+  const float tpc_driftVolt=-400*105.5; //V
+  const float tpc_driftVel=8.0*1e6;//cm per s
+  const float tpc_magField=1.4;//T
   const double epsilonnaught=8.854e-12;// units of C/(V*m)
   const double eps_in_cm=epsilonnaught/100; //units of C/(V*cm)
-  const double alice_chargescale=1;//our hist. has charge in units of C/cm^3, so we do not need a multiplier.
+  const double tpc_chargescale=1;//our hist. has charge in units of C/cm^3, so we do not need a multiplier.
   const char scmapfilename[]="G4Hits_new_1500.sum.hist.root";
   const char scmaphistname[]="sphenix_minbias_charge";
 
 
-  //define a region of interest, in units of the intrinsic scale of the alice histogram:
+  //define a region of interest, in units of the intrinsic scale of the tpc histogram:
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
-  int nr=159;//159 nominal
+  int nr=15;//159 nominal
   int nr_roi_min=0;
   int nr_roi=nr;
   int nr_roi_max=nr_roi_min+nr_roi;
-  int nphi=360;//360 nominal
+  int nphi=36;//360 nominal
   int nphi_roi_min=0;
   int nphi_roi=nphi;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
-  int nz=62;
+  int nz=6;
   int nz_roi_min=0;
   int nz_roi=nz;
   int nz_roi_max=nz_roi_min+nz_roi;
 
-  float rmin_roi=alice_rmin+alice_deltar/(nr*1.0)*nr_roi_min;
-  float rmax_roi=rmin_roi+alice_deltar/nr*nr_roi;
+  float rmin_roi=tpc_rmin+tpc_deltar/(nr*1.0)*nr_roi_min;
+  float rmax_roi=rmin_roi+tpc_deltar/nr*nr_roi;
   float phimin_roi=2*TMath::Pi()/(nphi*1.0)*nphi_roi_min;
  float phimax_roi=phimin_roi+2*TMath::Pi()/nphi*nphi_roi;
- float zmin_roi=alice_z/(nz*1.0)*nz_roi_min;
-  float zmax_roi=zmin_roi+alice_z/nz*nz_roi;
+ float zmin_roi=tpc_z/(nz*1.0)*nz_roi_min;
+  float zmax_roi=zmin_roi+tpc_z/nz*nz_roi;
 
-  float rmin_roi_with_buffer=rmin_roi+alice_deltar/(nr*1.0)*(0.5);
-  float rmax_roi_with_buffer=rmax_roi-alice_deltar/(nr*1.0)*(0.5);
+  float rmin_roi_with_buffer=rmin_roi+tpc_deltar/(nr*1.0)*(0.5);
+  float rmax_roi_with_buffer=rmax_roi-tpc_deltar/(nr*1.0)*(0.5);
   float phimin_roi_with_buffer=phimin_roi+2*TMath::Pi()/(nphi*1.0)*(0.5);
  float phimax_roi_with_buffer=phimax_roi-2*TMath::Pi()/(nphi*1.0)*(0.5);
- float zmin_roi_with_buffer=zmin_roi+alice_z/(nz*1.0)*(0.5);
- float zmax_roi_with_buffer=zmax_roi-alice_z/(nz*1.0)*(0.5);
+ float zmin_roi_with_buffer=zmin_roi+tpc_z/(nz*1.0)*(0.5);
+ float zmax_roi_with_buffer=zmax_roi-tpc_z/(nz*1.0)*(0.5);
 
 
 
  
 
- printf("r bounds are %f<%f<%f<r<%f<%f<%f\n",alice_rmin,rmin_roi,rmin_roi_with_buffer,rmax_roi_with_buffer,rmax_roi,alice_rmax);
+ printf("r bounds are %f<%f<%f<r<%f<%f<%f\n",tpc_rmin,rmin_roi,rmin_roi_with_buffer,rmax_roi_with_buffer,rmax_roi,tpc_rmax);
  printf("phi bounds are %f<%f<%f<phi<%f<%f<%f\n",0.0,phimin_roi,phimin_roi_with_buffer,phimax_roi_with_buffer,phimax_roi,2*TMath::Pi());
 
  //now that we've set certain bounds, re-define the size of the simulation per our reduction factor:
@@ -104,59 +105,59 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
  
   //get the SC density histogram
   TFile *f=TFile::Open(scmapfilename);
-  TH3F* alice_average=(TH3F*)f->Get(scmaphistname);
+  TH3F* tpc_average=(TH3F*)f->Get(scmaphistname);
   now=gSystem->Now();
   printf("loaded hist.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
-  AnnularFieldSim *alice=
-    new  AnnularFieldSim(alice_rmin,alice_rmax,alice_z,
+  AnnularFieldSim *tpc=
+    new  AnnularFieldSim(tpc_rmin,tpc_rmax,tpc_z,
 			 nr, nr_roi_min,nr_roi_max,1,2,
 			 nphi,nphi_roi_min, nphi_roi_max,1,2,
 			 nz, nz_roi_min, nz_roi_max,1,2,
-			 alice_driftVel, AnnularFieldSim::PhiSlice, AnnularFieldSim::NoSpacecharge);
-  //  new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,9,120,9,alice_driftVel);
+			 tpc_driftVel, AnnularFieldSim::PhiSlice, AnnularFieldSim::NoSpacecharge);
+  //  new AnnularFieldSim(tpc_rmin,tpc_rmax,tpc_z,9,120,9,tpc_driftVel);
    
-    // dropping half-res for test: new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,53,18,31,alice_driftVel);
-    //full resolution is too big:  new AnnularFieldSim(alice_rmin,alice_rmax,alice_z,159,360,62,alice_driftVel);
+    // dropping half-res for test: new AnnularFieldSim(tpc_rmin,tpc_rmax,tpc_z,53,18,31,tpc_driftVel);
+    //full resolution is too big:  new AnnularFieldSim(tpc_rmin,tpc_rmax,tpc_z,159,360,62,tpc_driftVel);
   now=gSystem->Now();
   printf("created sim obj.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
-  alice->setFlatFields(0.5, alice_driftVolt/alice_z);
-  // alice->loadBfield("sPHENIX.2d.root","fieldmap");
-  // alice->loadEfield("externalEfield.ttree.root","fTree");
+  tpc->setFlatFields(tpc_magField, 12345);// tpc_driftVolt/tpc_z);
+  tpc->loadBfield("sPHENIX.2d.root","fieldmap");
+  tpc->loadEfield("externalEfield.ttree.root","fTree");
   now=gSystem->Now();
   printf("set fields.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
-  //alice->load_rossegger();
+  //tpc->load_rossegger();
    now=gSystem->Now();
     printf("load rossegger greens functions.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
-  alice->load_spacecharge(alice_average,0,alice_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
-  //computed the correction to get the same spacecharge as in the alice histogram:
-  //todo: make the analytic scale proportional to the alice_chargescale.
-  double alice_analytic_scale=1.237320E-06/9.526278E-11;
-  alice->load_analytic_spacecharge(alice_analytic_scale);
+  //tpc->load_spacecharge(tpc_average,0,tpc_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
+  //computed the correction to get the same spacecharge as in the tpc histogram:
+  //todo: make the analytic scale proportional to the tpc_chargescale.
+  double tpc_analytic_scale=1.237320E-06/9.526278E-11;
+  tpc->load_analytic_spacecharge(0);//tpc_analytic_scale);
   now=gSystem->Now();
   printf("loaded spacecharge.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
-  alice->populate_lookup();
+  tpc->populate_lookup();
   now=gSystem->Now();
   printf("populated lookup.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
-  alice->populate_fieldmap();
+  tpc->populate_fieldmap();
  now=gSystem->Now();
   printf("populated fieldmap.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   printf("consistency check:  integrate field along IR and OR, confirm V:\n");
 
   if (reduction==0){
-    TH3F* hAnCharge=new TH3F("hAnCharge","hAnCharge;phi;r;z",nphi,0,6.281,nr,alice_rmin,alice_rmax,nz,0,alice_z);
+    TH3F* hAnCharge=new TH3F("hAnCharge","hAnCharge;phi;r;z",nphi,0,6.281,nr,tpc_rmin,tpc_rmax,nz,0,tpc_z);
     hAnCharge->Fill(0.0,0.0,0.0,0.0); //prime it so it draws correctly
 
     int rh,ph,zh;
     for (int i=0;i<hAnCharge->GetNcells();i++){
       hAnCharge->GetBinXYZ(i,ph,rh,zh);
-      hAnCharge->SetBinContent(i,alice->q->Get(rh%nr,ph%nphi,zh%nz));
+      hAnCharge->SetBinContent(i,tpc->q->Get(rh%nr,ph%nphi,zh%nz));
     }
     hAnCharge->Project3D("XZ")->Draw("colz");
     TCanvas *ct=new TCanvas();
@@ -167,7 +168,7 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
 
   // return;
   //define a grid of test points:
-  const int divisor=100;
+  const int divisor=30;
   const int nparticles=divisor*divisor;
   TVector3 testparticle[nparticles];
   TVector3 outparticle[nparticles];
@@ -211,7 +212,7 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
 
   //save data about the Efield:
   TTree fTree("fTree","field Tree");
-  TVector3 pos0,pos,Efield,phihat;
+  TVector3 pos0,pos,Efield,Bfield,phihat;
   TVector3 zero(0,0,0);
   TVector3 Eint,EintA;
   bool inroi;
@@ -220,19 +221,21 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
   fTree.Branch("phihat","TVector3",&phihat);
 
   fTree.Branch("E","TVector3",&Efield);
+  fTree.Branch("B","TVector3",&Bfield);
   fTree.Branch("Eint","TVector3",&Eint);
   fTree.Branch("EintA","TVector3",&EintA);
   fTree.Branch("q",&charge);
   fTree.Branch("Eintp",&eintp);
   fTree.Branch("Ep",&ep);
   fTree.Branch("roi",&inroi);
-  float delr,delp;//=alice->GetCellCenter(2,0,0)-alice->GetCellCenter(1,0,0);
+  float delr,delp;//=tpc->GetCellCenter(2,0,0)-tpc->GetCellCenter(1,0,0);
   //TVector3 delp;
-  float delz=alice->GetCellCenter(0,0,1).Z()-alice->GetCellCenter(0,0,0).Z();
+  float delz=tpc->GetCellCenter(0,0,1).Z()-tpc->GetCellCenter(0,0,0).Z();
   
   bool inr,inp,inz;
   int rl,pl, zl;
-  if (0)
+  int fieldmap_output_extra_sampling=0;
+  if (1)
   for (int ir=nr_roi_min;ir<nr_roi_max;ir++){
     rl=ir-nr_roi_min;
     inr=(rl>=0 && rl<nr_roi);
@@ -242,29 +245,31 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
       for (int iz=0;iz<nz;iz++){
 	zl=iz-nz_roi_min;
 	inz=(zl>=0 && zl<nz_roi);
-	pos0=alice->GetCellCenter(ir,ip,iz);
-	delr=(alice->GetCellCenter(ir+1,ip,iz)).Perp()-pos0.Perp();
-	delp=(alice->GetCellCenter(ir,ip+1,iz)).Phi()-pos0.Phi();
+	pos0=tpc->GetCellCenter(ir,ip,iz);
+	delr=(tpc->GetCellCenter(ir+1,ip,iz)).Perp()-pos0.Perp();
+	delp=(tpc->GetCellCenter(ir,ip+1,iz)).Phi()-pos0.Phi();
 
 	Efield=zero;
+	Bfield=zero;
 	inroi=inr && inp && inz;
 	if (inroi){
-	  Efield=alice->Efield->Get(ir-nr_roi_min,ip-nphi_roi_min,iz-nz_roi_min);
+	  Efield=tpc->Efield->Get(ir-nr_roi_min,ip-nphi_roi_min,iz-nz_roi_min);
+	  Bfield=tpc->Bfield->Get(ir-nr_roi_min,ip-nphi_roi_min,iz-nz_roi_min);
 	  //for (int rlocal=-10;rlocal<10;rlocal++){
 	    //int plocal=0;
-	  int rlocal=-10;
-	    for (int plocal=-10;plocal<10;plocal++){
+	  int rlocal=0;
+	    for (int plocal=-fieldmap_output_extra_sampling;plocal<fieldmap_output_extra_sampling+1;plocal++){
 	      pos=pos0;
-	      pos.SetPerp(pos0.Perp()+delr/20*rlocal);
-	      pos.RotateZ(delp/20*plocal);//+(rlocal)/20.1*delr+(plocal)/(20.1)*delp;
+	      pos.SetPerp(pos0.Perp()+delr/(1+2*fieldmap_output_extra_sampling)*rlocal);
+	      pos.RotateZ(delp/(1+2*fieldmap_output_extra_sampling)*plocal);//+(rlocal)/20.1*delr+(plocal)/(20.1)*delp;
 	      //printf("trying pos=(%f,%f,%f)= rphiz(%f,%f,%f)\n",pos.X(),pos.Y(),pos.Z(),pos.Perp(),pos.Phi(),pos.Z());
 	      phihat=pos;// build our phi position by starting with the vector in the rz plane:
 	      phihat.SetZ(0);//remove the z component so it points purely in r
 	      phihat.SetMag(1.0);//scale it to 1.0;
 	      phihat.RotateZ(TMath::Pi()/2);//rotate 90 degrees from the position vector so it now points purely in phi; 
-	      Eint=(alice->interpolatedFieldIntegral(pos.Z()-delz/(4.0),pos))*(4.0/delz);
-	      EintA=(alice->analyticFieldIntegral(pos.Z()-delz/(4.0),pos))*(4.0/delz);
-	      charge=alice->q->Get(ir,ip,iz);
+	      Eint=(tpc->interpolatedFieldIntegral(pos.Z()-delz/(4.0),pos))*(4.0/delz);
+	      EintA=(tpc->analyticFieldIntegral(pos.Z()-delz/(4.0),pos))*(4.0/delz);
+	      charge=tpc->q->Get(ir,ip,iz);
 	      eintp=Eint.Dot(phihat);
 	      ep=Efield.Dot(phihat);
 	      fTree.Fill();
@@ -281,7 +286,7 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
   int validToStep=-1;
   start=gSystem->Now();
   for (int i=0;i<nparticles;i++){
-    if (!(i%(997))) {
+    if (!(i%((nparticles-1)/20))) {
        now=gSystem->Now();
        printf("(periodic progress...) test[%d]=(%f,%f,%f) to %f\t dtime=%lu\n",
 	      i,testparticle[i].X(),testparticle[i].Y(),testparticle[i].Z(),zmax_roi,(unsigned long)(now-start));
@@ -294,12 +299,12 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
     orig=testparticle[i];
     if (!loadOutputFromFile)
       {
-	outparticle[i]=alice->swimToInSteps(zmax_roi,testparticle[i],60,true, &validToStep);
-	outparticle2[i]=alice->swimToInAnalyticSteps(zmax_roi,testparticle[i],60, &validToStep); //no arg for interpolation in the analytic swim, since we sample the exact position.
+	outparticle[i]=tpc->swimToInSteps(zmax_roi,testparticle[i],60,true, &validToStep);
+	outparticle2[i].SetXYZ(0,0,0);//=tpc->swimToInAnalyticSteps(zmax_roi,testparticle[i],60, &validToStep); //no arg for interpolation in the analytic swim, since we sample the exact position.
       }
 
-    out1=outparticle[i];//not generating from the swim.=alice->swimToInSteps(zmax_roi,testparticle[i],600,true);
-    outa=outparticle2[i];//not generating from the swim.=alice->swimToInSteps(zmax_roi,testparticle[i],600,true);
+    out1=outparticle[i];//not generating from the swim.=tpc->swimToInSteps(zmax_roi,testparticle[i],600,true);
+    outa=outparticle2[i];//not generating from the swim.=tpc->swimToInSteps(zmax_roi,testparticle[i],600,true);
     outx[i]=outparticle[i].X();
     outy[i]=outparticle[i].Y();
     outz[i]=outparticle[i].Z();
@@ -308,7 +313,7 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
     //printf("delta1=(%E,%E,%E)\n",delta.X(),delta.Y(),delta.Z());
     //printf("out[%d]=(%f,%f,%f)\n",i,outparticle[i].X(),outparticle[i].Y(),outparticle[i].Z());
     //drift back from the analytic position:
-      back1=backparticle[i]=alice->swimToInSteps(testparticle[i].Z(),outa,600,true,&validToStep);
+      back1=backparticle[i]=tpc->swimToInSteps(testparticle[i].Z(),out1,600,true,&validToStep);
     goodSteps[1]=validToStep;
 
     //for convenience of reading, set all of the pTree in microns, not cm:

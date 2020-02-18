@@ -8,7 +8,7 @@ void average_distortion_study(){
 
   int first_sample=1;
   int last_sample=99;
-  int n_samples=78-20;
+  int n_samples=20;
   float red[n_samples];
   float rpos[n_samples];
   float sigrpos[n_samples];
@@ -28,8 +28,8 @@ void average_distortion_study(){
   //automatically get our axes:
   t->Draw("orig.Perp()>>raxis");
   t->Draw("orig.Phi()>>paxis");
-  float rmin=((TH1F*)gDirectory->Get("raxis"))->GetXaxis()->GetXmin();
-  float rmax=((TH1F*)gDirectory->Get("raxis"))->GetXaxis()->GetXmax();
+  float rmin=20*1e4;//((TH1F*)gDirectory->Get("raxis"))->GetXaxis()->GetXmin();
+  float rmax=78*1e4;//((TH1F*)gDirectory->Get("raxis"))->GetXaxis()->GetXmax();
   float rstep=(rmax-rmin)/n_samples;
   float pmin=((TH1F*)gDirectory->Get("paxis"))->GetXaxis()->GetXmin();
   float pmax=((TH1F*)gDirectory->Get("paxis"))->GetXaxis()->GetXmax();
@@ -47,11 +47,9 @@ void average_distortion_study(){
     float p1=p0+pstep;
     printf("loading step %d, %f<r<%f\n",i,r0,r1);
     assert(f->IsOpen());
-    t->Draw("(out1.Perp()-orig.Perp())>>histR",Form("orig.Perp()>%f && orig.Perp()<%f",r0,r1));
-    t->Draw("(out1.Phi()-orig.Phi())*orig.Perp()>>histRphi",Form("(out1.Phi()-orig.Phi()<3.14)&&(orig.Perp()>%f && orig.Perp()<%f)",r0,r1));
+    t->Draw("(out1.Perp()-orig.Perp())>>histR(100)",Form("orig.Perp()>%f && orig.Perp()<%f",r0,r1));
+    t->Draw("(out1.Phi()-orig.Phi())*orig.Perp()>>histRphi(100)",Form("(out1.Phi()-orig.Phi()<3.14)&&(orig.Perp()>%f && orig.Perp()<%f)",r0,r1));
     hR=(TH1F*)gDirectory->Get("histR");
-    hRphi=(TH1F*)gDirectory->Get("histRphi");
-     hR=(TH1F*)gDirectory->Get("histR");
     hRphi=(TH1F*)gDirectory->Get("histRphi");
     rpos[i]=(r0+rstep/2)/1e4;
     sigrpos[i]=(rstep/2)/1e4;
@@ -68,7 +66,7 @@ void average_distortion_study(){
  TGraphErrors *getemp;
  TMultiGraph *mgtemp;
  mgtemp=new TMultiGraph();
-  mgtemp->SetTitle("r and r*phi residual for varying reco grid sizes (freespace Greens functions);r position (cm);distortion(um)");
+  mgtemp->SetTitle("r distortion from static E and B fieldmaps in absence of spacecharge;r position (cm);distortion(um)");
   getemp=new TGraphErrors(n_samples,rpos,deltar,sigrpos,sigmar);
   getemp->SetTitle("r diff (um);fraction of nominal grid;(um)");
   getemp->SetMarkerColor(kRed);

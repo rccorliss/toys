@@ -737,7 +737,7 @@ void AnnularFieldSim::loadEfield(const char *filename, char *treename){
   fTree->SetBranchAddress("ez",&fz);
   //phi would go here if we had it.
   phi=fphi=0; //no phi components yet.
-  loadField(&Efield,fTree,&r,0,&z,&fr,&fphi,&fz);
+  loadField(&Eexternal,fTree,&r,0,&z,&fr,&fphi,&fz);
   return;
   
 }
@@ -774,12 +774,13 @@ void AnnularFieldSim::loadField(MultiArray<TVector3> **field, TTree *source, flo
   int nEntries=source->GetEntries();
   for (int i=0;i<nEntries;i++){ //could probably do this with an iterator
     source->GetEntry(i);
+    //if we aren't asking for phi symmetry, build just the one phi strip
     if (!phiSymmetry){
       htEntries->Fill(*phiptr,*rptr,*zptr);//for legacy reasons this histogram, like others, goes phi-r-z.
       htSum[0]->Fill(*phiptr,*rptr,*zptr,*frptr);
       htSum[1]->Fill(*phiptr,*rptr,*zptr,*fphiptr);
       htSum[2]->Fill(*phiptr,*rptr,*zptr,*fzptr);
-    } else {
+    } else { //if we do have phi symmetry, build every phi strip using this one.
       for (int j=0;j<nphi;j++){
 	htEntries->Fill(j*step.Phi(),*rptr,*zptr);//for legacy reasons this histogram, like others, goes phi-r-z.
 	htSum[0]->Fill(j*step.Phi(),*rptr,*zptr,*frptr);

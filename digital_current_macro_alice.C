@@ -2,7 +2,7 @@
 #include "AnnularFieldSim.h"
 R__LOAD_LIBRARY(.libs/libfieldsim)
 
-void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false, char* fname="pre-hybrid_fixed_reduction_0.ttree.root"){
+void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false, const char* fname="pre-hybrid_fixed_reduction_0.ttree.root"){
 
   //bonk.  making sure this updates to my other branch.
   printf("hello\n");
@@ -45,15 +45,15 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
 
   //define a region of interest, in units of the intrinsic scale of the tpc histogram:
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
-  int nr=15;//159 nominal
+  int nr=159;//159 nominal
   int nr_roi_min=0;
   int nr_roi=nr;
   int nr_roi_max=nr_roi_min+nr_roi;
-  int nphi=36;//360 nominal
+  int nphi=360;//360 nominal
   int nphi_roi_min=0;
   int nphi_roi=nphi;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
-  int nz=6;
+  int nz=62;//62 nominal
   int nz_roi_min=0;
   int nz_roi=nz;
   int nz_roi_max=nz_roi_min+nz_roi;
@@ -235,7 +235,7 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
   bool inr,inp,inz;
   int rl,pl, zl;
   int fieldmap_output_extra_sampling=0;
-  if (1)
+  if (0)
   for (int ir=nr_roi_min;ir<nr_roi_max;ir++){
     rl=ir-nr_roi_min;
     inr=(rl>=0 && rl<nr_roi);

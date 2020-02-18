@@ -123,8 +123,8 @@ class AnnularFieldSim{
   void setNominalB(float x){Bnominal=x;return;};
   void seNominalE(float x){Enominal=x;return;};
   void setFlatFields(float B, float E);
-  void loadEfield(const char *filename, char *treename);
-  void loadBfield(const char *filename, char *treename);
+  void loadEfield(const char *filename, const char *treename);
+  void loadBfield(const char *filename, const char *treename);
   void loadField(MultiArray<TVector3> **field, TTree *source, float *rptr, float *phiptr, float *zptr, float *frptr,  float *fphiptr,  float *fzptr);
   
   void load_rossegger(){  green=new Rossegger(rmin,rmax,zmax); return;};

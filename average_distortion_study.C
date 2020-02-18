@@ -8,7 +8,7 @@ void average_distortion_study(){
 
   int first_sample=1;
   int last_sample=99;
-  int n_samples=20;
+  int n_samples=30;
   float red[n_samples];
   float rpos[n_samples];
   float sigrpos[n_samples];

@@ -32,5 +32,5 @@ freq=200
 for ((r=0;r<=maxend-eveperfile;r=r+eveperfile)); do
     rp=$(($r+$eveperfile))
     fname=$basename`printf "%05d\n" $r`_`printf "%05d\n" $rp`.root
-    root -b -q CreateSpacechargeHist.C\(\"$dir\",\"$fname\",$r,$eveperfile, $freq,0\)
+    root -b -q CreateSpacechargeHist.C\(\"$dir\",\"$fname\",$r,$eveperfile,$freq,0\)
 done

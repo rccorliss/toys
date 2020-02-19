@@ -40,7 +40,7 @@ bool IsOverFrame(double r, double phi){
 
   //find the two spokes we're between:
   float sectorangle=(TMath::Pi()/6);
-  float nsectors=phi/sectorangel;
+  float nsectors=phi/sectorangle;
   int nsec=floor(nsectors);
   float reduced_phi=phi-nsec*sectorangle; //between zero and sixty degrees.
   float dist_to_previous=r*sin(reduced_phi);

@@ -168,7 +168,7 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
 
   // return;
   //define a grid of test points:
-  const int divisor=30;
+  const int divisor=100;
   const int nparticles=divisor*divisor;
   TVector3 testparticle[nparticles];
   TVector3 outparticle[nparticles];

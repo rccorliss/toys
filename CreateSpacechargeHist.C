@@ -11,7 +11,7 @@ R__LOAD_LIBRARY(libphg4hit.so)
 //need to include something to read DST.TPC.G4HIT_TPC
 //and maybe 'G4HIT_ABSORBER_TPC' as well?
 
-void CreateSpacechargeHist(const char *dirname, const char *filename, int istart=0, bool saveTree=false){
+void CreateSpacechargeHist(const char *dirname, const char *filename, int istart=0, int tilesize=0, bool saveTree=false){
   printf("are you running with the sphenix env?  This probably doesn't work without that!\n");
 
   gSystem->Load("libg4testbench.so");
@@ -88,8 +88,9 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
   float r,phi;
   float ne;
 
-  float driftedZ;
-  //float backwardsDriftedZ; //for building the field from the center outwward instead of readout inward.
+  float driftedZ;//distance these particular particles have drifted
+  float driftedZtile=tilesize*vIon/mbRate;  //drift distance between tile repetitions.
+
   int testi=5;
   int i;
   if (saveTree){
@@ -148,6 +149,17 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
 	hPrimary->Fill(phi,r/(cm),zprim/(cm),ne/vol);
 	hIBF->Fill(phi,r/(cm),zibf/(cm),ne*ionsPerEle/vol);
 	hPrimaryNoDrift->Fill(phi,r/(cm),z/(cm),ne/vol);
+
+	if(tilesize>0){//this lets us tile the whole drift volume with some specified set of events.
+	  for(int j=0;j*driftedZtile+driftedZ<z_rdo;j++){
+	    float jdrift=j*driftedZtile;
+	    hCharge->Fill(phi,r/(cm),(zprim-jdrift)/(cm),ne/vol); //primary ion, drifted by t0, in cm
+	    hCharge->Fill(phi,r/(cm),(zibf-jdrift)/(cm),ne*ionsPerEle/vol); //amp ion, drifted by t0, in cm
+	    hPrimary->Fill(phi,r/(cm),(zprim-jdrift)/(cm),ne/vol);
+	    hIBF->Fill(phi,r/(cm),(zibf-jdrift)/(cm),ne*ionsPerEle/vol);
+	  }
+	}
+	
 	if (saveTree){
 	  rawHits->Fill();
 	}

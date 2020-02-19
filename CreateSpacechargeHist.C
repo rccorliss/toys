@@ -8,8 +8,6 @@
 R__LOAD_LIBRARY(libg4testbench.so)
 R__LOAD_LIBRARY(libphg4hit.so)
 
-//need to include something to read DST.TPC.G4HIT_TPC
-//and maybe 'G4HIT_ABSORBER_TPC' as well?
 
 void CreateSpacechargeHist(const char *dirname, const char *filename, int istart=0, int tilesize=0, int freqKhz=22, bool saveTree=false){
   printf("are you running with the sphenix env?  This probably doesn't work without that!\n");
@@ -126,43 +124,42 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
     float f=0.5;;//for now, just pick the middle of the hit.  Do better later.
 
     
-    for (PHG4HitContainer::ConstIterator hiter=range.first;hiter!=range.second;hiter++)
-      {
-	ne=hiter->second->get_eion()*Tpc_ElectronsPerGeV;
-	//load the three coordinates in with units of cm.
-	x = (hiter->second->get_x(0) + f * (hiter->second->get_x(1) - hiter->second->get_x(0)))*(cm);
-	y = (hiter->second->get_y(0) + f * (hiter->second->get_y(1) - hiter->second->get_y(0)))*(cm);
-	z = (hiter->second->get_z(0) + f * (hiter->second->get_z(1) - hiter->second->get_z(0)))*(cm);
-	if (z<0) continue;
-	r=sqrt(x*x+y*y);
-	phi=atan2(x,y);
-	zprim=z-driftedZ;
-	zibf=z_rdo-driftedZ;
-	if (phi<0) phi+=6.28319;
-	//compute the bin volume:
-	int bin=hCharge->GetYaxis()->FindBin(r/(cm));
-	double hr=hCharge->GetYaxis()->GetBinLowEdge(bin);
-	double vol=(hzstep*hphistep*(hr+hrstep*0.5)*hrstep)/cm/cm/cm;
+    for (PHG4HitContainer::ConstIterator hiter=range.first;hiter!=range.second;hiter++) {
+      ne=hiter->second->get_eion()*Tpc_ElectronsPerGeV;
+      //load the three coordinates in with units of cm.
+      x = (hiter->second->get_x(0) + f * (hiter->second->get_x(1) - hiter->second->get_x(0)))*(cm);
+      y = (hiter->second->get_y(0) + f * (hiter->second->get_y(1) - hiter->second->get_y(0)))*(cm);
+      z = (hiter->second->get_z(0) + f * (hiter->second->get_z(1) - hiter->second->get_z(0)))*(cm);
+      if (z<0) continue;
+      r=sqrt(x*x+y*y);
+      phi=atan2(x,y);
+      zprim=z-driftedZ;
+      zibf=z_rdo-driftedZ;
+      if (phi<0) phi+=6.28319;
+      //compute the bin volume:
+      int bin=hCharge->GetYaxis()->FindBin(r/(cm));
+      double hr=hCharge->GetYaxis()->GetBinLowEdge(bin);
+      double vol=(hzstep*hphistep*(hr+hrstep*0.5)*hrstep)/cm/cm/cm;
 
-	hCharge->Fill(phi,r/(cm),zprim/(cm),ne/vol); //primary ion, drifted by t0, in cm
-	hCharge->Fill(phi,r/(cm),zibf/(cm),ne*ionsPerEle/vol); //amp ion, drifted by t0, in cm
-	hPrimary->Fill(phi,r/(cm),zprim/(cm),ne/vol);
-	hIBF->Fill(phi,r/(cm),zibf/(cm),ne*ionsPerEle/vol);
-	hPrimaryNoDrift->Fill(phi,r/(cm),z/(cm),ne/vol);
+      hCharge->Fill(phi,r/(cm),zprim/(cm),ne/vol); //primary ion, drifted by t0, in cm
+      hCharge->Fill(phi,r/(cm),zibf/(cm),ne*ionsPerEle/vol); //amp ion, drifted by t0, in cm
+      hPrimary->Fill(phi,r/(cm),zprim/(cm),ne/vol);
+      hIBF->Fill(phi,r/(cm),zibf/(cm),ne*ionsPerEle/vol);
+      hPrimaryNoDrift->Fill(phi,r/(cm),z/(cm),ne/vol);
 
-	if(tilesize>0){//this lets us tile the whole drift volume with some specified set of events.
-	  for(int j=0;j*driftedZtile+driftedZ<z_rdo;j++){
-	    float jdrift=j*driftedZtile;
-	    hCharge->Fill(phi,r/(cm),(zprim-jdrift)/(cm),ne/vol); //primary ion, drifted by t0, in cm
-	    hCharge->Fill(phi,r/(cm),(zibf-jdrift)/(cm),ne*ionsPerEle/vol); //amp ion, drifted by t0, in cm
-	    hPrimary->Fill(phi,r/(cm),(zprim-jdrift)/(cm),ne/vol);
-	    hIBF->Fill(phi,r/(cm),(zibf-jdrift)/(cm),ne*ionsPerEle/vol);
-	  }
+      if(tilesize>0){//this lets us tile the whole drift volume with some specified set of events.
+	for(int j=0;j*driftedZtile+driftedZ<z_rdo;j++){
+	  float jdrift=j*driftedZtile;
+	  hCharge->Fill(phi,r/(cm),(zprim-jdrift)/(cm),ne/vol); //primary ion, drifted by t0, in cm
+	  hCharge->Fill(phi,r/(cm),(zibf-jdrift)/(cm),ne*ionsPerEle/vol); //amp ion, drifted by t0, in cm
+	  hPrimary->Fill(phi,r/(cm),(zprim-jdrift)/(cm),ne/vol);
+	  hIBF->Fill(phi,r/(cm),(zibf-jdrift)/(cm),ne*ionsPerEle/vol);
 	}
+      }
 	
-	if (saveTree){
-	  rawHits->Fill();
-	}
+      if (saveTree){
+	rawHits->Fill();
+      }
     }
 
     

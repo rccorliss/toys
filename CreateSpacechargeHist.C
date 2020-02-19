@@ -8,7 +8,50 @@
 R__LOAD_LIBRARY(libg4testbench.so)
 R__LOAD_LIBRARY(libphg4hit.so)
 
+bool IsOverFrame(double r, double phi){
+  //these parameters are taken from Feb 12 drawings of frames.
+  double tpc_frame_side_gap=0.8;//mm //space between radial line and start of frame
+  double tpc_frame_side_width=2.6;//mm //thickness of frame
+  double tpc_margin=0.0;//mm // extra gap between edge of frame and start of GEM holes
+  
+  double tpc_frame_r3_outer=758.4;//mm inner edge of larger-r frame of r3
+  double tpc_frame_r3_inner=583.5;//mm outer edge of smaller-r frame of r3
+ 
+  double tpc_frame_r2_outer=574.9;//mm inner edge of larger-r frame of r3
+  double tpc_frame_r2_inner=411.4;//mm outer edge of smaller-r frame of r3
+ 
+  double tpc_frame_r1_outer=402.6;//mm inner edge of larger-r frame of r3
+  double tpc_frame_r1_inner=221.0;//mm outer edge of smaller-r frame of r3
+ 
+  double tpc_sec0_phi=0.0;//get_double_param("tpc_sec0_phi");
 
+  //if the coordinate is in the radial spaces of the frames, return true:
+  if (r<tpc_frame_r1_inner+tpc_margin)
+    return true;
+  if (r>tpc_frame_r1_outer-tpc_margin  && r<tpc_frame_r2_inner+tpc_margin)
+    return true;
+  if (r>tpc_frame_r2_outer-tpc_margin  && r<tpc_frame_r3_inner+tpc_margin)
+    return true;
+  if (r>tpc_frame_r3_outer-tpc_margin)
+    return true;
+
+  //if the coordinate is within gap+width of a sector boundary, return true:
+  //note that this is not a line of constant radius, but a linear distance from a radius.
+
+  //find the two spokes we're between:
+  float sectorangle=(TMath::Pi()/6);
+  float nsectors=phi/sectorangel;
+  int nsec=floor(nsectors);
+  float reduced_phi=phi-nsec*sectorangle; //between zero and sixty degrees.
+  float dist_to_previous=r*sin(reduced_phi);
+  float dist_to_next=r*sin(sectorangle-reduced_phi);
+  if (dist_to_previous<tpc_frame_side_gap+tpc_frame_side_width+tpc_margin)
+    return true;
+  if (dist_to_next<tpc_frame_side_gap+tpc_frame_side_width+tpc_margin)
+    return true;
+  
+  return false;
+}
 void CreateSpacechargeHist(const char *dirname, const char *filename, int istart=0, int tilesize=0, int freqKhz=22, bool saveTree=false){
   printf("are you running with the sphenix env?  This probably doesn't work without that!\n");
 
@@ -140,23 +183,28 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
       int bin=hCharge->GetYaxis()->FindBin(r/(cm));
       double hr=hCharge->GetYaxis()->GetBinLowEdge(bin);
       double vol=(hzstep*hphistep*(hr+hrstep*0.5)*hrstep)/cm/cm/cm;
+      bool overFrame=IsOverFrame(r,phi);
 
       hCharge->Fill(phi,r/(cm),zprim/(cm),ne/vol); //primary ion, drifted by t0, in cm
-      hCharge->Fill(phi,r/(cm),zibf/(cm),ne*ionsPerEle/vol); //amp ion, drifted by t0, in cm
+      if (!overFrame) {
+	hCharge->Fill(phi,r/(cm),zibf/(cm),ne*ionsPerEle/vol); //amp ion, drifted by t0, in cm
+	hIBF->Fill(phi,r/(cm),zibf/(cm),ne*ionsPerEle/vol);
+      }
       hPrimary->Fill(phi,r/(cm),zprim/(cm),ne/vol);
-      hIBF->Fill(phi,r/(cm),zibf/(cm),ne*ionsPerEle/vol);
       hPrimaryNoDrift->Fill(phi,r/(cm),z/(cm),ne/vol);
 
       if(tilesize>0){//this lets us tile the whole drift volume with some specified set of events.
 	for(int j=0;j*driftedZtile+driftedZ<z_rdo;j++){
 	  float jdrift=j*driftedZtile;
 	  hCharge->Fill(phi,r/(cm),(zprim-jdrift)/(cm),ne/vol); //primary ion, drifted by t0, in cm
-	  hCharge->Fill(phi,r/(cm),(zibf-jdrift)/(cm),ne*ionsPerEle/vol); //amp ion, drifted by t0, in cm
 	  hPrimary->Fill(phi,r/(cm),(zprim-jdrift)/(cm),ne/vol);
-	  hIBF->Fill(phi,r/(cm),(zibf-jdrift)/(cm),ne*ionsPerEle/vol);
+	  if (!overFrame) {
+	    hCharge->Fill(phi,r/(cm),(zibf-jdrift)/(cm),ne*ionsPerEle/vol); //amp ion, drifted by t0, in cm
+	    hIBF->Fill(phi,r/(cm),(zibf-jdrift)/(cm),ne*ionsPerEle/vol);
+	  }
 	}
       }
-	
+      
       if (saveTree){
 	rawHits->Fill();
       }

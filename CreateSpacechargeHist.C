@@ -52,6 +52,7 @@ bool IsOverFrame(double r, double phi){
   
   return false;
 }
+
 void CreateSpacechargeHist(const char *dirname, const char *filename, int istart=0, int tilesize=0, int freqKhz=22, bool saveTree=false){
   printf("are you running with the sphenix env?  This probably doesn't work without that!\n");
 
@@ -107,11 +108,11 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
   TFile *outfile=TFile::Open(Form("%s_%dkHz.rcc_sc.hist.root",filename,freqKhz),"RECREATE");
   int nr=159;
   int nphi=360;
-  int nz=110;
-  TH3D *hCharge=new TH3D("sphenix_minbias_charge","SC (ions) per cm^3;phi (rad);r (cm);z (cm)",nphi,0,6.28319,nr,rmin/cm,rmax/cm,110,0,z_rdo/cm);
-  TH3D *hPrimary=new TH3D("sphenix_minbias_primary","Primary (ions) per cm^3;phi (rad);r (cm);z (cm)",nphi,0,6.28319,nr,rmin/cm,rmax/cm,2*110,0,2*z_rdo/cm);
-  TH3D *hIBF=new TH3D("sphenix_minbias_IBF","IBF (ions) per cm^3;phi (rad);r (cm);z (cm)",nphi,0,6.28319,nr,rmin/cm,rmax/cm,2*110,0,2*z_rdo/cm);
-  TH3D *hPrimaryNoDrift=new TH3D("sphenix_minbias_raw","Undrifted Primary (ions) per cm^3;phi (rad);r (cm);z (cm)",nphi,0,6.28319,nr,rmin/cm,rmax/cm,2*110,0,2*z_rdo/cm);
+  int nz=62*2;
+  TH3D *hCharge=new TH3D("sphenix_minbias_charge","SC (ions) per cm^3;phi (rad);r (cm);z (cm)",nphi,0,6.28319,nr,rmin/cm,rmax/cm,nz,0,z_rdo/cm);
+  TH3D *hPrimary=new TH3D("sphenix_minbias_primary","Primary (ions) per cm^3;phi (rad);r (cm);z (cm)",nphi,0,6.28319,nr,rmin/cm,rmax/cm,nz,0,z_rdo/cm);
+  TH3D *hIBF=new TH3D("sphenix_minbias_IBF","IBF (ions) per cm^3;phi (rad);r (cm);z (cm)",nphi,0,6.28319,nr,rmin/cm,rmax/cm,nz,0,z_rdo/cm);
+  TH3D *hPrimaryNoDrift=new TH3D("sphenix_minbias_raw","Undrifted Primary (ions) per cm^3;phi (rad);r (cm);z (cm)",nphi,0,6.28319,nr,rmin/cm,rmax/cm,nz,0,z_rdo/cm);
 
   
   //TH3D *hChargeBack=new TH3D("sphenix_minbias_charge_backward","SC (ions) per cm^3;phi (rad);r (cm);z (cm)",nphi,0,6.28319,nr,rmin/cm,rmax/cm,110,0,z_rdo/cm);
@@ -183,7 +184,7 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
       int bin=hCharge->GetYaxis()->FindBin(r/(cm));
       double hr=hCharge->GetYaxis()->GetBinLowEdge(bin);
       double vol=(hzstep*hphistep*(hr+hrstep*0.5)*hrstep)/cm/cm/cm;
-      bool overFrame=IsOverFrame(r,phi);
+      bool overFrame=IsOverFrame(r/(mm),phi);
 
       hCharge->Fill(phi,r/(cm),zprim/(cm),ne/vol); //primary ion, drifted by t0, in cm
       if (!overFrame) {

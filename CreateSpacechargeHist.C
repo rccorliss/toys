@@ -11,7 +11,7 @@ R__LOAD_LIBRARY(libphg4hit.so)
 //need to include something to read DST.TPC.G4HIT_TPC
 //and maybe 'G4HIT_ABSORBER_TPC' as well?
 
-void CreateSpacechargeHist(const char *dirname, const char *filename, int istart=0, int tilesize=0, bool saveTree=false){
+void CreateSpacechargeHist(const char *dirname, const char *filename, int istart=0, int tilesize=0, int freqKhz=22, bool saveTree=false){
   printf("are you running with the sphenix env?  This probably doesn't work without that!\n");
 
   gSystem->Load("libg4testbench.so");
@@ -48,7 +48,7 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
   float ampGain=2e3;
   float ampIBFfrac=0.02;
   float ionsPerEle=ampGain*ampIBFfrac;
-  float mbRate=22*kHz;
+  float mbRate=freqKhz*kHz;
   float z_rdo=105.5*cm;
   float rmin=20*cm;
   float rmax=78*cm;
@@ -63,7 +63,7 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
   double Tpc_ElectronsPerGeV = Tpc_NTot / Tpc_dEdx*1e6; //electrons per gev.
 
   
-  TFile *outfile=TFile::Open(Form("%s.rcc_sc.hist.root",filename),"RECREATE");
+  TFile *outfile=TFile::Open(Form("%s_%dkHz.rcc_sc.hist.root",filename,freqKhz),"RECREATE");
   int nr=159;
   int nphi=360;
   int nz=110;

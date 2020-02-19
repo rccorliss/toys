@@ -121,7 +121,7 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
     PHG4HitContainer::ConstRange range=eleHits->getHits();
     assert(range);
 
-    float f=0.5;;//for now, just pick the middle of the hit.  Do better later.
+    float f=0.5;//for now, just pick the middle of the hit.  Do better later.
 
     
     for (PHG4HitContainer::ConstIterator hiter=range.first;hiter!=range.second;hiter++) {

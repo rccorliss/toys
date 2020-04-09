@@ -13,7 +13,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   printf("the time is %lu\n",(unsigned long)now);
 
   /*
-  //load the TPC space charge model
+  //load the ALICE TPC space charge model
   const float tpc_rmin=83.5;
   const float tpc_rmax=254.5;
   float tpc_deltar=tpc_rmax-tpc_rmin;
@@ -28,32 +28,32 @@ const char scmapfilename[]="InputSCDensityHistograms_8000events.root";
 const char scmaphistname[]="inputSCDensity3D_8000_avg";
   */
 
-    //load the sPHENIX space charge model
+    //load the sPHENIX space charge model dimensions
   const float tpc_rmin=20.0;
   const float tpc_rmax=78.0;
   float tpc_deltar=tpc_rmax-tpc_rmin;
   const float tpc_z=105.5;
-  const float tpc_driftVolt=-400*105.5; //V
+  const float tpc_driftVolt=-400*105.5; //V -- volts per cm times the length of the drift volume.
   const float tpc_driftVel=8.0*1e6;//cm per s
   const float tpc_magField=1.4;//T
   const double epsilonnaught=8.854e-12;// units of C/(V*m)
   const double eps_in_cm=epsilonnaught/100; //units of C/(V*cm)
-  const double tpc_chargescale=1;//our hist. has charge in units of C/cm^3, so we do not need a multiplier.
-  const char scmapfilename[]="G4Hits_new_1500.sum.hist.root";
+  const double tpc_chargescale=-0.5*1.6e-19*10*1000;//should be -19;//our hist. has charge in units of ions/cm^3, so we need to multiply by the electric charge of an electron to get out C/cm^3.  adding in a factor of 0.5 for the double-counting in the original 10khz sample, a factor of 10 to get to 100khz, and a factor 0f 1k that I don't understand
+  const char scmapfilename[]="G4Hits_sHijing_0-12fm_10kHz.rcc_sc.hist.root";
   const char scmaphistname[]="sphenix_minbias_charge";
 
 
   //define a region of interest, in units of the intrinsic scale of the tpc histogram:
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
-  int nr=159;//159 nominal
+  int nr=12;//159;//159 nominal
   int nr_roi_min=0;
   int nr_roi=nr;
   int nr_roi_max=nr_roi_min+nr_roi;
-  int nphi=360;//360 nominal
+  int nphi=13;//360;//360 nominal
   int nphi_roi_min=0;
   int nphi_roi=nphi;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
-  int nz=62;//62 nominal
+  int nz=8;//62;//62 nominal
   int nz_roi_min=0;
   int nz_roi=nz;
   int nz_roi_max=nz_roi_min+nz_roi;
@@ -114,7 +114,7 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
 			 nr, nr_roi_min,nr_roi_max,1,2,
 			 nphi,nphi_roi_min, nphi_roi_max,1,2,
 			 nz, nz_roi_min, nz_roi_max,1,2,
-			 tpc_driftVel, AnnularFieldSim::PhiSlice, AnnularFieldSim::NoSpacecharge);
+			 tpc_driftVel, AnnularFieldSim::PhiSlice, AnnularFieldSim::FromFile);
   //  new AnnularFieldSim(tpc_rmin,tpc_rmax,tpc_z,9,120,9,tpc_driftVel);
    
     // dropping half-res for test: new AnnularFieldSim(tpc_rmin,tpc_rmax,tpc_z,53,18,31,tpc_driftVel);
@@ -128,15 +128,15 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
   now=gSystem->Now();
   printf("set fields.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
-  //tpc->load_rossegger();
+  tpc->load_rossegger();
    now=gSystem->Now();
-    printf("load rossegger greens functions.  the dtime is %lu\n",(unsigned long)(now-start));
+    printf("load rossegger greens functions. (phi set to zero) the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
-  //tpc->load_spacecharge(tpc_average,0,tpc_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
+  tpc->load_spacecharge(tpc_average,0,tpc_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
   //computed the correction to get the same spacecharge as in the tpc histogram:
   //todo: make the analytic scale proportional to the tpc_chargescale.
   double tpc_analytic_scale=1.237320E-06/9.526278E-11;
-  tpc->load_analytic_spacecharge(0);//tpc_analytic_scale);
+  //tpc->load_analytic_spacecharge(0);//tpc_analytic_scale);
   now=gSystem->Now();
   printf("loaded spacecharge.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;

@@ -165,7 +165,6 @@ class AnnularFieldSim{
   BoundsCase GetPhiIndexAndCheckBounds(float pos, int *phi);
   BoundsCase GetZindexAndCheckBounds(float pos, int *z);
 
-    float RosseggerEterm(int m, int n, TVector3 at, TVector3 from);
 
 };
 

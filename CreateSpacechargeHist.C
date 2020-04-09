@@ -17,11 +17,11 @@ bool IsOverFrame(double r, double phi){
   double tpc_frame_r3_outer=758.4;//mm inner edge of larger-r frame of r3
   double tpc_frame_r3_inner=583.5;//mm outer edge of smaller-r frame of r3
  
-  double tpc_frame_r2_outer=574.9;//mm inner edge of larger-r frame of r3
-  double tpc_frame_r2_inner=411.4;//mm outer edge of smaller-r frame of r3
+  double tpc_frame_r2_outer=574.9;//mm inner edge of larger-r frame of r2
+  double tpc_frame_r2_inner=411.4;//mm outer edge of smaller-r frame of r2
  
-  double tpc_frame_r1_outer=402.6;//mm inner edge of larger-r frame of r3
-  double tpc_frame_r1_inner=221.0;//mm outer edge of smaller-r frame of r3
+  double tpc_frame_r1_outer=402.6;//mm inner edge of larger-r frame of r1
+  double tpc_frame_r1_inner=221.0;//mm outer edge of smaller-r frame of r1
  
   double tpc_sec0_phi=0.0;//get_double_param("tpc_sec0_phi");
 
@@ -182,7 +182,7 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
       if (phi<0) phi+=6.28319;
       //compute the bin volume:
       int bin=hCharge->GetYaxis()->FindBin(r/(cm));
-      double hr=hCharge->GetYaxis()->GetBinLowEdge(bin);
+      double hr=hCharge->GetYaxis()->GetBinLowEdge(bin)*cm;
       double vol=(hzstep*hphistep*(hr+hrstep*0.5)*hrstep)/cm/cm/cm;
       bool overFrame=IsOverFrame(r/(mm),phi);
 
@@ -195,7 +195,7 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
       hPrimaryNoDrift->Fill(phi,r/(cm),z/(cm),ne/vol);
 
       if(tilesize>0){//this lets us tile the whole drift volume with some specified set of events.
-	for(int j=0;j*driftedZtile+driftedZ<z_rdo;j++){
+	for(int j=1;j*driftedZtile+driftedZ<z_rdo;j++){ //starts from 1, since we already did j=0.
 	  float jdrift=j*driftedZtile;
 	  hCharge->Fill(phi,r/(cm),(zprim-jdrift)/(cm),ne/vol); //primary ion, drifted by t0, in cm
 	  hPrimary->Fill(phi,r/(cm),(zprim-jdrift)/(cm),ne/vol);

@@ -40,7 +40,7 @@ Rossegger::Rossegger(double InnerRadius, double OuterRadius, double Rdo_Z)
   b = OuterRadius;
   L = Rdo_Z;
 
-  verbosity =1;
+  verbosity =0;
   pi = 2.0 * asin(1.0);
   cout << pi << endl;
 

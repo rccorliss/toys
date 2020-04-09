@@ -269,10 +269,12 @@ TVector3 AnnularFieldSim::calc_unit_field(TVector3 at, TVector3 from){
     }
     //printf("calc_unit_field at (%2.2f,%2.2f,%2.2f) from  (%2.2f,%2.2f,%2.2f).  Mag=%2.4fe-9\n",at.x(),at.Y(),at.Z(),from.X(),from.Y(),from.Z(),field.Mag()*1e9);
   }else{
-    double Er=green->Er(at.Perp(),at.Phi(),at.Z(),from.Perp(),from.Phi(),from.Z());
-    double Ez=green->Ez(at.Perp(),at.Phi(),at.Z(),from.Perp(),from.Phi(),from.Z());
-    double Ephi=green->Ephi(at.Perp(),at.Phi(),at.Z(),from.Perp(),from.Phi(),from.Z());
+    double Er=green->Er(at.Perp(),FilterPhiPos(at.Phi()),at.Z(),from.Perp(),FilterPhiPos(from.Phi()),from.Z());
+    double Ez=green->Ez(at.Perp(),FilterPhiPos(at.Phi()),at.Z(),from.Perp(),FilterPhiPos(from.Phi()),from.Z());
+    double Ephi=0;//green->Ephi(at.Perp(),at.Phi(),at.Z(),from.Perp(),from.Phi(),from.Z());
+    //manually disable the phi component for now.
     field.SetXYZ(Er,Ephi,Ez); //now this is correct if our test point is at y=0 (hence phi=0);
+    field=field*(k_perm*4*3.14159);//scale field strength, since the greens functions as of Apr 1 2020 do not build-in this factor.
     field.RotateZ(at.Phi());//rotate to the coordinates of our 'at' point.
   }
     return field;
@@ -1303,6 +1305,9 @@ void  AnnularFieldSim::populate_phislice_lookup(){
   TVector3 from(1,0,0);
   TVector3 zero(0,0,0);
 
+  int counter=0;
+  int checkin=127;
+
   for (int ifr=rmin_roi;ifr<rmax_roi;ifr++){
     for (int ifz=zmin_roi;ifz<zmax_roi;ifz++){
       at=GetCellCenter(ifr, 0, ifz);
@@ -1310,13 +1315,26 @@ void  AnnularFieldSim::populate_phislice_lookup(){
 	for (int iophi=0;iophi<nphi;iophi++){
 	  for (int ioz=0;ioz<nz;ioz++){
 	    from=GetCellCenter(ior, iophi, ioz);
+		
+			    //printf("calc_unit_field...\n");
+
 	    
 	    //*f[ifx][ify][ifz][iox][ioy][ioz]=cacl_unit_field(at,from);
 	    //printf("calc_unit_field...\n");
 	    if (ifr==ior && 0==iophi && ifz==ioz){
 	      Epartial_phislice->Set(ifr-rmin_roi,0,ifz-zmin_roi,ior,iophi,ioz,zero);
 	    } else{
-	      Epartial_phislice->Set(ifr-rmin_roi,0,ifz-zmin_roi,ior,iophi,ioz,calc_unit_field(at,from));
+	      TVector3 unitf=calc_unit_field(at,from);
+	      if (1){
+		counter++;
+		if (!(counter%checkin)){
+		  counter=0;
+		  printf("calc_unit_field (ir=%d,iphi=%d,iz=%d) to (or=%d,ophi=0,oz=%d) gives (%E,%E,%E)\n",
+			 ior,iophi,ioz,ifr,ifz,unitf.X(),unitf.Y(),unitf.Z());
+		}
+	      }
+
+	      Epartial_phislice->Set(ifr-rmin_roi,0,ifz-zmin_roi,ior,iophi,ioz,unitf);
 	      }
 	    }
 	  }
@@ -1942,7 +1960,7 @@ TVector3 AnnularFieldSim::GetStepDistortion(float zdest,TVector3 start, bool int
     fieldIntB=fieldIntegral(zdest,start,Bfield);
   }
 
-  if (abs(fieldInt.Z())<ALMOST_ZERO){
+  if (abs(fieldInt.Z()/zdist)<ALMOST_ZERO){
     printf("GetStepDistortion is attempting to swim with no drift field:\n");
     printf("GetStepDistortion: (%2.4f,%2.4f,%2.4f) to z=%2.4f\n",start.X(),start.Y(), start.Z(),zdest);
     printf("GetStepDistortion: fieldInt=(%E,%E,%E)\n",fieldInt.X(),fieldInt.Y(),fieldInt.Z());
@@ -2035,29 +2053,4 @@ TVector3 AnnularFieldSim::GetStepDistortion(float zdest,TVector3 start, bool int
   
   return shift;
   
-}
-
-float AnnularFieldSim::RosseggerEterm(int m, int n, TVector3 at, TVector3 from){
-  //from eqn 5.68 in Rossegger thesis, p 111.
-  //cylindrical cavity from r=a to r=b, z=0 to z=L
-  /*
-  double L;
-  double betaMN; // comes from solution to 5.12.
-  double Esubz;
-  int deltaM0;
-  double eps0;
-  double phi1;
-  double phi;
-  double r1;
-  double r;
-  double z1;
-  double z;
-  double dz;
-  double dr; 
- double dphi;
-  
-  
-  */
-  
-  return 0;
 }

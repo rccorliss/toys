@@ -56,34 +56,39 @@ void convergence_study(){
  TGraphErrors *getemp;
  TMultiGraph *mgtemp;
  mgtemp=new TMultiGraph();
-  mgtemp->SetTitle("r and r*phi residual for varying reco grid sizes;fraction of nominal grid;residual(um)");
+  mgtemp->SetTitle("radial residual (drift+correction) for varying reco grid sizes;reco grid resolution / gen. grid resolution (%);residual(um)");
   getemp=new TGraphErrors(n_samples,red,deltar,sigmared,sigmar);
-  getemp->SetTitle("r diff (um);fraction of nominal grid;(um)");
+  getemp->SetTitle("r diff (um);reco grid resolution / gen. grid resolution (%);(um)");
   getemp->SetMarkerColor(kRed);
   getemp->SetMarkerStyle(kStar);
   mgtemp->Add(getemp);
+  /*
   getemp=new TGraphErrors(n_samples,red,deltarphi,sigmared,sigmarphi);
   getemp->SetTitle("r*(phi diff) (um);fraction of nominal grid;(um)");
    getemp->SetMarkerColor(kBlue);
   getemp->SetMarkerStyle(kStar);
   mgtemp->Add(getemp);
+  */
   mgtemp->Draw("A*");
 
  TCanvas *c2 =  new TCanvas();
  c2->cd();
    mgtemp=new TMultiGraph();
-  mgtemp->SetTitle("r/driftr and phi/driftphi residual for varying reco grid sizes;fraction of nominal grid;residual(um)");
+   //mgtemp->SetTitle("r/driftr and phi/driftphi residual for varying reco grid sizes;fraction of nominal grid;residual(um)");
+  mgtemp->SetTitle("r/driftr residual for varying reco grid sizes;fraction of nominal grid;residual(um)");
   getemp=new TGraphErrors(n_samples,red,deltarF,sigmared,sigmar);
   getemp->SetTitle("r diff/r drift;fraction of nominal grid;(um)");
   getemp->SetMarkerColor(kRed);
   getemp->SetMarkerStyle(kStar);
   mgtemp->Add(getemp);
+  /*
   getemp=new TGraphErrors(n_samples,red,deltarphiF,sigmared,sigmarphi);
   getemp->SetTitle("(phi diff/ phi drift;fraction of nominal grid;(um)");
    getemp->SetMarkerColor(kBlue);
   getemp->SetMarkerStyle(kStar);
   mgtemp->Add(getemp);
-  mgtemp->Draw("AC*");
+  */
+  mgtemp->Draw("A*");
   return;
 
   int i=0;

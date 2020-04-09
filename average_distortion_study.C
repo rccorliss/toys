@@ -22,6 +22,7 @@ void average_distortion_study(){
 
   TFile *f;
   f=TFile::Open(Form("last_macro_output.ttree.root"));
+  //f=TFile::Open(Form("testparticles_noSC_rossRandZonly.root"));
   TTree *t;
   t=(TTree*)f->Get("pTree");
 
@@ -66,7 +67,7 @@ void average_distortion_study(){
  TGraphErrors *getemp;
  TMultiGraph *mgtemp;
  mgtemp=new TMultiGraph();
-  mgtemp->SetTitle("r distortion from static E and B fieldmaps in absence of spacecharge;r position (cm);distortion(um)");
+  mgtemp->SetTitle("r distortion from static E and B fieldmaps with scaled 10kHz SC;r position (cm);distortion(um)");
   getemp=new TGraphErrors(n_samples,rpos,deltar,sigrpos,sigmar);
   getemp->SetTitle("r diff (um);fraction of nominal grid;(um)");
   getemp->SetMarkerColor(kRed);

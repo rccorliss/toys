@@ -139,6 +139,7 @@ class AnnularFieldSim{
   int FilterPhiIndex(int phi,int range); //puts phi in bin range 0<phi<range.  defaults to using nphi for range.
 
   TVector3 GetCellCenter(int r, int phi, int z);
+  TVector3 GetRoiCellCenter(int r, int phi, int z);
   TVector3 GetGroupCellCenter(int r0, int r1, int phi0, int phi1, int z0, int z1);
   TVector3 GetWeightedCellCenter(int r, int phi, int z);
   TVector3 fieldIntegral(float zdest,TVector3 start, MultiArray<TVector3> *field);

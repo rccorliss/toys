@@ -520,6 +520,20 @@ TVector3 AnnularFieldSim::GetCellCenter(int r, int phi, int z){
   return c;
 }
 
+TVector3 AnnularFieldSim::GetRoiCellCenter(int r, int phi, int z){
+  //returns the midpoint of the cell relative to the roi (halfway between each edge, not weighted center)
+
+  //return zero if it's out of bounds:
+  if (r>nr_roi || r<0 || phi>nphi_roi || phi<0 || z>nz_roi || z<0) return zero_vector;
+  
+  TVector3 c(1,0,0);
+  c.SetPerp((r+rmin_roi+0.5)*step.Perp()+rmin);
+  c.SetPhi((phi+phimin_roi+0.5)*step.Phi());
+  c.SetZ((z+zmin_roi+0.5)*step.Z());
+
+  return c;
+}
+
 TVector3 AnnularFieldSim::GetGroupCellCenter(int r0, int r1, int phi0, int phi1, int z0, int z1){
   //returns the midpoint of the cell (halfway between each edge, not weighted center)
   float ravg=(r0+r1)/2.0+0.5;

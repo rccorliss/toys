@@ -1,10 +1,32 @@
 //#include "FieldSim.h"
+
+/*
+digital_current_macro_alice started as code to model the alice-specific TPC properties, to match to work the ALICE group did.  
+it turned out to be a convenient point to compare sPHENIX performance, so it became ill-named.
+
+This code loads an AnnularFieldSim model of the TPC, computing spacecharge distortions and using those to propagate particles from arbitrary points in the volume to a specified z-plane.  It assumes propagation or back-propagation based on the sign of (destination-start).  Details of the simulation are set in the first section, and details of the particles to be propagated in the second.
+
+ */
+
+
+
 #include "AnnularFieldSim.h"
 R__LOAD_LIBRARY(.libs/libfieldsim)
 
+
+//place test electrons along a fixed grid and drift them one grid-length in z to calculate local distortions
+void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int nphi,float pi,float pf,int nr,float ri,float rf,int nz,float zi,float zf)
+;
+//reads the charge object from the tpc and saves it to file.  Useful to make sure things are being filled correctly.
+void SaveChargeAndProjections(const char* filename,AnnularFieldSim *t,int nphi,float pi,float pf,int nr,float ri,float rf,int nz,float zi,float zf);
+
+//reads the field object from the tpc roi and saves it to file.  Useful to make sure the field is sane or to check that propagation makes sense.
+void SaveField(const char* filename,AnnularFieldSim *t,int pi,int pf,int ri, int rf, int zi, int zf);
+
+
+
 void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false, const char* fname="pre-hybrid_fixed_reduction_0.ttree.root"){
 
-  //bonk.  making sure this updates to my other branch.
   printf("hello\n");
   if (loadOutputFromFile) printf("loading out1 vectors from %s\n",fname);
 
@@ -12,6 +34,9 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   start=now=gSystem->Now();
   printf("the time is %lu\n",(unsigned long)now);
 
+
+  //step 1:  specify the physical parameters, scales, etc of the model, either ALICE or sPHENIXL
+  
   /*
   //load the ALICE TPC space charge model
   const float tpc_rmin=83.5;
@@ -24,11 +49,11 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   const double epsilonnaught=8.854e-12;// units of C/(V*m)
   const double eps_in_cm=epsilonnaught/100; //units of C/(V*cm)
   const double tpc_chargescale=8.85e-14;//their hist. has charge in units of C/cm^3 /eps0.  This is eps0 in (V*cm)/C units so that I can multiple by the volume in cm^3 to get Q in C.
-const char scmapfilename[]="InputSCDensityHistograms_8000events.root";
-const char scmaphistname[]="inputSCDensity3D_8000_avg";
+  const char scmapfilename[]="InputSCDensityHistograms_8000events.root";
+  const char scmaphistname[]="inputSCDensity3D_8000_avg";
   */
 
-    //load the sPHENIX space charge model dimensions
+  //load the sPHENIX space charge model dimensions
   const float tpc_rmin=20.0;
   const float tpc_rmax=78.0;
   float tpc_deltar=tpc_rmax-tpc_rmin;
@@ -43,71 +68,83 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
   const char scmaphistname[]="sphenix_minbias_charge";
 
 
+
+
+  //step 2: specify the parameters of the field simulation.  Larger numbers of bins will rapidly increase the memory footprint and compute times.
+  //there are some ways to mitigate this by setting a small region of interest, or a more parsimonious lookup strategy, specified when AnnularFieldSim() is actually constructed below.
+  
   //define a region of interest, in units of the intrinsic scale of the tpc histogram:
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
-  int nr=12;//159;//159 nominal
-  int nr_roi_min=0;
-  int nr_roi=nr;
+  int nr=8;//159;//159 nominal
+  int nr_roi_min=4;
+  int nr_roi=2;
   int nr_roi_max=nr_roi_min+nr_roi;
-  int nphi=13;//360;//360 nominal
-  int nphi_roi_min=0;
-  int nphi_roi=nphi;
+  int nphi=30;//360;//360 nominal
+  int nphi_roi_min=10;
+  int nphi_roi=10;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
-  int nz=8;//62;//62 nominal
+  int nz=20;//62;//62 nominal
   int nz_roi_min=0;
   int nz_roi=nz;
   int nz_roi_max=nz_roi_min+nz_roi;
+  float buffer_fraction=0.5;// to stay clear of the roi bounds, what fraction of the bin size should we stop short by?
 
+
+  //step 2a:  Calculate some details of the roi dimensions from the variables chosen above.  no user-serviceable parts here:
   float rmin_roi=tpc_rmin+tpc_deltar/(nr*1.0)*nr_roi_min;
   float rmax_roi=rmin_roi+tpc_deltar/nr*nr_roi;
   float phimin_roi=2*TMath::Pi()/(nphi*1.0)*nphi_roi_min;
- float phimax_roi=phimin_roi+2*TMath::Pi()/nphi*nphi_roi;
- float zmin_roi=tpc_z/(nz*1.0)*nz_roi_min;
+  float phimax_roi=phimin_roi+2*TMath::Pi()/nphi*nphi_roi;
+  float zmin_roi=tpc_z/(nz*1.0)*nz_roi_min;
   float zmax_roi=zmin_roi+tpc_z/nz*nz_roi;
+  float rmin_roi_with_buffer=rmin_roi+tpc_deltar/(nr*1.0)*(buffer_fraction);
+  float rmax_roi_with_buffer=rmax_roi-tpc_deltar/(nr*1.0)*(buffer_fraction);
+  float phimin_roi_with_buffer=phimin_roi+2*TMath::Pi()/(nphi*1.0)*(buffer_fraction);
+  float phimax_roi_with_buffer=phimax_roi-2*TMath::Pi()/(nphi*1.0)*(buffer_fraction);
+  float zmin_roi_with_buffer=zmin_roi+tpc_z/(nz*1.0)*(buffer_fraction);
+  float zmax_roi_with_buffer=zmax_roi-tpc_z/(nz*1.0)*(buffer_fraction);
 
-  float rmin_roi_with_buffer=rmin_roi+tpc_deltar/(nr*1.0)*(0.5);
-  float rmax_roi_with_buffer=rmax_roi-tpc_deltar/(nr*1.0)*(0.5);
-  float phimin_roi_with_buffer=phimin_roi+2*TMath::Pi()/(nphi*1.0)*(0.5);
- float phimax_roi_with_buffer=phimax_roi-2*TMath::Pi()/(nphi*1.0)*(0.5);
- float zmin_roi_with_buffer=zmin_roi+tpc_z/(nz*1.0)*(0.5);
- float zmax_roi_with_buffer=zmax_roi-tpc_z/(nz*1.0)*(0.5);
-
-
-
- 
-
- printf("r bounds are %f<%f<%f<r<%f<%f<%f\n",tpc_rmin,rmin_roi,rmin_roi_with_buffer,rmax_roi_with_buffer,rmax_roi,tpc_rmax);
- printf("phi bounds are %f<%f<%f<phi<%f<%f<%f\n",0.0,phimin_roi,phimin_roi_with_buffer,phimax_roi_with_buffer,phimax_roi,2*TMath::Pi());
-
- //now that we've set certain bounds, re-define the size of the simulation per our reduction factor:
- if (reduction==0){
-   //do nothing
- }else if (reduction>0){
-   //reduce all dimensions by the specified amount:
-   nr=nr-reduction;
-   nphi=nphi-reduction;
-   nz=nz-reduction;
- } else if (reduction<0){
-   //scale all dimensions by the specified amount in percent:
-   nr=ceil(-nr*reduction*0.01);
-   nphi=ceil(-nphi*reduction*0.01);
-   nz=ceil(-nz*reduction*0.01);
- }
- //make sure we didn't break anything:
-   if (nr<1)nr=1;
-   if (nphi<1)nphi=1;
-   if (nz<1)nz=1;
-   if (nr_roi_max>nr)nr_roi_max=nr;
-   if (nphi_roi_max>nphi)nphi_roi_max=nphi;
-   if (nz_roi_max>nz)nz_roi_max=nz;
+  printf("r bounds are %f<%f<%f<r<%f<%f<%f\n",tpc_rmin,rmin_roi,rmin_roi_with_buffer,rmax_roi_with_buffer,rmax_roi,tpc_rmax);
+  printf("phi bounds are %f<%f<%f<phi<%f<%f<%f\n",0.0,phimin_roi,phimin_roi_with_buffer,phimax_roi_with_buffer,phimax_roi,2*TMath::Pi());
 
 
- 
-  //get the SC density histogram
+  //step 2b:  The default study I've been doing for a while is to reduce the size of the simulation by a certain factor and see how that impacts the performance.  The code below adjusts the size of the simulation per the specified reduction factor (where the default value of '0' makes this skip):
+  if (reduction==0){
+    //do nothing
+  }else if (reduction>0){
+    //reduce all dimensions by the specified amount:
+    nr=nr-reduction;
+    nphi=nphi-reduction;
+    nz=nz-reduction;
+  } else if (reduction<0){
+    //scale all dimensions by the specified amount in percent:
+    nr=ceil(-nr*reduction*0.01);
+    nphi=ceil(-nphi*reduction*0.01);
+    nz=ceil(-nz*reduction*0.01);
+  }
+  //make sure we didn't break anything:
+  if (nr<1)nr=1;
+  if (nphi<1)nphi=1;
+  if (nz<1)nz=1;
+  if (nr_roi_max>nr)nr_roi_max=nr;
+  if (nphi_roi_max>nphi)nphi_roi_max=nphi;
+  if (nz_roi_max>nz)nz_roi_max=nz;
+
+
+
+
+   //step 3: load the spacecharge density map from the specified histogram (in the tpc parameters, above).
+
   TFile *f=TFile::Open(scmapfilename);
   TH3F* tpc_average=(TH3F*)f->Get(scmaphistname);
   now=gSystem->Now();
   printf("loaded hist.  the dtime is %lu\n",(unsigned long)(now-start));
+
+
+
+
+  //step 4:  create the fieldsim object.  different choices of the last few arguments will change how it builds the lookup table spatially, and how it loads the spacecharge.  The various start-up steps are exposed here so they can be timed in the macro.
+  //To set rossegger vs trivial greens functions you either call or do not call load_rossegger().
   start=now;
   AnnularFieldSim *tpc=
     new  AnnularFieldSim(tpc_rmin,tpc_rmax,tpc_z,
@@ -117,8 +154,8 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
 			 tpc_driftVel, AnnularFieldSim::PhiSlice, AnnularFieldSim::FromFile);
   //  new AnnularFieldSim(tpc_rmin,tpc_rmax,tpc_z,9,120,9,tpc_driftVel);
    
-    // dropping half-res for test: new AnnularFieldSim(tpc_rmin,tpc_rmax,tpc_z,53,18,31,tpc_driftVel);
-    //full resolution is too big:  new AnnularFieldSim(tpc_rmin,tpc_rmax,tpc_z,159,360,62,tpc_driftVel);
+  // dropping half-res for test: new AnnularFieldSim(tpc_rmin,tpc_rmax,tpc_z,53,18,31,tpc_driftVel);
+  //full resolution is too big:  new AnnularFieldSim(tpc_rmin,tpc_rmax,tpc_z,159,360,62,tpc_driftVel);
   now=gSystem->Now();
   printf("created sim obj.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
@@ -128,16 +165,22 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
   now=gSystem->Now();
   printf("set fields.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
+
+  //to use the full rossegger terms instead of trivial free-space greens functions, uncomment the line below:
   tpc->load_rossegger();
-   now=gSystem->Now();
-    printf("load rossegger greens functions. (phi set to zero) the dtime is %lu\n",(unsigned long)(now-start));
+  now=gSystem->Now();
+  printf("load rossegger greens functions. (phi set to zero) the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   tpc->load_spacecharge(tpc_average,0,tpc_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
   //computed the correction to get the same spacecharge as in the tpc histogram:
   //todo: make the analytic scale proportional to the tpc_chargescale.
   double tpc_analytic_scale=1.237320E-06/9.526278E-11;
+
+  //to use an analytic spacecharge model instead of the one loaded from the file earlier, uncomment the line below:
   //tpc->load_analytic_spacecharge(0);//tpc_analytic_scale);
   now=gSystem->Now();
+
+  
   printf("loaded spacecharge.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   tpc->populate_lookup();
@@ -150,23 +193,29 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
   start=now;
   printf("consistency check:  integrate field along IR and OR, confirm V:\n");
 
-  if (reduction==0){
-    TH3F* hAnCharge=new TH3F("hAnCharge","hAnCharge;phi;r;z",nphi,0,6.281,nr,tpc_rmin,tpc_rmax,nz,0,tpc_z);
-    hAnCharge->Fill(0.0,0.0,0.0,0.0); //prime it so it draws correctly
 
-    int rh,ph,zh;
-    for (int i=0;i<hAnCharge->GetNcells();i++){
-      hAnCharge->GetBinXYZ(i,ph,rh,zh);
-      hAnCharge->SetBinContent(i,tpc->q->Get(rh%nr,ph%nphi,zh%nz));
-    }
-    hAnCharge->Project3D("XZ")->Draw("colz");
-    TCanvas *ct=new TCanvas();
-    hAnCharge->Project3D("YZ")->Draw("colz");
-    ct=new TCanvas();
-    hAnCharge->Project3D("YX")->Draw("colz");
+
+  //some sanity checks: 
+  if (reduction==0){
+    //save the charge into a histogram with size and dimensions matching the native tpc object:
+    //  SaveChargeAndProjections("last_macro.charge_projections.hist.root",tpc,nphi,0,6.281,nr,tpc_rmin,tpc_rmax,nz,0,tpc_z);
   }
 
-  // return;
+  //SaveField("last_macro.field.hist.root",tpc,nr_roi_min,nr_roi_max,nphi_roi_min,nphi_roi_max,nz_roi_min,nz_roi_max);
+
+
+  
+  
+  //generate the distortions by throwing particles at each z step and letting them propagate to the next:
+  //eventually this should be folded into AnnularFieldSim.  
+  GenerateAndSaveDistortionMap("last_macro.distortion_map.hist.root",tpc,
+			       nphi_roi,phimin_roi,phimax_roi,
+			       nr_roi,rmin_roi,rmax_roi,
+			       nz_roi,zmin_roi,zmax_roi);
+
+
+
+  
   //define a grid of test points:
   const int divisor=100;
   const int nparticles=divisor*divisor;
@@ -210,78 +259,6 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
   pTree.Branch("back1","TVector3",&back1);
   pTree.Branch("back1N",&goodSteps[1]);
 
-  //save data about the Efield:
-  TTree fTree("fTree","field Tree");
-  TVector3 pos0,pos,Efield,Bfield,phihat;
-  TVector3 zero(0,0,0);
-  TVector3 Eint,EintA;
-  bool inroi;
-  float charge,eintp, ep;
-  fTree.Branch("pos","TVector3",&pos);
-  fTree.Branch("phihat","TVector3",&phihat);
-
-  fTree.Branch("E","TVector3",&Efield);
-  fTree.Branch("B","TVector3",&Bfield);
-  fTree.Branch("Eint","TVector3",&Eint);
-  fTree.Branch("EintA","TVector3",&EintA);
-  fTree.Branch("q",&charge);
-  fTree.Branch("Eintp",&eintp);
-  fTree.Branch("Ep",&ep);
-  fTree.Branch("roi",&inroi);
-  float delr,delp;//=tpc->GetCellCenter(2,0,0)-tpc->GetCellCenter(1,0,0);
-  //TVector3 delp;
-  float delz=tpc->GetCellCenter(0,0,1).Z()-tpc->GetCellCenter(0,0,0).Z();
-  
-  bool inr,inp,inz;
-  int rl,pl, zl;
-  int fieldmap_output_extra_sampling=0;
-  if (0)
-  for (int ir=nr_roi_min;ir<nr_roi_max;ir++){
-    rl=ir-nr_roi_min;
-    inr=(rl>=0 && rl<nr_roi);
-    for (int ip=nphi_roi_min;ip<nphi_roi_max;ip++){
-      pl=ip-nphi_roi_min;
-      inp=(pl>=0 && pl<nphi_roi);     
-      for (int iz=0;iz<nz;iz++){
-	zl=iz-nz_roi_min;
-	inz=(zl>=0 && zl<nz_roi);
-	pos0=tpc->GetCellCenter(ir,ip,iz);
-	delr=(tpc->GetCellCenter(ir+1,ip,iz)).Perp()-pos0.Perp();
-	delp=(tpc->GetCellCenter(ir,ip+1,iz)).Phi()-pos0.Phi();
-
-	Efield=zero;
-	Bfield=zero;
-	inroi=inr && inp && inz;
-	if (inroi){
-	  Efield=tpc->Efield->Get(ir-nr_roi_min,ip-nphi_roi_min,iz-nz_roi_min);
-	  Bfield=tpc->Bfield->Get(ir-nr_roi_min,ip-nphi_roi_min,iz-nz_roi_min);
-	  //for (int rlocal=-10;rlocal<10;rlocal++){
-	    //int plocal=0;
-	  int rlocal=0;
-	    for (int plocal=-fieldmap_output_extra_sampling;plocal<fieldmap_output_extra_sampling+1;plocal++){
-	      pos=pos0;
-	      pos.SetPerp(pos0.Perp()+delr/(1+2*fieldmap_output_extra_sampling)*rlocal);
-	      pos.RotateZ(delp/(1+2*fieldmap_output_extra_sampling)*plocal);//+(rlocal)/20.1*delr+(plocal)/(20.1)*delp;
-	      //printf("trying pos=(%f,%f,%f)= rphiz(%f,%f,%f)\n",pos.X(),pos.Y(),pos.Z(),pos.Perp(),pos.Phi(),pos.Z());
-	      phihat=pos;// build our phi position by starting with the vector in the rz plane:
-	      phihat.SetZ(0);//remove the z component so it points purely in r
-	      phihat.SetMag(1.0);//scale it to 1.0;
-	      phihat.RotateZ(TMath::Pi()/2);//rotate 90 degrees from the position vector so it now points purely in phi; 
-	      Eint=(tpc->interpolatedFieldIntegral(pos.Z()-delz/(4.0),pos))*(4.0/delz);
-	      EintA=(tpc->analyticFieldIntegral(pos.Z()-delz/(4.0),pos))*(4.0/delz);
-	      charge=tpc->q->Get(ir,ip,iz);
-	      eintp=Eint.Dot(phihat);
-	      ep=Efield.Dot(phihat);
-	      fTree.Fill();
-	      }
-	    //}
-	}
-	
-      }
-    }
-  }
-  fTree.Write();
-  //return;
   
   int validToStep=-1;
   start=gSystem->Now();
@@ -462,5 +439,169 @@ const char scmaphistname[]="inputSCDensity3D_8000_avg";
   multi->Add(graph[i]);
   i++;
   multi->Draw("AC*");  
+  return;
+}
+
+
+void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int np,float pi,float pf,int nr,float ri,float rf,int nz,float zi,float zf){
+  //scan over the tpc physical volume in nphi steps from pi to pf, and similar for the other two dimensions.
+  //set a particle at those coordinates and drift it to the next coordinate in z, then save the delta in histograms.
+
+  TFile *outf=TFile::Open(filename,"RECREATE");
+  outf->cd();
+
+  TH3F* hDistortionR=new TH3F("hDistortionR","Per-z-step Distortion in the R direction as a function of (r,phi,z) (centered in r,phi, edge in z). and z;phi;r;z",np,pi,pf,nr,ri,rf,nz,zi,zf);
+  TH3F* hDistortionP=new TH3F("hDistortionP","Per-z-step Distortion in the RPhi direction as a function of (r,phi,z). and z;phi;r;z",np,pi,pf,nr,ri,rf,nz,zi,zf);
+
+  float deltar=(rf-ri)/nr;
+  float deltap=(pf-pi)/np;
+  float deltaz=(zf-zi)/nz;
+  TVector3 inpart,outpart;
+  TVector3 distort;
+  int validToStep;
+  int nSteps=10;
+
+  float partR,partP,partZ;
+  int ir,ip,iz;
+  float distortR,distortP;
+  TTree *dTree=new TTree("dTree","Distortion per step z");
+  dTree->Branch("r",&partR);
+  dTree->Branch("p",&partP);
+  dTree->Branch("z",&partZ);
+  dTree->Branch("ir",&ir);
+  dTree->Branch("ip",&ip);
+  dTree->Branch("iz",&iz);
+  dTree->Branch("dr",&distortR);
+  dTree->Branch("drp",&distortP);
+
+  
+  
+  inpart.SetXYZ(1,0,0);
+  for (ir=0;ir<nr;ir++){
+    inpart.SetPerp((ir+0.5)*deltar+ri);
+    partR=inpart.Perp();
+    for (ip=0;ip<np;ip++){
+      inpart.SetPhi((ip+0.5)*deltap+pi);
+      partP=inpart.Phi();
+      if (partP<0) partP+=TMath::TwoPi();
+      for (iz=0;iz<nz;iz++){
+	inpart.SetZ(iz*deltaz+zi);
+	partZ=inpart.Z();
+	outpart=t->swimToInSteps(inpart.Z()+deltaz,inpart,nSteps,true, &validToStep);
+	distort=outpart-inpart;
+	float distortR=distort.Perp();
+	distort.RotateZ(-inpart.Phi());//rotate so that rhat is on the x axis
+	float distortP=distort.Y();//the phi component is now the y component.
+	hDistortionR->Fill(partP,partR,partZ,distortR);
+	hDistortionP->Fill(partP,partR,partZ,distortP);
+	dTree->Fill();
+      }
+    }
+  }
+  
+  hDistortionR->Write();
+  hDistortionP->Write();
+  dTree->Write();
+  //caution!  don't forget phi math is not just components!@
+  outf->Close();
+  return;
+}
+
+void SaveChargeAndProjections(const char* filename,AnnularFieldSim *t,int nphi,float pi,float pf,int nr,float ri,float rf,int nz,float zi,float zf){
+  //scan over the tpc physical volume in nphi steps from pi to pf, and similar for the other two dimensions,
+  //extract the charge from the tpc object at those coordinates, then save the resulting histogram and projections.
+  TH3F* hAnCharge=new TH3F("hAnCharge","hAnCharge;phi;r;z",nphi,pi,pf,nr,ri,rf,nz,zi,zf);
+  hAnCharge->Fill(0.0,0.0,0.0,0.0); //prime it so it draws correctly
+  TH1F *hproj[3];
+  int rh,ph,zh;
+  for (int i=0;i<hAnCharge->GetNcells();i++){
+    hAnCharge->GetBinXYZ(i,ph,rh,zh);
+    hAnCharge->SetBinContent(i,t->q->Get(rh%nr,ph%nphi,zh%nz));
+  }
+  hproj[0]=(TH1F*)(hAnCharge->Project3D("XZ"));
+  hproj[1]=(TH1F*)(hAnCharge->Project3D("YZ"));
+  hproj[2]=(TH1F*)(hAnCharge->Project3D("YX"));
+
+  TFile *outf=TFile::Open(filename,"RECREATE");
+  outf->cd();
+  hAnCharge->Write();
+  for (int i=0;i<3;i++){
+    hproj[i]->Write();
+  }
+  outf->Close();
+  return;
+}
+
+
+void SaveField(const char* filename,AnnularFieldSim *t,int pi,int pf,int ri, int rf, int zi, int zf){
+  //scan over the tpc object's field map, from the cell center of (ri,pi,zi) to the cell center of (rf-1,pf-1,zf-1), inclusive,
+  //and save the field vectors at each point.
+  //note that this may misbehave if you go outside the roi.
+  TFile *outf=TFile::Open(filename,"RECREATE");
+  outf->cd();
+ 
+  //save data about the Efield:
+  TTree fTree("fTree","field Tree");
+  TVector3 pos0,pos1,pos2,pos,Efield,Bfield,phihat;
+  TVector3 zero(0,0,0);
+  TVector3 Eint,EintA;
+  bool inroi;
+  float charge,eintp, ep;
+  fTree.Branch("pos","TVector3",&pos);
+  fTree.Branch("phihat","TVector3",&phihat);
+
+  fTree.Branch("E","TVector3",&Efield);
+  fTree.Branch("B","TVector3",&Bfield);
+  fTree.Branch("Eint","TVector3",&Eint);
+  fTree.Branch("EintA","TVector3",&EintA);
+  //fTree.Branch("q",&charge);
+  fTree.Branch("Eintp",&eintp);
+  fTree.Branch("Ep",&ep);
+  fTree.Branch("roi",&inroi);
+  float delr,delp;//=tpc->GetCellCenter(2,0,0)-tpc->GetCellCenter(1,0,0);
+  //TVector3 delp;
+  float delz=t->GetCellCenter(0,0,1).Z()-t->GetCellCenter(0,0,0).Z();
+  
+  bool inr,inp,inz;
+  int rl,pl, zl;
+  int fieldmap_output_extra_sampling=0;
+  if (0)
+  for (int ir=ri;ir<rf;ir++){
+    for (int ip=pi;ip<pf;ip++){
+      for (int iz=zi;iz<zf;iz++){
+	pos0=t->GetRoiCellCenter(ir,ip,iz);
+	pos1=t->GetRoiCellCenter(ir+1,ip,iz);//shift by one point in r.
+	pos2=t->GetRoiCellCenter(ir,ip+1,iz);//shift by one point in phi.
+	delr=pos1.Perp()-pos0.Perp();
+	delp=pos2.Phi()-pos0.Phi();
+	if (pos0.Mag()==0) continue; // we aren't in the roi.
+	if (pos1.Mag()==0) continue; // we couldn't get an accurate r spacing
+	if (pos2.Mag()==0) continue; // we couldn't get an accurate phi spacing
+	Efield=zero;
+	Bfield=zero;
+	Efield=t->Efield->Get(ir,ip,iz);
+	Bfield=t->Bfield->Get(ir,ip,iz);
+	int rlocal=0;
+	for (int plocal=-fieldmap_output_extra_sampling;plocal<fieldmap_output_extra_sampling+1;plocal++){
+	  pos=pos0;
+	  pos.SetPerp(pos0.Perp()+delr/(1+2*fieldmap_output_extra_sampling)*rlocal);
+	  pos.RotateZ(delp/(1+2*fieldmap_output_extra_sampling)*plocal);//+(rlocal)/20.1*delr+(plocal)/(20.1)*delp;
+	  //printf("trying pos=(%f,%f,%f)= rphiz(%f,%f,%f)\n",pos.X(),pos.Y(),pos.Z(),pos.Perp(),pos.Phi(),pos.Z());
+	  phihat=pos;// build our phi position by starting with the vector in the rz plane:
+	  phihat.SetZ(0);//remove the z component so it points purely in r
+	  phihat.SetMag(1.0);//scale it to 1.0;
+	  phihat.RotateZ(TMath::Pi()/2);//rotate 90 degrees from the position vector so it now points purely in phi; 
+	  Eint=(t->interpolatedFieldIntegral(pos.Z()-delz/(4.0),pos))*(4.0/delz);
+	  EintA=(t->analyticFieldIntegral(pos.Z()-delz/(4.0),pos))*(4.0/delz);
+	  //charge=tpc->q->Get(ir,ip,iz);
+	  eintp=Eint.Dot(phihat);
+	  ep=Efield.Dot(phihat);
+	  fTree.Fill();
+	}
+      }
+    }
+  }
+  fTree.Write();
+  outf->Close();
   return;
 }

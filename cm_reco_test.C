@@ -126,5 +126,6 @@ void cm_reco_test(){
   tex->Draw();
  tex=new TLatex(0.0,0.2,Form("RMS of reco-true =%1.3f #mum",hDistMatch->GetRMS()*1e4));
   tex->Draw();
+  c->SaveAs("cm_reco.pdf");
   return;
 }

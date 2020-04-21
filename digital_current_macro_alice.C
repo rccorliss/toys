@@ -76,14 +76,14 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   //define a region of interest, in units of the intrinsic scale of the tpc histogram:
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
   int nr=8;//159;//159 nominal
-  int nr_roi_min=4;
-  int nr_roi=2;
+  int nr_roi_min=3;
+  int nr_roi=3;
   int nr_roi_max=nr_roi_min+nr_roi;
-  int nphi=30;//360;//360 nominal
+  int nphi=20;//360;//360 nominal
   int nphi_roi_min=10;
-  int nphi_roi=10;
+  int nphi_roi=5;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
-  int nz=20;//62;//62 nominal
+  int nz=12;//62;//62 nominal
   int nz_roi_min=0;
   int nz_roi=nz;
   int nz_roi_max=nz_roi_min+nz_roi;
@@ -191,7 +191,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
  now=gSystem->Now();
   printf("populated fieldmap.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
-  printf("consistency check:  integrate field along IR and OR, confirm V:\n");
+  //printf("consistency check:  integrate field along IR and OR, confirm V:\n");
 
 
 
@@ -213,7 +213,8 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 			       nr_roi,rmin_roi,rmax_roi,
 			       nz_roi,zmin_roi,zmax_roi);
 
-
+  printf("all done.\n");
+  return;
 
   
   //define a grid of test points:
@@ -446,7 +447,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int np,float pi,float pf,int nr,float ri,float rf,int nz,float zi,float zf){
   //scan over the tpc physical volume in nphi steps from pi to pf, and similar for the other two dimensions.
   //set a particle at those coordinates and drift it to the next coordinate in z, then save the delta in histograms.
-
+  printf("generating distortion map...\n");
   TFile *outf=TFile::Open(filename,"RECREATE");
   outf->cd();
 
@@ -490,7 +491,7 @@ void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int np
 	outpart=t->swimToInSteps(inpart.Z()+deltaz,inpart,nSteps,true, &validToStep);
 	distort=outpart-inpart;
 	float distortR=distort.Perp();
-	distort.RotateZ(-inpart.Phi());//rotate so that rhat is on the x axis
+	distort.RotateZ(-inpart.Phi());//rotate so that that is on the x axis
 	float distortP=distort.Y();//the phi component is now the y component.
 	hDistortionR->Fill(partP,partR,partZ,distortR);
 	hDistortionP->Fill(partP,partR,partZ,distortP);
@@ -502,8 +503,8 @@ void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int np
   hDistortionR->Write();
   hDistortionP->Write();
   dTree->Write();
-  //caution!  don't forget phi math is not just components!@
   outf->Close();
+  printf("closed outfile, done saving distortion.\n");
   return;
 }
 

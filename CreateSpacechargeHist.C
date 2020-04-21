@@ -91,6 +91,7 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
   float ampIBFfrac=0.02;
   float ionsPerEle=ampGain*ampIBFfrac;
   float mbRate=freqKhz*kHz;
+  float xingRate=9.0*MHz;
   float z_rdo=105.5*cm;
   float rmin=20*cm;
   float rmax=78*cm;

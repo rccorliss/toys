@@ -208,7 +208,7 @@ void slow_laser_macro() {
     photon_direction=DiffusePhoton(photon_direction,fThorAngle);
 
     //what if we diffuse it /twice/?
-        photon_direction=DiffusePhoton(photon_direction,fThorAngle);
+    photon_direction=DiffusePhoton(photon_direction,fThorAngle);
 
 
     //find the position where this photon intersects the CM:

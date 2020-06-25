@@ -75,15 +75,15 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   
   //define a region of interest, in units of the intrinsic scale of the tpc histogram:
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
-  int nr=8;//159;//159 nominal
-  int nr_roi_min=3;
-  int nr_roi=3;
+  int nr=12;//159;//159 nominal
+  int nr_roi_min=0;
+  int nr_roi=12;
   int nr_roi_max=nr_roi_min+nr_roi;
   int nphi=20;//360;//360 nominal
-  int nphi_roi_min=10;
-  int nphi_roi=5;
+  int nphi_roi_min=0;
+  int nphi_roi=20;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
-  int nz=12;//62;//62 nominal
+  int nz=20;//62;//62 nominal
   int nz_roi_min=0;
   int nz_roi=nz;
   int nz_roi_max=nz_roi_min+nz_roi;
@@ -167,7 +167,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   start=now;
 
   //to use the full rossegger terms instead of trivial free-space greens functions, uncomment the line below:
-  tpc->load_rossegger();
+  //tpc->load_rossegger();
   now=gSystem->Now();
   printf("load rossegger greens functions. (phi set to zero) the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
@@ -204,7 +204,8 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   //SaveField("last_macro.field.hist.root",tpc,nr_roi_min,nr_roi_max,nphi_roi_min,nphi_roi_max,nz_roi_min,nz_roi_max);
 
 
-  
+    printf("fieldsim ptr=%p\n",(void*)tpc);
+
   
   //generate the distortions by throwing particles at each z step and letting them propagate to the next:
   //eventually this should be folded into AnnularFieldSim.  
@@ -447,12 +448,20 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int np,float pi,float pf,int nr,float ri,float rf,int nz,float zi,float zf){
   //scan over the tpc physical volume in nphi steps from pi to pf, and similar for the other two dimensions.
   //set a particle at those coordinates and drift it to the next coordinate in z, then save the delta in histograms.
+
+  //by doing this per-bin, we can properly apply fractional distortions to particles that are not along a bin boundary, though this may be a minor concern.  If we integrated, we would lose this power.
   printf("generating distortion map...\n");
+  printf("file=%s\n",filename);
+  printf("Phi:  %d steps from %f to %f\n",np,pi,pf);
+  printf("R:  %d steps from %f to %f\n",nr,ri,rf);
+  printf("Z:  %d steps from %f to %f\n",nz,zi,zf);
+  printf("fieldsim ptr=%p\n",(void*)t);
   TFile *outf=TFile::Open(filename,"RECREATE");
   outf->cd();
 
-  TH3F* hDistortionR=new TH3F("hDistortionR","Per-z-step Distortion in the R direction as a function of (r,phi,z) (centered in r,phi, edge in z). and z;phi;r;z",np,pi,pf,nr,ri,rf,nz,zi,zf);
-  TH3F* hDistortionP=new TH3F("hDistortionP","Per-z-step Distortion in the RPhi direction as a function of (r,phi,z). and z;phi;r;z",np,pi,pf,nr,ri,rf,nz,zi,zf);
+  TH3F* hDistortionR=new TH3F("hDistortionR","Per-z-bin Distortion in the R direction as a function of (r,phi,z) (centered in r,phi, edge in z);phi;r;z",np,pi,pf,nr,ri,rf,nz,zi,zf);
+  TH3F* hDistortionP=new TH3F("hDistortionP","Per-z-bin Distortion in the RPhi direction as a function of (r,phi,z)  (centered in r,phi, edge in z);phi;r;z",np,pi,pf,nr,ri,rf,nz,zi,zf);
+  TH3F* hDistortionZ=new TH3F("hDistortionZ","Per-z-bin Distortion in the Z direction as a function of (r,phi,z)  (centered in r,phi, edge in z);phi;r;z",np,pi,pf,nr,ri,rf,nz,zi,zf);
 
   float deltar=(rf-ri)/nr;
   float deltap=(pf-pi)/np;
@@ -464,7 +473,7 @@ void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int np
 
   float partR,partP,partZ;
   int ir,ip,iz;
-  float distortR,distortP;
+  float distortR,distortP,distortZ;
   TTree *dTree=new TTree("dTree","Distortion per step z");
   dTree->Branch("r",&partR);
   dTree->Branch("p",&partP);
@@ -474,6 +483,7 @@ void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int np
   dTree->Branch("iz",&iz);
   dTree->Branch("dr",&distortR);
   dTree->Branch("drp",&distortP);
+  dTree->Branch("dz",&distortZ);
 
   
   
@@ -490,11 +500,13 @@ void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int np
 	partZ=inpart.Z();
 	outpart=t->swimToInSteps(inpart.Z()+deltaz,inpart,nSteps,true, &validToStep);
 	distort=outpart-inpart;
-	float distortR=distort.Perp();
+	distortR=distort.Perp();
 	distort.RotateZ(-inpart.Phi());//rotate so that that is on the x axis
-	float distortP=distort.Y();//the phi component is now the y component.
+	distortP=distort.Y();//the phi component is now the y component.
+	distortZ=0;
 	hDistortionR->Fill(partP,partR,partZ,distortR);
 	hDistortionP->Fill(partP,partR,partZ,distortP);
+	hDistortionZ->Fill(partP,partR,partZ,0);
 	dTree->Fill();
       }
     }
@@ -502,6 +514,7 @@ void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int np
   
   hDistortionR->Write();
   hDistortionP->Write();
+  hDistortionZ->Write();
   dTree->Write();
   outf->Close();
   printf("closed outfile, done saving distortion.\n");

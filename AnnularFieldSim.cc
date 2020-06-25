@@ -107,7 +107,7 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
 
 
 
-  //handlke the lookup table construction:  
+  //handle the lookup table construction:  
   lookupCase=in_lookupCase;
   chargeCase=in_chargeCase;
   if (chargeCase==ChargeCase::NoSpacecharge)
@@ -136,16 +136,13 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
   *(q_local->GetFlat(0))=0;
 
   } else if (lookupCase==HybridRes){
-      printf("lookupCase==HybridRes\n");
-
-
-   
-  //zero out the other two:
-  Epartial=new MultiArray<TVector3>(1);
-  Epartial->GetFlat(0)->SetXYZ(0,0,0);
-
-  Epartial_phislice=new MultiArray<TVector3>(1);
-  Epartial_phislice->GetFlat(0)->SetXYZ(0,0,0);
+    printf("lookupCase==HybridRes\n");   
+    //zero out the other two:
+    Epartial=new MultiArray<TVector3>(1);
+    Epartial->GetFlat(0)->SetXYZ(0,0,0);
+    
+    Epartial_phislice=new MultiArray<TVector3>(1);
+    Epartial_phislice->GetFlat(0)->SetXYZ(0,0,0);
   
   } else if (lookupCase==PhiSlice){
       printf("lookupCase==PhiSlice\n");

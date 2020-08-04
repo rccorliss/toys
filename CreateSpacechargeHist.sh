@@ -31,9 +31,11 @@ eveperfile=50
 #freq=200
 for freq in 200 100 20 10
   do
-      for ((r=0;r<=maxend-eveperfile;r=r+eveperfile)); do
-	  rp=$(($r+$eveperfile))
-	  fname=$basename`printf "%05d\n" $r`_`printf "%05d\n" $rp`.root
-	  echo root -b -q CreateSpacechargeHist.C\(\"$dir\",\"$fname\",$r,$maxend,$freq,0\)
+      for ((x=0;x<=beamend-beamsperrun;x=x+beamsperrun)); do
+	  for ((r=0;r<=maxend-eveperfile;r=r+eveperfile)); do
+	      rp=$(($r+$eveperfile))
+	      fname=$basename`printf "%05d\n" $r`_`printf "%05d\n" $rp`.root
+	      echo root -b -q CreateSpacechargeHist.C\(\"$dir\",\"$fname\",$r,$maxend,$freq,0\)
+	  done
       done
   done

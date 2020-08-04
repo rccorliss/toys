@@ -120,8 +120,10 @@ class AnnularFieldSim{
   
   void load_spacecharge(TH3F *hist, float zoffset, float scalefactor);
   void load_analytic_spacecharge(float scalefactor);
+  void add_testcharge(float r, float phi, float z, float coulombs);
+  
   void setNominalB(float x){Bnominal=x;return;};
-  void seNominalE(float x){Enominal=x;return;};
+  void setNominalE(float x){Enominal=x;return;};
   void setFlatFields(float B, float E);
   void loadEfield(const char *filename, const char *treename);
   void loadBfield(const char *filename, const char *treename);
@@ -160,6 +162,9 @@ class AnnularFieldSim{
   TVector3 OldSwimToInSteps(float zdest,TVector3 start, int steps, bool interpolate, int *goodToStep);
   TVector3 swimTo(float zdest,TVector3 start, bool interpolate=true, bool useAnalytic=false);
   TVector3 GetStepDistortion(float zdest,TVector3 start, bool interpolate=true, bool useAnalytic=false);
+
+  TVector3 GetInnerEdge(){return TVector3(rmin,0,zmin);};
+  TVector3 GetOuterEdge(){return TVector3(rmax,0,zmax);};
  
  private:
   BoundsCase GetRindexAndCheckBounds(float pos, int *r);

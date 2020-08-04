@@ -13,10 +13,11 @@ This code loads an AnnularFieldSim model of the TPC, computing spacecharge disto
 #include "AnnularFieldSim.h"
 R__LOAD_LIBRARY(.libs/libfieldsim)
 
+//place test charge at the IFC and confirm all charge distort inward.
+void TestChargeSign(AnnularFieldSim *t);
 
 //place test electrons along a fixed grid and drift them one grid-length in z to calculate local distortions
-void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int nphi,float pi,float pf,int nr,float ri,float rf,int nz,float zi,float zf)
-;
+void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int nphi,float pi,float pf,int nr,float ri,float rf,int nz,float zi,float zf);
 //reads the charge object from the tpc and saves it to file.  Useful to make sure things are being filled correctly.
 void SaveChargeAndProjections(const char* filename,AnnularFieldSim *t,int nphi,float pi,float pf,int nr,float ri,float rf,int nz,float zi,float zf);
 
@@ -134,7 +135,6 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 
 
    //step 3: load the spacecharge density map from the specified histogram (in the tpc parameters, above).
-
   TFile *f=TFile::Open(scmapfilename);
   TH3F* tpc_average=(TH3F*)f->Get(scmaphistname);
   now=gSystem->Now();
@@ -160,18 +160,30 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   printf("created sim obj.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   tpc->setFlatFields(tpc_magField, 12345);// tpc_driftVolt/tpc_z);
-  tpc->loadBfield("sPHENIX.2d.root","fieldmap");
-  tpc->loadEfield("externalEfield.ttree.root","fTree");
+  //tpc->loadBfield("sPHENIX.2d.root","fieldmap");
+  //tpc->loadEfield("externalEfield.ttree.root","fTree");
   now=gSystem->Now();
   printf("set fields.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
 
+
+  //load the greens functions:
   //to use the full rossegger terms instead of trivial free-space greens functions, uncomment the line below:
   //tpc->load_rossegger();
   now=gSystem->Now();
   printf("load rossegger greens functions. (phi set to zero) the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
-  tpc->load_spacecharge(tpc_average,0,tpc_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
+  tpc->populate_lookup();
+  now=gSystem->Now();
+  printf("populated lookup.  the dtime is %lu\n",(unsigned long)(now-start));
+  start=now;
+ 
+  
+  //load the spacecharge:
+  TestChargeSign(tpc); //adds a test charge, and looks at how electrons deflect and draws some plots.
+  return;
+  
+  //tpc->load_spacecharge(tpc_average,0,tpc_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
   //computed the correction to get the same spacecharge as in the tpc histogram:
   //todo: make the analytic scale proportional to the tpc_chargescale.
   double tpc_analytic_scale=1.237320E-06/9.526278E-11;
@@ -183,11 +195,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   
   printf("loaded spacecharge.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
-  tpc->populate_lookup();
-  now=gSystem->Now();
-  printf("populated lookup.  the dtime is %lu\n",(unsigned long)(now-start));
-  start=now;
-  tpc->populate_fieldmap();
+ tpc->populate_fieldmap();
  now=gSystem->Now();
   printf("populated fieldmap.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
@@ -617,5 +625,77 @@ void SaveField(const char* filename,AnnularFieldSim *t,int pi,int pf,int ri, int
   }
   fTree.Write();
   outf->Close();
+  return;
+}
+
+void TestChargeSign(AnnularFieldSim *t){
+  printf("hello\n");
+  TVector3 inner=t->GetInnerEdge();
+  TVector3 outer=t->GetOuterEdge();
+  TVector3 mid=0.5*(inner+outer);
+  TVector3 span=(outer-inner);
+  float rstart=inner.Perp();
+  float rend=outer.Perp();
+  float zend=mid.Z()+0.45*span.Z();//travel to higher z
+  float zstart=mid.Z()-0.45*span.Z();//start at lower z
+  t->add_testcharge(mid.Perp(),3.14,0,1e-6);//1 milicoulomb of charge located at the middle in r and end in z.      
+  t->populate_fieldmap();
+
+  int nr=30;
+  float deltar=span.Perp()/nr;
+  int np=30;
+  float deltap=6.28/np;
+  int validToStep;
+  float z[]={zstart,zend};
+  int nDriftSteps=500;
+
+  TH2F *hDistortR[2];
+  TH2F *hDistortP[2];
+  TH2F *hDistortC[2];
+
+  TVector3 inpart(1,0,0);
+  TVector3 outpart,distort;
+  float partR,partP,distortR,distortP;
+  TCanvas *c=new TCanvas("ctestcharge","test charge data",800,800);
+  c->Divide(3,2);
+  for (int iz=0;iz<2;iz++){
+    hDistortR[iz]=new TH2F(Form("hDistortR%d",iz),
+			   Form("R Distortion Drifting from z=%2.1fcm to z=%2.1fcm;phi;r;#Delta R (cm)",z[iz],z[1-iz]),
+			   np,0,6.28,nr,rstart,rend);
+    hDistortP[iz]=new TH2F(Form("hDistortP%d",iz),
+			   Form("Phi Distortion Drifting from z=%2.1fcm to z=%2.1fcm;phi;r;#Delta#Phi (cm)",z[iz],z[1-iz]),
+			   np,0,6.28,nr,rstart,rend);
+    hDistortC[iz]=new TH2F(Form("hDistortC%d",iz),
+			   Form("%% Successful Steps from z=%2.1fcm to z=%2.1fcm;phi;r;#Delta#Phi (cm)",z[iz],z[1-iz]),
+			   np,0,6.28,nr,rstart,rend);
+
+    for (int ir=0;ir<nr;ir++){
+      inpart.SetPerp((ir+0.1)*deltar+rstart);
+      partR=inpart.Perp();
+      for (int ip=0;ip<np;ip++){
+	inpart.SetPhi((ip+0.1)*deltap);
+	partP=inpart.Phi();
+	if (partP<0) partP+=TMath::TwoPi();
+      
+	inpart.SetZ(z[iz]);
+	outpart=t->swimToInSteps(z[1-iz],inpart,nDriftSteps,true, &validToStep);
+	distort=outpart-inpart;
+	distortR=outpart.Perp()-inpart.Perp();
+	distort.RotateZ(-inpart.Phi());//rotate so that that is on the x axis
+	distortP=distort.Y();//the phi component is now the y component.
+	hDistortR[iz]->Fill(partP,partR,distortR);
+	hDistortP[iz]->Fill(partP,partR,distortP);
+	hDistortC[iz]->Fill(partP,partR,(1.0*validToStep)/nDriftSteps*100);
+      }
+    }
+
+    c->cd(iz*3+1);
+    hDistortR[iz]->Draw("colz");
+    c->cd(iz*3+2);
+    hDistortP[iz]->Draw("colz");
+    c->cd(iz*3+3);
+    hDistortC[iz]->Draw("colz");
+  }
+   
   return;
 }

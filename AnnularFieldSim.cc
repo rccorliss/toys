@@ -996,6 +996,33 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefac
   return;
 }
 
+void AnnularFieldSim::add_testcharge(float r, float phi, float z, float coulombs){
+  int rcell,phicell,zcell;
+
+  //translate to which cell we're in:
+  BoundsCase rb=GetRindexAndCheckBounds(r, &rcell);
+  BoundsCase pb=GetPhiIndexAndCheckBounds(phi, &phicell);
+  BoundsCase zb=GetZindexAndCheckBounds(z, &zcell);
+  //really, we would like to confirm that the cell we find is in the charge map region, not the field map region.
+  if (rb==BoundsCase::OutOfBounds || pb==BoundsCase::OutOfBounds || zb==BoundsCase::OutOfBounds){
+    printf("placing %f Coulombs at (r,p,z)=(%f,%f,%f).  Caution that that is out of the roi.\n",coulombs,r,phi,z);
+  }
+  if (rcell<0 || phicell<0 || zcell <0){
+    printf("Tried placing %f Coulombs at (r,p,z)=(%f,%f,%f).  That is outside of the charge map region.\n",coulombs,r,phi,z);
+    return;
+  }
+
+  q->Add(rcell,phicell,zcell,coulombs);
+  if (lookupCase==HybridRes){
+    printf("write the code you didn't write earlier about reloading the lowres map.\n");
+    assert(1==2);
+  }
+    
+
+  return;
+}
+
+
 /*
 void AnnularFieldSim::populate_analytic_fieldmap(){
   //sum the E field at every point in the region of interest
@@ -1067,11 +1094,16 @@ void  AnnularFieldSim::populate_full3d_lookup(){
   //with 'f' being the position the field is being measured at, and 'o' being the position of the charge generating the field.
   //remember the 'f' part of Epartial uses relative indices.
   //  TVector3 (*f)[fx][fy][fz][ox][oy][oz]=field_;
-  //printf("populating lookup for (%dx%dx%d)x(%dx%dx%d) grid\n",fx,fy,fz,ox,oy,oz);
+  printf("populating full lookup table for (%dx%dx%d)x(%dx%dx%d) grid\n",
+	 (rmax_roi-rmin_roi),(phimax_roi-phimin_roi),(zmax_roi-zmin_roi),nr,nphi,nz);
+  unsigned long long totalelements=(rmax_roi-rmin_roi)*(phimax_roi-phimin_roi)*(zmax_roi-zmin_roi)*nr*nphi*nz;
+  unsigned long long percent=totalelements/100;
+  printf("total elements = %llu\n",totalelements);
   TVector3 at(1,0,0);
   TVector3 from(1,0,0);
   TVector3 zero(0,0,0);
 
+  int el=0;
   for (int ifr=rmin_roi;ifr<rmax_roi;ifr++){
     for (int ifphi=phimin_roi;ifphi<phimax_roi;ifphi++){
       for (int ifz=zmin_roi;ifz<zmax_roi;ifz++){
@@ -1079,6 +1111,8 @@ void  AnnularFieldSim::populate_full3d_lookup(){
 	for (int ior=0;ior<nr;ior++){
 	  for (int iophi=0;iophi<nphi;iophi++){
 	    for (int ioz=0;ioz<nz;ioz++){
+	      el++;
+	      if(!(el%percent)) printf("populate_full3d_lookup %d%%\n",(int)(el/percent));
 	      from=GetCellCenter(ior, iophi, ioz);
 
 	      //*f[ifx][ify][ifz][iox][ioy][ioz]=cacl_unit_field(at,from);
@@ -1312,36 +1346,36 @@ void  AnnularFieldSim::populate_phislice_lookup(){
   //remember the 'f' part of Epartial uses relative indices.
   //  TVector3 (*f)[fx][fy][fz][ox][oy][oz]=field_;
   printf("populating phislice  lookup for (%dx%dx%d)x(%dx%dx%d) grid\n",nr_roi,1,nz_roi,nr,nphi,nz);
+  unsigned long long totalelements=nr*nphi*nz*nr_roi*1*nz_roi;
+  unsigned long long percent=totalelements/100;
+  printf("total elements = %llu\n",totalelements);
   TVector3 at(1,0,0);
   TVector3 from(1,0,0);
   TVector3 zero(0,0,0);
 
-  int counter=0;
-  int checkin=127;
-
+  int el=0;
   for (int ifr=rmin_roi;ifr<rmax_roi;ifr++){
     for (int ifz=zmin_roi;ifz<zmax_roi;ifz++){
       at=GetCellCenter(ifr, 0, ifz);
       for (int ior=0;ior<nr;ior++){
 	for (int iophi=0;iophi<nphi;iophi++){
 	  for (int ioz=0;ioz<nz;ioz++){
+	    el++;
 	    from=GetCellCenter(ior, iophi, ioz);
-		
-			    //printf("calc_unit_field...\n");
-
-	    
 	    //*f[ifx][ify][ifz][iox][ioy][ioz]=cacl_unit_field(at,from);
 	    //printf("calc_unit_field...\n");
 	    if (ifr==ior && 0==iophi && ifz==ioz){
+		if(!(el%percent)) {printf("populate_phislice_lookup %d%%:  ",(int)(el/percent));
+		  printf("self-to-self is zero (ir=%d,iphi=%d,iz=%d) to (or=%d,ophi=0,oz=%d) gives (%E,%E,%E)\n",
+		  	 ior,iophi,ioz,ifr,ifz,zero.X(),zero.Y(),zero.Z());
+		}
 	      Epartial_phislice->Set(ifr-rmin_roi,0,ifz-zmin_roi,ior,iophi,ioz,zero);
 	    } else{
 	      TVector3 unitf=calc_unit_field(at,from);
 	      if (1){
-		counter++;
-		if (!(counter%checkin)){
-		  counter=0;
+		if(!(el%percent)) {printf("populate_phislice_lookup %d%%:  ",(int)(el/percent));
 		  printf("calc_unit_field (ir=%d,iphi=%d,iz=%d) to (or=%d,ophi=0,oz=%d) gives (%E,%E,%E)\n",
-			 ior,iophi,ioz,ifr,ifz,unitf.X(),unitf.Y(),unitf.Z());
+		  	 ior,iophi,ioz,ifr,ifz,unitf.X(),unitf.Y(),unitf.Z());
 		}
 	      }
 
@@ -1779,7 +1813,7 @@ TVector3 AnnularFieldSim::swimToInSteps(float zdest,TVector3 start,int steps=1, 
     //this seems redundant, but if the distortions are small they may lose precision and stop actually changing the position when step size is small.  This allows them to accumulate separately so they can grow properly:
     ret=start+accumulated_distortion+accumulated_drift;
   }
-  
+  *goodToStep=steps;
   return ret;
 }
 
@@ -1914,7 +1948,7 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate, b
 
   if (abs(deltaX)<1E-20){
     printf("swimTo produced a very small deltaX: %E\n",deltaX);
-    assert(1==2);
+    //assert(1==2);
 
    }
   
@@ -2040,7 +2074,7 @@ TVector3 AnnularFieldSim::GetStepDistortion(float zdest,TVector3 start, bool int
     printf("GetStepDistortion: fieldInt=(%E,%E,%E)\n",fieldInt.X(),fieldInt.Y(),fieldInt.Z());
     printf("GetStepDistortion: delta=(%E,%E,%E)\n",deltaX,deltaY,deltaZ);
    printf("GetStepDistortion produced a very small deltaX: %E\n",deltaX);
-    assert(1==2);
+   //assert(1==2);
 
    }
 

@@ -117,6 +117,11 @@ class AnnularFieldSim{
       debug_printCounter=0;return true;
     } return false;};
 
+
+  //getters for internal states:
+  const char* GetLookupString();
+  //float 
+  
   
   void load_spacecharge(TH3F *hist, float zoffset, float scalefactor);
   void load_analytic_spacecharge(float scalefactor);

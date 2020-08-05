@@ -1048,12 +1048,27 @@ void AnnularFieldSim::populate_fieldmap(){
   //sum the E field at every point in the region of interest
   // remember that Efield uses relative indices
   printf("in pop_fieldmap, n=(%d,%d,%d)\n",nr,nphi,nz);
- 
+
+  printf("populating fieldmap for (%dx%dx%d) grid with (%dx%dx%d) source \n",nr_roi,nphi_roi,nz_roi,nr,nphi,nz);
+  unsigned long long totalelements=nr_roi*nphi_roi*nz_roi;
+  unsigned long long percent=totalelements/100;
+  printf("total elements = %llu\n",totalelements*nr*nphi*nz);
+
+
+  int el=0;
+
+  
   TVector3 localF;//holder for the summed field at the current position.
   for (int ir=rmin_roi;ir<rmax_roi;ir++){
     for (int iphi=phimin_roi;iphi<phimax_roi;iphi++){
       for (int iz=zmin_roi;iz<zmax_roi;iz++){
 	localF=sum_field_at(ir,iphi,iz); //asks in global coordinates
+	if(!(el%percent)) {printf("populate_fieldmap %d%%:  ",(int)(el/percent));
+	  printf("sum_field_at (ir=%d,iphi=%d,iz=%d) gives (%E,%E,%E)\n",
+		 ir,iphi,iz,localF.X(),localF.Y(),localF.Z());
+	}
+	el++;
+
 	Efield->Set(ir-rmin_roi,iphi-phimin_roi,iz-zmin_roi,localF);
 	//if (localF.Mag()>1e-9)
 	if(debugFlag()) printf("%d: AnnularFieldSim::populate_fieldmap fieldmap@ (%d,%d,%d) mag=%f\n",__LINE__,ir,iphi,iz,localF.Mag());
@@ -2098,4 +2113,20 @@ TVector3 AnnularFieldSim::GetStepDistortion(float zdest,TVector3 start, bool int
   
   return shift;
   
+}
+
+
+
+
+//putting all the getters here out of the way:
+const char* AnnularFieldSim::GetLookupString(){
+  if (lookupCase==LookupCase::Full3D){
+    return Form("Full3D (%d x %d x %d) with (%d x %d x %d) roi",nr,nphi,nz,nr_roi,nphi_roi,nz_roi);
+  }
+
+  if (lookupCase==LookupCase::PhiSlice){
+    return Form("PhiSlice (%d x %d x %d) with (%d x 1 x %d) roi",nr,nphi,nz,nr_roi,nz_roi);
+  }
+  
+  return "broken";
 }

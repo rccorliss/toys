@@ -54,12 +54,12 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   const char scmaphistname[]="inputSCDensity3D_8000_avg";
   */
 
-  //load the sPHENIX space charge model dimensions
+  //load the sPHENIX space charge model parameters
   const float tpc_rmin=20.0;
   const float tpc_rmax=78.0;
   float tpc_deltar=tpc_rmax-tpc_rmin;
   const float tpc_z=105.5;
-  const float tpc_driftVolt=-400*105.5; //V -- volts per cm times the length of the drift volume.
+  const float tpc_driftVolt=-400*105.5; //V =V_CM-V_RDO -- volts per cm times the length of the drift volume.
   const float tpc_driftVel=8.0*1e6;//cm per s
   const float tpc_magField=1.4;//T
   const double epsilonnaught=8.854e-12;// units of C/(V*m)
@@ -76,15 +76,15 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   
   //define a region of interest, in units of the intrinsic scale of the tpc histogram:
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
-  int nr=12;//159;//159 nominal
+  int nr=24;//159;//159 nominal
   int nr_roi_min=0;
-  int nr_roi=12;
+  int nr_roi=24;
   int nr_roi_max=nr_roi_min+nr_roi;
-  int nphi=20;//360;//360 nominal
+  int nphi=30;//360;//360 nominal
   int nphi_roi_min=0;
-  int nphi_roi=20;
+  int nphi_roi=30;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
-  int nz=20;//62;//62 nominal
+  int nz=30;//62;//62 nominal
   int nz_roi_min=0;
   int nz_roi=nz;
   int nz_roi_max=nz_roi_min+nz_roi;
@@ -629,7 +629,7 @@ void SaveField(const char* filename,AnnularFieldSim *t,int pi,int pf,int ri, int
 }
 
 void TestChargeSign(AnnularFieldSim *t){
-  printf("hello\n");
+  printf("Testing Charge Sign\n");
   TVector3 inner=t->GetInnerEdge();
   TVector3 outer=t->GetOuterEdge();
   TVector3 mid=0.5*(inner+outer);
@@ -638,26 +638,36 @@ void TestChargeSign(AnnularFieldSim *t){
   float rend=outer.Perp();
   float zend=mid.Z()+0.45*span.Z();//travel to higher z
   float zstart=mid.Z()-0.45*span.Z();//start at lower z
-  t->add_testcharge(mid.Perp(),3.14,0,1e-6);//1 milicoulomb of charge located at the middle in r and end in z.      
+  TVector3 cpos(mid.Perp(),0,0);
+  cpos.SetPhi(3.14);
+  float charge=1e-6;//1 milicoulomb of charge
+  t->add_testcharge(cpos.Perp(),cpos.Phi(),cpos.Z(),charge);
   t->populate_fieldmap();
 
-  int nr=30;
+  int nr=47;
   float deltar=span.Perp()/nr;
-  int np=30;
+  int np=47;
   float deltap=6.28/np;
   int validToStep;
   float z[]={zstart,zend};
   int nDriftSteps=500;
 
-  TH2F *hDistortR[2];
-  TH2F *hDistortP[2];
+  TH2F *hDistortR[4];
+  TH2F *hDistortP[4];
   TH2F *hDistortC[2];
+  TH1F *hProfileSum[2];
 
   TVector3 inpart(1,0,0);
   TVector3 outpart,distort;
   float partR,partP,distortR,distortP;
-  TCanvas *c=new TCanvas("ctestcharge","test charge data",800,800);
-  c->Divide(3,2);
+  TCanvas *c=new TCanvas("ctestcharge","test charge data",1200,800);
+  c->Divide(2,1);//raw data on the left, summary on the right
+  c->cd(1)->Divide(2,3);//two columns, three rows of raw data
+  c->cd(2)->Divide(1,3);//three rows of summary with differing columns
+  c->cd(2)->cd(1)->Divide(3,1);//three plots about R
+  c->cd(2)->cd(2)->Divide(3,1);//three plots about Phi
+  //and cd(3) is text.
+  
   for (int iz=0;iz<2;iz++){
     hDistortR[iz]=new TH2F(Form("hDistortR%d",iz),
 			   Form("R Distortion Drifting from z=%2.1fcm to z=%2.1fcm;phi;r;#Delta R (cm)",z[iz],z[1-iz]),
@@ -668,6 +678,9 @@ void TestChargeSign(AnnularFieldSim *t){
     hDistortC[iz]=new TH2F(Form("hDistortC%d",iz),
 			   Form("%% Successful Steps from z=%2.1fcm to z=%2.1fcm;phi;r;#Delta#Phi (cm)",z[iz],z[1-iz]),
 			   np,0,6.28,nr,rstart,rend);
+      for (int i=0;i<2;i++){
+    hProfileSum[i]=new TH1F(Form("hProfileSum%d",i),"Histogram of Cell Contents for Drift Steps >99%",100,-2,2);
+  }
 
     for (int ir=0;ir<nr;ir++){
       inpart.SetPerp((ir+0.1)*deltar+rstart);
@@ -689,13 +702,64 @@ void TestChargeSign(AnnularFieldSim *t){
       }
     }
 
-    c->cd(iz*3+1);
+    c->cd(1)->cd(iz+1);
     hDistortR[iz]->Draw("colz");
-    c->cd(iz*3+2);
+    c->cd(1)->cd(2+iz+1);
     hDistortP[iz]->Draw("colz");
-    c->cd(iz*3+3);
+     c->cd(1)->cd(4+iz+1);
     hDistortC[iz]->Draw("colz");
   }
-   
+
+
+    printf("Finished Test Drifts\n");
+
+
+
+  
+  c->cd(2)->cd(1)->cd(1)->SetLogz();
+  hDistortR[2]=(TH2F*)hDistortR[1]->Clone();
+  hDistortR[2]->SetTitle("Ratio of R distortion in Forward and Backward drift;phi,r");
+  hDistortR[2]->Divide(hDistortR[0]);
+  hDistortR[2]->Scale(-1);
+  hDistortR[2]->Draw("colz");
+  c->cd(2)->cd(2)->cd(1)->SetLogz();
+  hDistortP[2]=(TH2F*)hDistortP[1]->Clone();
+  hDistortP[2]->SetTitle("Ratio of Phi distortion in Forward and Backward drift;phi,r");
+  hDistortP[2]->Divide(hDistortP[0]);
+  hDistortP[2]->Scale(-1);
+  hDistortP[2]->Draw("colz");
+
+  c->cd(2)->cd(1)->cd(2);
+  hDistortR[3]=(TH2F*)hDistortR[1]->Clone();
+  hDistortR[3]->SetTitle("Sum of R distortion in Forward and Backward drift;phi,r");
+  hDistortR[3]->Add(hDistortR[0]);
+  hDistortR[3]->Draw("colz");
+  c->cd(2)->cd(2)->cd(2);
+  hDistortP[3]=(TH2F*)hDistortP[1]->Clone();
+  hDistortP[3]->SetTitle("Sum of Phi distortion in Forward and Backward drift;phi,r");
+  hDistortP[3]->Add(hDistortP[0]);
+  hDistortP[3]->Draw("colz");
+
+  for (int i=0;i<hDistortR[3]->GetNbinsX();i++){
+    for (int j=0;j<hDistortR[3]->GetNbinsY();j++){
+      if (hDistortC[0]->GetBinContent(i+1,j+1)>99 && hDistortC[1]->GetBinContent(i+1,j+1)>99){
+      hProfileSum[0]->Fill(hDistortR[3]->GetBinContent(i+1,j+1));
+      hProfileSum[1]->Fill(hDistortP[3]->GetBinContent(i+1,j+1));
+      }
+    }
+  }
+  
+  c->cd(2)->cd(1)->cd(3)->SetLogy();
+  hProfileSum[0]->Draw();
+  c->cd(2)->cd(2)->cd(3)->SetLogy();
+  hProfileSum[1]->Draw();
+
+  
+  c->cd(2)->cd(3);
+  float texpos=0.9;float texshift=0.08;
+  TLatex *tex=new TLatex(0.0,texpos,"Fill Me In");
+  tex->DrawLatex(0.0,texpos,Form("Test Charge: %2.2E C @ (rpz)=(%2.1fcm,%2.1frad,%2.1fcm)",charge,cpos.Perp(),cpos.Phi(),cpos.Z()));texpos-=texshift;
+  tex->DrawLatex(0.0,texpos,Form("Drifting grid of (rp)=(%d x %d) electrons in %d steps",nr,np,nDriftSteps));texpos-=texshift;
+  tex->DrawLatex(0.0,texpos,t->GetLookupString());texpos-=texshift;
   return;
 }

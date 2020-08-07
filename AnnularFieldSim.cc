@@ -2097,7 +2097,7 @@ TVector3 AnnularFieldSim::GetStepDistortion(float zdest,TVector3 start, bool int
    printf("GetStepDistortion:  (c0,c1,c2)=(%E,%E,%E)\n",c0,c1,c2);
     printf("GetStepDistortion:  EintOverEz==(%E,%E,%E)\n",EintOverEz.X(),EintOverEz.Y(),EintOverEz.Z());
     printf("GetStepDistortion:  BintOverBz==(%E,%E,%E)\n",BintOverBz.X(),BintOverBz.Y(),BintOverBz.Z());    
-    printf("GetStepDistortion: (%2.4f,%2.4f,%2.4f) to z=%2.4f\n",start.X(),start.Y(), start.Z(),zdest);
+    printf("GetStepDistortion: (%2.4f,%2.4f,%2.4f) (rp)=(%2.4f,%2.4f) to z=%2.4f\n",start.X(),start.Y(), start.Z(),start.Perp(),start.Phi(),zdest);
     printf("GetStepDistortion: fieldInt=(%E,%E,%E)\n",fieldInt.X(),fieldInt.Y(),fieldInt.Z());
     printf("GetStepDistortion: delta=(%E,%E,%E)\n",deltaX,deltaY,deltaZ);
     printf("GetStepDistortion produced a very large deltaX: %E\n",deltaX);
@@ -2129,4 +2129,13 @@ const char* AnnularFieldSim::GetLookupString(){
   }
   
   return "broken";
+}
+
+TVector3 AnnularFieldSim::GetFieldAt(TVector3 pos){
+  int r,p,z;
+
+  if( GetRindexAndCheckBounds(pos.Perp(),  &r)==BoundsCase::OutOfBounds) return zero_vector;
+  if(  GetPhiIndexAndCheckBounds(pos.Phi(), &p)==BoundsCase::OutOfBounds) return zero_vector;
+  if(  GetZindexAndCheckBounds(pos.Z(), &z)==BoundsCase::OutOfBounds) return zero_vector;
+  return Efield->Get(r,p,z);
 }

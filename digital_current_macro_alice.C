@@ -13,8 +13,12 @@ This code loads an AnnularFieldSim model of the TPC, computing spacecharge disto
 #include "AnnularFieldSim.h"
 R__LOAD_LIBRARY(.libs/libfieldsim)
 
-//place test charge at the IFC and confirm all charge distort inward.
+//place test charge  and plot how charges distort.
 void TestChargeSign(AnnularFieldSim *t);
+
+//plot the fields at a certain point.
+void PlotFieldSlices(AnnularFieldSim *t, TVector3 pos);
+
 
 //place test electrons along a fixed grid and drift them one grid-length in z to calculate local distortions
 void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int nphi,float pi,float pf,int nr,float ri,float rf,int nz,float zi,float zf);
@@ -59,7 +63,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   const float tpc_rmax=78.0;
   float tpc_deltar=tpc_rmax-tpc_rmin;
   const float tpc_z=105.5;
-  const float tpc_driftVolt=-400*105.5; //V =V_CM-V_RDO -- volts per cm times the length of the drift volume.
+  const float tpc_driftVolt=-400*tpc_z; //V =V_CM-V_RDO -- volts per cm times the length of the drift volume.
   const float tpc_driftVel=8.0*1e6;//cm per s
   const float tpc_magField=1.4;//T
   const double epsilonnaught=8.854e-12;// units of C/(V*m)
@@ -76,7 +80,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   
   //define a region of interest, in units of the intrinsic scale of the tpc histogram:
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
-  int nr=24;//159;//159 nominal
+  int nr=5;//24;//159;//159 nominal
   int nr_roi_min=0;
   int nr_roi=24;
   int nr_roi_max=nr_roi_min+nr_roi;
@@ -159,7 +163,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   now=gSystem->Now();
   printf("created sim obj.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
-  tpc->setFlatFields(tpc_magField, 12345);// tpc_driftVolt/tpc_z);
+  tpc->setFlatFields(tpc_magField,tpc_driftVolt/tpc_z);
   //tpc->loadBfield("sPHENIX.2d.root","fieldmap");
   //tpc->loadEfield("externalEfield.ttree.root","fTree");
   now=gSystem->Now();
@@ -628,6 +632,11 @@ void SaveField(const char* filename,AnnularFieldSim *t,int pi,int pf,int ri, int
   return;
 }
 
+void PlotFieldSlices(AnnularFieldSim *t, TVector3 pos){
+  return;
+  //not implemented yet.
+}
+
 void TestChargeSign(AnnularFieldSim *t){
   printf("Testing Charge Sign\n");
   TVector3 inner=t->GetInnerEdge();
@@ -639,8 +648,9 @@ void TestChargeSign(AnnularFieldSim *t){
   float zend=mid.Z()+0.45*span.Z();//travel to higher z
   float zstart=mid.Z()-0.45*span.Z();//start at lower z
   TVector3 cpos(mid.Perp(),0,0);
-  cpos.SetPhi(3.14);
-  float charge=1e-6;//1 milicoulomb of charge
+  float phipos=TMath::Pi();
+  cpos.SetPhi(phipos);
+  float charge=-1e-12;//16 picocoulomb of charge = 1e8 electrons
   t->add_testcharge(cpos.Perp(),cpos.Phi(),cpos.Z(),charge);
   t->populate_fieldmap();
 
@@ -651,6 +661,87 @@ void TestChargeSign(AnnularFieldSim *t){
   int validToStep;
   float z[]={zstart,zend};
   int nDriftSteps=500;
+  int nSampleSteps=47;
+
+  TCanvas *c;
+
+  TH2F *hEfield[3][3];
+  TH1F *hEfieldMag[3];
+  TH1F *hEfieldComp[3][3];
+  char axis[]="rpzrpz";
+  float axisval[]={(float)cpos.Perp(),(float)cpos.Phi(),(float)cpos.Z(),(float)cpos.Perp(),(float)cpos.Phi(),(float)cpos.Z()};
+  int axn[]={nr,np,nSampleSteps,nr,np,nSampleSteps};
+  float axtop[]={rend,TMath::TwoPi(),(float)outer.Z(),rend,TMath::TwoPi(),(float)outer.Z()};
+  float axbot[]={rstart,0,(float)inner.Z(),rstart,0,(float)inner.Z()};
+  float axstep[6];
+  for (int i=0;i<6;i++){
+    axstep[i]=(axtop[i]-axbot[i])/(1.0*axn[i]);
+  }
+  TVector3 field;
+  TVector3 pos;
+  for (int ax=0;ax<3;ax++){
+    //loop over which axis slice to take
+    hEfieldMag[ax]=new TH1F(Form("hEfieldMag%c",axis[ax]),
+			      Form("Log Magnitude of E Field sampled on the %c%c plane at %c=%2.3f;log10(mag)",
+				   axis[ax+1],axis[ax+2],axis[ax],axisval[ax]),
+			    200,-5,5);
+    for (int i=0;i<3;i++){
+      //loop over which axis of the field to read
+      hEfield[ax][i]=new TH2F(Form("hEfield%c_%c%c",axis[i],axis[ax+1],axis[ax+2]),
+			      Form("%c component of E Field in the %c%c plane at %c=%2.3f;%c;%c",
+				   axis[i],axis[ax+1],axis[ax+2],axis[ax],axisval[ax],axis[ax+1],axis[ax+2]),
+			      axn[ax+1],axbot[ax+1]-axstep[ax+1]/2,axtop[ax+1]-axstep[ax+1]/2,
+			      axn[ax+2],axbot[ax+2]-axstep[ax+2]/2,axtop[ax+2]-axstep[ax+2]/2);
+      hEfieldComp[ax][i]=new TH1F(Form("hEfieldComp%c_%c%c",axis[i],axis[ax+1],axis[ax+2]),
+			      Form("Log Magnitude of %c component of E Field in the %c%c plane at %c=%2.3f;log10(mag)",
+				   axis[i],axis[ax+1],axis[ax+2],axis[ax],axisval[ax]),
+				  200,-5,5);
+    }
+  }
+
+  float rpz_coord[3];
+  for (int ax=0;ax<3;ax++){
+    rpz_coord[ax]=axisval[ax];
+    for (int i=0;i<axn[ax+1];i++){
+      rpz_coord[(ax+1)%3]=axbot[ax+1]+i*axstep[ax+1];
+      for (int j=0;j<axn[ax+2];j++){
+	rpz_coord[(ax+2)%3]=axbot[ax+2]+j*axstep[ax+2];
+	pos.SetXYZ(rpz_coord[0],0,rpz_coord[2]);
+	pos.SetPhi(rpz_coord[1]);
+	if (0 && ax==0){
+	  printf("sampling rpz=(%f,%f,%f)=(%f,%f,%f) after conversion to xyz=(%f,%f,%f)\n",
+		 rpz_coord[0],rpz_coord[1],rpz_coord[2],
+		 pos.Perp(),pos.Phi(),pos.Z(),pos.X(),pos.Y(),pos.Z());
+	}
+	field=t->GetFieldAt(pos);
+	field.RotateZ(-rpz_coord[1]);//rotate us so we can read the y component as the phi component
+	//if (field.Mag()>0) continue; //nothing has mag zero because of the drift field.
+	hEfield[ax][0]->Fill(rpz_coord[(ax+1)%3],rpz_coord[(ax+2)%3],field.X());
+	hEfield[ax][1]->Fill(rpz_coord[(ax+1)%3],rpz_coord[(ax+2)%3],field.Y());
+	hEfield[ax][2]->Fill(rpz_coord[(ax+1)%3],rpz_coord[(ax+2)%3],field.Z());
+	hEfieldMag[ax]->Fill(log10(field.Mag()));
+	hEfieldComp[ax][0]->Fill((abs(field.X())));
+	hEfieldComp[ax][1]->Fill((abs(field.Y())));
+	hEfieldComp[ax][2]->Fill((abs(field.Z())));
+      }
+    }
+  }
+
+  c=new TCanvas("ctestchargefield","test charge field",1200,800);
+  c->Divide(4,3);
+  gStyle->SetOptStat();
+  for (int ax=0;ax<3;ax++){
+    for (int i=0;i<3;i++){
+      c->cd(ax*4+i+1);
+      hEfield[ax][i]->SetStats(0);
+      hEfield[ax][i]->Draw("colz");
+      //hEfieldComp[ax][i]->Draw();//"colz");
+    }
+    c->cd(ax*4+4);
+    hEfieldMag[ax]->Draw();
+  }
+	
+  
 
   TH2F *hDistortR[4];
   TH2F *hDistortP[4];
@@ -660,7 +751,9 @@ void TestChargeSign(AnnularFieldSim *t){
   TVector3 inpart(1,0,0);
   TVector3 outpart,distort;
   float partR,partP,distortR,distortP;
-  TCanvas *c=new TCanvas("ctestcharge","test charge data",1200,800);
+  c=new TCanvas("ctestcharge","test charge data",1200,800);
+    gStyle->SetOptStat();
+
   c->Divide(2,1);//raw data on the left, summary on the right
   c->cd(1)->Divide(2,3);//two columns, three rows of raw data
   c->cd(2)->Divide(1,3);//three rows of summary with differing columns
@@ -678,10 +771,6 @@ void TestChargeSign(AnnularFieldSim *t){
     hDistortC[iz]=new TH2F(Form("hDistortC%d",iz),
 			   Form("%% Successful Steps from z=%2.1fcm to z=%2.1fcm;phi;r;#Delta#Phi (cm)",z[iz],z[1-iz]),
 			   np,0,6.28,nr,rstart,rend);
-      for (int i=0;i<2;i++){
-    hProfileSum[i]=new TH1F(Form("hProfileSum%d",i),"Histogram of Cell Contents for Drift Steps >99%",100,-2,2);
-  }
-
     for (int ir=0;ir<nr;ir++){
       inpart.SetPerp((ir+0.1)*deltar+rstart);
       partR=inpart.Perp();
@@ -703,10 +792,14 @@ void TestChargeSign(AnnularFieldSim *t){
     }
 
     c->cd(1)->cd(iz+1);
+    hDistortR[iz]->SetStats(0);
     hDistortR[iz]->Draw("colz");
     c->cd(1)->cd(2+iz+1);
+    hDistortP[iz]->SetStats(0);
+
     hDistortP[iz]->Draw("colz");
-     c->cd(1)->cd(4+iz+1);
+    c->cd(1)->cd(4+iz+1);
+    hDistortC[iz]->SetStats(0);
     hDistortC[iz]->Draw("colz");
   }
 
@@ -721,24 +814,36 @@ void TestChargeSign(AnnularFieldSim *t){
   hDistortR[2]->SetTitle("Ratio of R distortion in Forward and Backward drift;phi,r");
   hDistortR[2]->Divide(hDistortR[0]);
   hDistortR[2]->Scale(-1);
+  hDistortR[2]->SetStats(0);
   hDistortR[2]->Draw("colz");
   c->cd(2)->cd(2)->cd(1)->SetLogz();
   hDistortP[2]=(TH2F*)hDistortP[1]->Clone();
   hDistortP[2]->SetTitle("Ratio of Phi distortion in Forward and Backward drift;phi,r");
   hDistortP[2]->Divide(hDistortP[0]);
   hDistortP[2]->Scale(-1);
+  hDistortP[2]->SetStats(0);
   hDistortP[2]->Draw("colz");
 
   c->cd(2)->cd(1)->cd(2);
   hDistortR[3]=(TH2F*)hDistortR[1]->Clone();
   hDistortR[3]->SetTitle("Sum of R distortion in Forward and Backward drift;phi,r");
   hDistortR[3]->Add(hDistortR[0]);
+  hDistortR[3]->SetStats(0);
   hDistortR[3]->Draw("colz");
   c->cd(2)->cd(2)->cd(2);
   hDistortP[3]=(TH2F*)hDistortP[1]->Clone();
   hDistortP[3]->SetTitle("Sum of Phi distortion in Forward and Backward drift;phi,r");
   hDistortP[3]->Add(hDistortP[0]);
+  hDistortP[3]->SetStats(0);
   hDistortP[3]->Draw("colz");
+
+  float maxdistort[2];
+  maxdistort[0]=max(hDistortR[3]->GetMaximum(),-1*hDistortR[3]->GetMinimum());
+  maxdistort[1]=max(hDistortP[3]->GetMaximum(),-1*hDistortP[3]->GetMinimum());
+  
+  for (int i=0;i<2;i++){
+    hProfileSum[i]=new TH1F(Form("hProfileSum%d",i),"Histogram of Cell Contents for Drift Steps >99%",100,-1.5*maxdistort[i],1.5*maxdistort[i]);
+  }
 
   for (int i=0;i<hDistortR[3]->GetNbinsX();i++){
     for (int j=0;j<hDistortR[3]->GetNbinsY();j++){
@@ -759,6 +864,7 @@ void TestChargeSign(AnnularFieldSim *t){
   float texpos=0.9;float texshift=0.08;
   TLatex *tex=new TLatex(0.0,texpos,"Fill Me In");
   tex->DrawLatex(0.0,texpos,Form("Test Charge: %2.2E C @ (rpz)=(%2.1fcm,%2.1frad,%2.1fcm)",charge,cpos.Perp(),cpos.Phi(),cpos.Z()));texpos-=texshift;
+  tex->DrawLatex(0.0,texpos,Form("Drift Field = %2.2f V/cm",t->GetNominalE()));texpos-=texshift;
   tex->DrawLatex(0.0,texpos,Form("Drifting grid of (rp)=(%d x %d) electrons in %d steps",nr,np,nDriftSteps));texpos-=texshift;
   tex->DrawLatex(0.0,texpos,t->GetLookupString());texpos-=texshift;
   return;

@@ -120,8 +120,12 @@ class AnnularFieldSim{
 
   //getters for internal states:
   const char* GetLookupString();
-  //float 
-  
+  float GetNominalB(){return Bnominal;};
+  float GetNominalE(){return Enominal;};
+  TVector3 GetFieldAt(TVector3 pos);
+  TVector3 GetInnerEdge(){return TVector3(rmin,0,zmin);};
+  TVector3 GetOuterEdge(){return TVector3(rmax,0,zmax);};
+ 
   
   void load_spacecharge(TH3F *hist, float zoffset, float scalefactor);
   void load_analytic_spacecharge(float scalefactor);
@@ -168,9 +172,7 @@ class AnnularFieldSim{
   TVector3 swimTo(float zdest,TVector3 start, bool interpolate=true, bool useAnalytic=false);
   TVector3 GetStepDistortion(float zdest,TVector3 start, bool interpolate=true, bool useAnalytic=false);
 
-  TVector3 GetInnerEdge(){return TVector3(rmin,0,zmin);};
-  TVector3 GetOuterEdge(){return TVector3(rmax,0,zmax);};
- 
+
  private:
   BoundsCase GetRindexAndCheckBounds(float pos, int *r);
   BoundsCase GetPhiIndexAndCheckBounds(float pos, int *phi);

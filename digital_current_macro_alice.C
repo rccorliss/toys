@@ -80,7 +80,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   
   //define a region of interest, in units of the intrinsic scale of the tpc histogram:
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
-  int nr=5;//24;//159;//159 nominal
+  int nr=10;//24;//159;//159 nominal
   int nr_roi_min=0;
   int nr_roi=24;
   int nr_roi_max=nr_roi_min+nr_roi;
@@ -632,10 +632,6 @@ void SaveField(const char* filename,AnnularFieldSim *t,int pi,int pf,int ri, int
   return;
 }
 
-void PlotFieldSlices(AnnularFieldSim *t, TVector3 pos){
-  return;
-  //not implemented yet.
-}
 
 void TestChargeSign(AnnularFieldSim *t){
   printf("Testing Charge Sign\n");
@@ -654,6 +650,8 @@ void TestChargeSign(AnnularFieldSim *t){
   t->add_testcharge(cpos.Perp(),cpos.Phi(),cpos.Z(),charge);
   t->populate_fieldmap();
 
+  PlotFieldSlices(t,cpos);
+
   int nr=47;
   float deltar=span.Perp()/nr;
   int np=47;
@@ -664,83 +662,6 @@ void TestChargeSign(AnnularFieldSim *t){
   int nSampleSteps=47;
 
   TCanvas *c;
-
-  TH2F *hEfield[3][3];
-  TH1F *hEfieldMag[3];
-  TH1F *hEfieldComp[3][3];
-  char axis[]="rpzrpz";
-  float axisval[]={(float)cpos.Perp(),(float)cpos.Phi(),(float)cpos.Z(),(float)cpos.Perp(),(float)cpos.Phi(),(float)cpos.Z()};
-  int axn[]={nr,np,nSampleSteps,nr,np,nSampleSteps};
-  float axtop[]={rend,TMath::TwoPi(),(float)outer.Z(),rend,TMath::TwoPi(),(float)outer.Z()};
-  float axbot[]={rstart,0,(float)inner.Z(),rstart,0,(float)inner.Z()};
-  float axstep[6];
-  for (int i=0;i<6;i++){
-    axstep[i]=(axtop[i]-axbot[i])/(1.0*axn[i]);
-  }
-  TVector3 field;
-  TVector3 pos;
-  for (int ax=0;ax<3;ax++){
-    //loop over which axis slice to take
-    hEfieldMag[ax]=new TH1F(Form("hEfieldMag%c",axis[ax]),
-			      Form("Log Magnitude of E Field sampled on the %c%c plane at %c=%2.3f;log10(mag)",
-				   axis[ax+1],axis[ax+2],axis[ax],axisval[ax]),
-			    200,-5,5);
-    for (int i=0;i<3;i++){
-      //loop over which axis of the field to read
-      hEfield[ax][i]=new TH2F(Form("hEfield%c_%c%c",axis[i],axis[ax+1],axis[ax+2]),
-			      Form("%c component of E Field in the %c%c plane at %c=%2.3f;%c;%c",
-				   axis[i],axis[ax+1],axis[ax+2],axis[ax],axisval[ax],axis[ax+1],axis[ax+2]),
-			      axn[ax+1],axbot[ax+1]-axstep[ax+1]/2,axtop[ax+1]-axstep[ax+1]/2,
-			      axn[ax+2],axbot[ax+2]-axstep[ax+2]/2,axtop[ax+2]-axstep[ax+2]/2);
-      hEfieldComp[ax][i]=new TH1F(Form("hEfieldComp%c_%c%c",axis[i],axis[ax+1],axis[ax+2]),
-			      Form("Log Magnitude of %c component of E Field in the %c%c plane at %c=%2.3f;log10(mag)",
-				   axis[i],axis[ax+1],axis[ax+2],axis[ax],axisval[ax]),
-				  200,-5,5);
-    }
-  }
-
-  float rpz_coord[3];
-  for (int ax=0;ax<3;ax++){
-    rpz_coord[ax]=axisval[ax];
-    for (int i=0;i<axn[ax+1];i++){
-      rpz_coord[(ax+1)%3]=axbot[ax+1]+i*axstep[ax+1];
-      for (int j=0;j<axn[ax+2];j++){
-	rpz_coord[(ax+2)%3]=axbot[ax+2]+j*axstep[ax+2];
-	pos.SetXYZ(rpz_coord[0],0,rpz_coord[2]);
-	pos.SetPhi(rpz_coord[1]);
-	if (0 && ax==0){
-	  printf("sampling rpz=(%f,%f,%f)=(%f,%f,%f) after conversion to xyz=(%f,%f,%f)\n",
-		 rpz_coord[0],rpz_coord[1],rpz_coord[2],
-		 pos.Perp(),pos.Phi(),pos.Z(),pos.X(),pos.Y(),pos.Z());
-	}
-	field=t->GetFieldAt(pos);
-	field.RotateZ(-rpz_coord[1]);//rotate us so we can read the y component as the phi component
-	//if (field.Mag()>0) continue; //nothing has mag zero because of the drift field.
-	hEfield[ax][0]->Fill(rpz_coord[(ax+1)%3],rpz_coord[(ax+2)%3],field.X());
-	hEfield[ax][1]->Fill(rpz_coord[(ax+1)%3],rpz_coord[(ax+2)%3],field.Y());
-	hEfield[ax][2]->Fill(rpz_coord[(ax+1)%3],rpz_coord[(ax+2)%3],field.Z());
-	hEfieldMag[ax]->Fill(log10(field.Mag()));
-	hEfieldComp[ax][0]->Fill((abs(field.X())));
-	hEfieldComp[ax][1]->Fill((abs(field.Y())));
-	hEfieldComp[ax][2]->Fill((abs(field.Z())));
-      }
-    }
-  }
-
-  c=new TCanvas("ctestchargefield","test charge field",1200,800);
-  c->Divide(4,3);
-  gStyle->SetOptStat();
-  for (int ax=0;ax<3;ax++){
-    for (int i=0;i<3;i++){
-      c->cd(ax*4+i+1);
-      hEfield[ax][i]->SetStats(0);
-      hEfield[ax][i]->Draw("colz");
-      //hEfieldComp[ax][i]->Draw();//"colz");
-    }
-    c->cd(ax*4+4);
-    hEfieldMag[ax]->Draw();
-  }
-	
   
 
   TH2F *hDistortR[4];
@@ -751,7 +672,7 @@ void TestChargeSign(AnnularFieldSim *t){
   TVector3 inpart(1,0,0);
   TVector3 outpart,distort;
   float partR,partP,distortR,distortP;
-  c=new TCanvas("ctestcharge","test charge data",1200,800);
+  c=new TCanvas("ctestdrift","test drift data",1200,800);
     gStyle->SetOptStat();
 
   c->Divide(2,1);//raw data on the left, summary on the right
@@ -868,4 +789,98 @@ void TestChargeSign(AnnularFieldSim *t){
   tex->DrawLatex(0.0,texpos,Form("Drifting grid of (rp)=(%d x %d) electrons in %d steps",nr,np,nDriftSteps));texpos-=texshift;
   tex->DrawLatex(0.0,texpos,t->GetLookupString());texpos-=texshift;
   return;
+}
+
+
+void PlotFieldSlices(AnnularFieldSim *t, TVector3 pos){
+
+  TVector3 inner=t->GetInnerEdge();
+  TVector3 outer=t->GetOuterEdge();
+  TVector3 step=t->GetFieldStep();
+  
+
+  int nr=t->GetFieldStepsR();
+  int np=t->GetFieldStepsPhi();
+  int nz=t->GetFieldStepsZ();
+
+  TCanvas *c;
+
+  TH2F *hEfield[3][3];
+  TH2F *hCharge[3];
+  TH1F *hEfieldComp[3][3];
+  char axis[]="rpzrpz";
+  float axisval[]={(float)pos.Perp(),(float)pos.Phi(),(float)pos.Z(),(float)pos.Perp(),(float)pos.Phi(),(float)pos.Z()};
+  int axn[]={nr,np,nz,nr,np,nz};
+  float axtop[]={(float)outer.Perp(),TMath::TwoPi(),(float)outer.Z(),(float)outer.Perp(),TMath::TwoPi(),(float)outer.Z()};
+  float axbot[]={(float)inner.Perp(),0,(float)inner.Z(),(float)inner.Perp(),0,(float)inner.Z()};
+  float axstep[6];
+  for (int i=0;i<6;i++){
+    axstep[i]=(axtop[i]-axbot[i])/(1.0*axn[i]);
+  }
+  TVector3 field;
+  TVector3 lpos;
+  for (int ax=0;ax<3;ax++){
+    //loop over which axis slice to take
+    hCharge[ax]=new TH2F(Form("hCharge%c",axis[ax]),
+			 Form("Spacecharge Distribution in the %c%c plane at %c=%2.3f;log10(mag)",
+			      axis[ax+1],axis[ax+2],axis[ax],axisval[ax]),
+			 axn[ax+1],axbot[ax+1]-axstep[ax+1]/2,axtop[ax+1]-axstep[ax+1]/2,
+			 axn[ax+2],axbot[ax+2]-axstep[ax+2]/2,axtop[ax+2]-axstep[ax+2]/2);
+    for (int i=0;i<3;i++){
+      //loop over which axis of the field to read
+      hEfield[ax][i]=new TH2F(Form("hEfield%c_%c%c",axis[i],axis[ax+1],axis[ax+2]),
+			      Form("%c component of E Field in the %c%c plane at %c=%2.3f;%c;%c",
+				   axis[i],axis[ax+1],axis[ax+2],axis[ax],axisval[ax],axis[ax+1],axis[ax+2]),
+			      axn[ax+1],axbot[ax+1]-axstep[ax+1]/2,axtop[ax+1]-axstep[ax+1]/2,
+			      axn[ax+2],axbot[ax+2]-axstep[ax+2]/2,axtop[ax+2]-axstep[ax+2]/2);
+      hEfieldComp[ax][i]=new TH1F(Form("hEfieldComp%c_%c%c",axis[i],axis[ax+1],axis[ax+2]),
+			      Form("Log Magnitude of %c component of E Field in the %c%c plane at %c=%2.3f;log10(mag)",
+				   axis[i],axis[ax+1],axis[ax+2],axis[ax],axisval[ax]),
+				  200,-5,5);
+    }
+  }
+
+  float rpz_coord[3];
+  for (int ax=0;ax<3;ax++){
+    rpz_coord[ax]=axisval[ax];
+    for (int i=0;i<axn[ax+1];i++){
+      rpz_coord[(ax+1)%3]=axbot[ax+1]+i*axstep[ax+1];
+      for (int j=0;j<axn[ax+2];j++){
+	rpz_coord[(ax+2)%3]=axbot[ax+2]+j*axstep[ax+2];
+	lpos.SetXYZ(rpz_coord[0],0,rpz_coord[2]);
+	lpos.SetPhi(rpz_coord[1]);
+	if (0 && ax==0){
+	  printf("sampling rpz=(%f,%f,%f)=(%f,%f,%f) after conversion to xyz=(%f,%f,%f)\n",
+		 rpz_coord[0],rpz_coord[1],rpz_coord[2],
+		 lpos.Perp(),lpos.Phi(),lpos.Z(),lpos.X(),lpos.Y(),lpos.Z());
+	}
+	field=t->GetFieldAt(lpos);
+	field.RotateZ(-rpz_coord[1]);//rotate us so we can read the y component as the phi component
+	//if (field.Mag()>0) continue; //nothing has mag zero because of the drift field.
+	hEfield[ax][0]->Fill(rpz_coord[(ax+1)%3],rpz_coord[(ax+2)%3],field.X());
+	hEfield[ax][1]->Fill(rpz_coord[(ax+1)%3],rpz_coord[(ax+2)%3],field.Y());
+	hEfield[ax][2]->Fill(rpz_coord[(ax+1)%3],rpz_coord[(ax+2)%3],field.Z());
+	hCharge[ax]->Fill(rpz_coord[(ax+1)%3],rpz_coord[(ax+2)%3],t->GetChargeAt(lpos));
+	hEfieldComp[ax][0]->Fill((abs(field.X())));
+	hEfieldComp[ax][1]->Fill((abs(field.Y())));
+	hEfieldComp[ax][2]->Fill((abs(field.Z())));
+      }
+    }
+  }
+
+  c=new TCanvas("cfieldslices","electric field",1200,800);
+  c->Divide(4,3);
+  gStyle->SetOptStat();
+  for (int ax=0;ax<3;ax++){
+    for (int i=0;i<3;i++){
+      c->cd(ax*4+i+1);
+      hEfield[ax][i]->SetStats(0);
+      hEfield[ax][i]->Draw("colz");
+      //hEfieldComp[ax][i]->Draw();//"colz");
+    }
+    c->cd(ax*4+4);
+    hCharge[ax]->SetStats(0);
+    hCharge[ax]->Draw("colz");
+  }
+return;
 }

@@ -122,7 +122,12 @@ class AnnularFieldSim{
   const char* GetLookupString();
   float GetNominalB(){return Bnominal;};
   float GetNominalE(){return Enominal;};
+  float GetChargeAt(TVector3 pos);
   TVector3 GetFieldAt(TVector3 pos);
+  TVector3 GetFieldStep(){return step;};
+  int GetFieldStepsR(){return nr_roi;};
+  int GetFieldStepsPhi(){return nphi_roi;};
+  int GetFieldStepsZ(){return nz_roi;};
   TVector3 GetInnerEdge(){return TVector3(rmin,0,zmin);};
   TVector3 GetOuterEdge(){return TVector3(rmax,0,zmax);};
  

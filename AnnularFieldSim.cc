@@ -2139,3 +2139,11 @@ TVector3 AnnularFieldSim::GetFieldAt(TVector3 pos){
   if(  GetZindexAndCheckBounds(pos.Z(), &z)==BoundsCase::OutOfBounds) return zero_vector;
   return Efield->Get(r,p,z);
 }
+float AnnularFieldSim::GetChargeAt(TVector3 pos){
+  int r,p,z;
+
+  GetRindexAndCheckBounds(pos.Perp(),  &r);//==BoundsCase::OutOfBounds) return zero_vector;
+  GetPhiIndexAndCheckBounds(pos.Phi(), &p);//==BoundsCase::OutOfBounds) return zero_vector;
+  GetZindexAndCheckBounds(pos.Z(), &z);//==BoundsCase::OutOfBounds) return zero_vector;
+  return q->Get(r,p,z);
+}

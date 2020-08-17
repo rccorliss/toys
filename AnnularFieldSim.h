@@ -166,6 +166,11 @@ class AnnularFieldSim{
   void  populate_highres_lookup();
   void  populate_lowres_lookup();
   void  populate_phislice_lookup();
+
+  void  load_phislice_lookup(const char* sourcefile);
+  void  save_phislice_lookup(const char* destfile);
+
+  
   TVector3 sum_field_at(int r,int phi, int z);
   TVector3 sum_full3d_field_at(int r,int phi, int z);
   TVector3 sum_local_field_at(int r,int phi, int z);

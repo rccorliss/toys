@@ -68,9 +68,11 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   const float tpc_magField=1.4;//T
   const double epsilonnaught=8.854e-12;// units of C/(V*m)
   const double eps_in_cm=epsilonnaught/100; //units of C/(V*cm)
-  const double tpc_chargescale=-0.5*1.6e-19*10*1000;//should be -19;//our hist. has charge in units of ions/cm^3, so we need to multiply by the electric charge of an electron to get out C/cm^3.  adding in a factor of 0.5 for the double-counting in the original 10khz sample, a factor of 10 to get to 100khz, and a factor 0f 1k that I don't understand
-  const char scmapfilename[]="G4Hits_sHijing_0-12fm_10kHz.rcc_sc.hist.root";
-  const char scmaphistname[]="sphenix_minbias_charge";
+  //old map const double tpc_chargescale=-0.5*1.6e-19*10*1000;//should be -19;//our hist. has charge in units of ions/cm^3, so we need to multiply by the electric charge of an electron to get out C/cm^3.  adding in a factor of 0.5 for the double-counting in the original 10khz sample, a factor of 10 to get to 100khz, and a factor 0f 1k that I don't understand
+  //old map const char scmapfilename[]="G4Hits_sHijing_0-12fm_10kHz.rcc_sc.hist.root";
+  const double tpc_chargescale=-1.6e-19*1000;//should be -19;//our hist. has charge in units of ions/cm^3, so we need to multiply by the electric charge of an electron to get out C/cm^3.  adding in a factor of 1k that I don't understand
+  const char scmapfilename[]="Smooth.50kHz.root";
+  const char scmaphistname[]="sphenix_minbias_average";
 
 
 
@@ -80,13 +82,13 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   
   //define a region of interest, in units of the intrinsic scale of the tpc histogram:
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
-  int nr=10;//24;//159;//159 nominal
+  int nr=10;//10;//24;//159;//159 nominal
   int nr_roi_min=0;
-  int nr_roi=24;
+  int nr_roi=10;//10;
   int nr_roi_max=nr_roi_min+nr_roi;
-  int nphi=30;//360;//360 nominal
+  int nphi=10;//38;//360;//360 nominal
   int nphi_roi_min=0;
-  int nphi_roi=30;
+  int nphi_roi=10;//38;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
   int nz=30;//62;//62 nominal
   int nz_roi_min=0;
@@ -173,21 +175,24 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 
   //load the greens functions:
   //to use the full rossegger terms instead of trivial free-space greens functions, uncomment the line below:
-  //tpc->load_rossegger();
+  tpc->load_rossegger();
   now=gSystem->Now();
-  printf("load rossegger greens functions. (phi set to zero) the dtime is %lu\n",(unsigned long)(now-start));
+  printf("loaded rossegger greens functions. (phi set to zero) the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   tpc->populate_lookup();
   now=gSystem->Now();
   printf("populated lookup.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
+  tpc->save_phislice_lookup(Form("phislice_lookup_r%dxp%dxz%dx.root",nr,nphi,nz));
  
   
   //load the spacecharge:
-  TestChargeSign(tpc); //adds a test charge, and looks at how electrons deflect and draws some plots.
-  return;
+  if (0){
+    TestChargeSign(tpc); //adds a test charge, and looks at how electrons deflect and draws some plots.
+    return;
+  }
   
-  //tpc->load_spacecharge(tpc_average,0,tpc_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
+  tpc->load_spacecharge(tpc_average,0,tpc_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
   //computed the correction to get the same spacecharge as in the tpc histogram:
   //todo: make the analytic scale proportional to the tpc_chargescale.
   double tpc_analytic_scale=1.237320E-06/9.526278E-11;
@@ -205,7 +210,11 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   start=now;
   //printf("consistency check:  integrate field along IR and OR, confirm V:\n");
 
+  TVector3 pos(0.5*(rmax_roi+rmin_roi),0,0.5*(zmax_roi+zmin_roi));
+  pos.SetPhi(0.5*(phimax_roi+phimin_roi));
+  PlotFieldSlices(tpc, pos);
 
+  
 
   //some sanity checks: 
   if (reduction==0){
@@ -456,7 +465,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   return;
 }
 
-
+//rcchere
 void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int np,float pi,float pf,int nr,float ri,float rf,int nz,float zi,float zf){
   //scan over the tpc physical volume in nphi steps from pi to pf, and similar for the other two dimensions.
   //set a particle at those coordinates and drift it to the next coordinate in z, then save the delta in histograms.
@@ -471,17 +480,59 @@ void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int np
   TFile *outf=TFile::Open(filename,"RECREATE");
   outf->cd();
 
-  TH3F* hDistortionR=new TH3F("hDistortionR","Per-z-bin Distortion in the R direction as a function of (r,phi,z) (centered in r,phi, edge in z);phi;r;z",np,pi,pf,nr,ri,rf,nz,zi,zf);
-  TH3F* hDistortionP=new TH3F("hDistortionP","Per-z-bin Distortion in the RPhi direction as a function of (r,phi,z)  (centered in r,phi, edge in z);phi;r;z",np,pi,pf,nr,ri,rf,nz,zi,zf);
-  TH3F* hDistortionZ=new TH3F("hDistortionZ","Per-z-bin Distortion in the Z direction as a function of (r,phi,z)  (centered in r,phi, edge in z);phi;r;z",np,pi,pf,nr,ri,rf,nz,zi,zf);
+  //for interpolation, Henry needs one extra buffer bin on each side.
+  TVector3 step((rf-ri)/(1.0*nr),0,(zf-zi)/(1.0*nz));
+  step.SetPhi((pf-pi)/(1.0*np));
+  //so we define the histogram bounds (the 'h' suffix) as an additional step in each direction.
+  int nph=np+2;
+  int nrh=nr+2;
+  int nzh=nz+2;
+  float pih=pi-step.Phi();
+  float pfh=pf+step.Phi();
+  float rih=ri-step.Perp();
+  float rfh=rf+step.Perp();
+  float zih=zi-step.Z();
+  float zfh=zf+step.Z();
+  
 
+  TH3F* hDistortionR=new TH3F("hDistortionR","Per-z-bin Distortion in the R direction as a function of (r,phi,z) (centered in r,phi, z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+  TH3F* hDistortionP=new TH3F("hDistortionP","Per-z-bin Distortion in the RPhi direction as a function of (r,phi,z)  (centered in r,phi, z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+  TH3F* hDistortionZ=new TH3F("hDistortionZ","Per-z-bin Distortion in the Z direction as a function of (r,phi,z)  (centered in r,phi, z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+  TH3F* hIntDistortionR=new TH3F("hIntDistortionR","Integrated R Distortion from (r,phi,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+  TH3F* hIntDistortionP=new TH3F("hIntDistortionP","Integrated R Distortion from (r,phi,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+  TH3F* hIntDistortionZ=new TH3F("hIntDistortionZ","Integrated R Distortion from (r,phi,z) to z=0  (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+
+  TVector3 pos((nrh/2+0.5)*step.Perp()+rih,0,(nzh/2+0.5)*step.Z()+zih);
+    pos.SetPhi((nph/2+0.5)*step.Phi()+pih);
+  int xi[3]={nrh/2,nph/2,nzh/2};
+  const char axname[]="rpzrpz";
+  int axn[]={nrh,nrh,nrh,nrh,nrh,nrh};
+  float axval[]={(float)pos.Perp(),(float)pos.Phi(),(float)pos.Z(),(float)pos.Perp(),(float)pos.Phi(),(float)pos.Z()};
+  float axbot[]={rih,pih,zih,rih,pih,zih};
+  float axtop[]={rfh,pfh,zfh,rfh,pfh,zfh};
+  TH2F* hIntDist[3][2];
+  for (int ax=0;ax<3;ax++){
+    //loop over which plane to work in
+    for (int i=0;i<2;i++){
+      //loop over which axis of the distortion to read
+      hIntDist[ax][i]=new TH2F(Form("hIntDist%c_%c%c",axname[i],axname[ax+1],axname[ax+2]),
+			      Form("%c component of distortion in the %c%c plane at %c=%2.3f;%c;%c",
+				   axname[i],axname[ax+1],axname[ax+2],axname[ax],axval[ax],axname[ax+1],axname[ax+2]),
+			      axn[ax+1],axbot[ax+1],axtop[ax+1],
+			      axn[ax+2],axbot[ax+2],axtop[ax+2]);
+
+    }
+  }
+
+
+  
   float deltar=(rf-ri)/nr;
   float deltap=(pf-pi)/np;
   float deltaz=(zf-zi)/nz;
   TVector3 inpart,outpart;
   TVector3 distort;
   int validToStep;
-  int nSteps=10;
+  int nSteps=100;
 
   float partR,partP,partZ;
   int ir,ip,iz;
@@ -497,38 +548,164 @@ void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int np
   dTree->Branch("drp",&distortP);
   dTree->Branch("dz",&distortZ);
 
-  
+
+  printf("generating distortion map with (%dx%dx%d) grid \n",nrh,nph,nzh);
+  unsigned long long totalelements=nrh*nph*nzh;
+  unsigned long long percent=totalelements/100;
+  printf("total elements = %llu\n",totalelements);
+
+
+  int el=0;
+
   
   inpart.SetXYZ(1,0,0);
-  for (ir=0;ir<nr;ir++){
-    inpart.SetPerp((ir+0.5)*deltar+ri);
-    partR=inpart.Perp();
-    for (ip=0;ip<np;ip++){
-      inpart.SetPhi((ip+0.5)*deltap+pi);
-      partP=inpart.Phi();
-      if (partP<0) partP+=TMath::TwoPi();
-      for (iz=0;iz<nz;iz++){
-	inpart.SetZ(iz*deltaz+zi);
-	partZ=inpart.Z();
+  for (ir=-1;ir<nr+1;ir++){
+    partR=(ir+0.5)*deltar+ri;
+    if (ir<0){
+      inpart.SetPerp(partR+deltar);
+    } else if (ir==nr){
+      inpart.SetPerp(partR-deltar);
+    } else {
+      inpart.SetPerp(partR);
+    }
+    for (ip=-1;ip<np+1;ip++){
+      partP=(ip+0.5)*deltap+pi;
+      inpart.SetPhi(partP);
+      //if (partP<0) partP+=TMath::TwoPi();
+      for (iz=-1;iz<nz+1;iz++){
+	partZ=(iz)*deltaz+zi;
+	if (iz<0){
+	  inpart.SetZ(partZ+deltaz);
+	} else if (iz==nz){
+	  inpart.SetZ(partZ-deltaz);
+	} else {
+	  inpart.SetZ(partZ);
+	}
+	partZ+=0.5*deltaz;
+
+	
 	outpart=t->swimToInSteps(inpart.Z()+deltaz,inpart,nSteps,true, &validToStep);
 	distort=outpart-inpart;
 	distortR=distort.Perp();
 	distort.RotateZ(-inpart.Phi());//rotate so that that is on the x axis
 	distortP=distort.Y();//the phi component is now the y component.
 	distortZ=0;
-	hDistortionR->Fill(partP,partR,partZ,distortR);
-	hDistortionP->Fill(partP,partR,partZ,distortP);
-	hDistortionZ->Fill(partP,partR,partZ,0);
+	hDistortionR->Fill(partP,partR,partZ+deltaz*0.5,distortR);
+	hDistortionP->Fill(partP,partR,partZ+deltaz*0.5,distortP);
+	hDistortionZ->Fill(partP,partR,partZ+deltaz*0.5,0);
 	dTree->Fill();
+	outpart=t->swimToInSteps(zf,inpart,nSteps,true, &validToStep);
+	distort=outpart-inpart;
+	distortR=distort.Perp();
+	distort.RotateZ(-inpart.Phi());//rotate so that that is on the x axis
+	distortP=distort.Y();//the phi component is now the y component.
+	distortZ=0;
+	//printf("part=(rpz)(%f,%f,%f),distortP=%f\n",partP,partR,partZ,distortP);
+	hIntDistortionR->Fill(partP,partR,partZ,distortR);
+	hIntDistortionP->Fill(partP,partR,partZ,distortP);
+	hIntDistortionZ->Fill(partP,partR,partZ,0);
+
+	if(ir==xi[0]){
+	    hIntDist[0][0]->Fill(partP,partZ,distortR);
+	    hIntDist[0][1]->Fill(partP,partZ,distortP);
+	}
+	if(ip==xi[1]){
+	    hIntDist[1][0]->Fill(partZ,partR,distortR);
+	    hIntDist[1][1]->Fill(partZ,partR,distortP);
+	}
+	if(iz==xi[2]){
+	    hIntDist[2][0]->Fill(partR,partP,distortR);
+	    hIntDist[2][1]->Fill(partR,partP,distortP);
+	}
+
+	if(!(el%percent)) {printf("generating distortions %d%%:  ",(int)(el/percent));
+	  printf("distortion at (ir=%d,ip=%d,iz=%d) is (%E,%E,%E)\n",
+		 ir,ip,iz,distortR,distortP,distortZ);
+	}
+	el++;
+	
       }
     }
   }
-  
+
+
+  TCanvas *c=new TCanvas("cdistort","distortion integrals",1200,800);
+  const char axes[]="XYZXYZ";
+
+  c->Divide(3,2);
+  gStyle->SetOptStat();
+  // TH2F *hProjection[12];
+  TAxis * axis;
+  int ih=0;
+
+
+  for (int ax=0;ax<3;ax++){
+    //plane
+    for (int i=0;i<2;i++){
+      //component
+      c->cd(i*3+ax+1);
+      gPad->SetRightMargin(0.15);
+      hIntDist[ax][i]->SetStats(0);
+      hIntDist[ax][i]->Draw("colz");
+    }
+  }
+
+  /*
+  for (int ax=0;ax<3;ax++){
+    if (ax==0) axis=hIntDistortionR->GetYaxis();
+    if (ax==1) axis=hIntDistortionR->GetXaxis();
+    if (ax==2) axis=hIntDistortionR->GetZaxis();
+    axis->SetRange(xi[ax],xi[ax]+1);
+    c->cd(ax*4+1);
+    gPad->SetRightMargin(0.15);
+    hProjection[ih]=(TH2F*)hIntDistortionR->Project3D(Form("%c%c%d",axes[ax+1],axes[ax+2],ih));
+    hProjection[ih]->SetStats(0);
+    hProjection[ih]->Draw("colz");
+    ih++;
+    gPad->Modified();
+
+      c->cd(ax*4+2);
+      gPad->SetRightMargin(0.15);
+     hProjection[ih]=(TH2F*)hIntDistortionP->Project3D(Form("%c%c%d",axes[ax+1],axes[ax+2],ih));
+      hProjection[ih]->SetStats(0);
+      hProjection[ih]->Draw("colz");
+      ih++;
+      gPad->Modified();
+      axis->SetRange(0,0);
+
+  }
+  for (int ax=0;ax<3;ax++){
+    if (ax==0) axis=hIntDistortionR->GetYaxis();
+    if (ax==1) axis=hIntDistortionR->GetXaxis();
+    if (ax==2) axis=hIntDistortionR->GetZaxis();
+
+    c->cd(ax*4+3);
+    gPad->SetRightMargin(0.15);
+    hProjection[ih]=(TH2F*)hDistortionR->Project3D(Form("%c%c%d",axes[ax+1],axes[ax+2],ih));
+    hProjection[ih]->SetStats(0);
+    hProjection[ih]->Draw("colz");
+    ih++; 
+    gPad->Modified();
+    c->cd(ax*4+4);
+    gPad->SetRightMargin(0.15);
+    hProjection[ih]=(TH2F*)hDistortionP->Project3D(Form("%c%c%d",axes[ax+1],axes[ax+2],ih));
+    hProjection[ih]->SetStats(0);
+    hProjection[ih]->Draw("colz");
+    ih++; 
+    gPad->Modified();
+    axis->SetRange(0,0);
+	  
+  }
+  */
+  c->SaveAs("Distortion.Summary.pdf");
   hDistortionR->Write();
   hDistortionP->Write();
   hDistortionZ->Write();
+  hIntDistortionR->Write();
+  hIntDistortionP->Write();
+  hIntDistortionZ->Write();
   dTree->Write();
-  outf->Close();
+  //outf->Close();
   printf("closed outfile, done saving distortion.\n");
   return;
 }
@@ -804,6 +981,7 @@ void PlotFieldSlices(AnnularFieldSim *t, TVector3 pos){
   int nz=t->GetFieldStepsZ();
 
   TCanvas *c;
+  TPaletteAxis *pal;
 
   TH2F *hEfield[3][3];
   TH2F *hCharge[3];
@@ -822,8 +1000,8 @@ void PlotFieldSlices(AnnularFieldSim *t, TVector3 pos){
   for (int ax=0;ax<3;ax++){
     //loop over which axis slice to take
     hCharge[ax]=new TH2F(Form("hCharge%c",axis[ax]),
-			 Form("Spacecharge Distribution in the %c%c plane at %c=%2.3f;log10(mag)",
-			      axis[ax+1],axis[ax+2],axis[ax],axisval[ax]),
+			 Form("Spacecharge Distribution in the %c%c plane at %c=%2.3f;%c;%c",
+			      axis[ax+1],axis[ax+2],axis[ax],axisval[ax],axis[ax+1],axis[ax+2]),
 			 axn[ax+1],axbot[ax+1]-axstep[ax+1]/2,axtop[ax+1]-axstep[ax+1]/2,
 			 axn[ax+2],axbot[ax+2]-axstep[ax+2]/2,axtop[ax+2]-axstep[ax+2]/2);
     for (int i=0;i<3;i++){
@@ -874,13 +1052,30 @@ void PlotFieldSlices(AnnularFieldSim *t, TVector3 pos){
   for (int ax=0;ax<3;ax++){
     for (int i=0;i<3;i++){
       c->cd(ax*4+i+1);
+      gPad->SetRightMargin(0.15);
       hEfield[ax][i]->SetStats(0);
       hEfield[ax][i]->Draw("colz");
+      hEfield[ax][i]->GetListOfFunctions()->Print();
+      	gPad->Modified();
+
+      pal=dynamic_cast<TPaletteAxis*>(hEfield[ax][i]->GetListOfFunctions()->FindObject("palette"));
+      if (pal){
+	pal->SetX1NDC(0.86);
+	pal->SetX2NDC(0.91);
+	gPad->Modified();
+      }
       //hEfieldComp[ax][i]->Draw();//"colz");
     }
     c->cd(ax*4+4);
+    gPad->SetRightMargin(0.15);
     hCharge[ax]->SetStats(0);
     hCharge[ax]->Draw("colz");
+    pal=dynamic_cast<TPaletteAxis*>(hCharge[ax]->GetListOfFunctions()->FindObject("palette"));
+      if (pal){
+	pal->SetX1NDC(0.86);
+	pal->SetX2NDC(0.91);
+	gPad->Modified();
+      }
   }
 return;
 }

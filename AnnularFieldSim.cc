@@ -945,7 +945,7 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefac
       for (int k=hnzmin;k<hnzmax;k++){
 	hz=hzmin+hzstep*(k+0.5);//bin center,
 	localz=(hz+zoffset)/step.Z();
-       
+	//I am allowing a z-wraparound because I allow a manual offset.
 	if (localz<0){
 	  localz+=nz;
 	  //printf("Loading from histogram has z out of range! z=%f < zmin=%f\n",hz,zmin);
@@ -1404,6 +1404,137 @@ void  AnnularFieldSim::populate_phislice_lookup(){
   return;
 
 }
+
+void  AnnularFieldSim::load_phislice_lookup(const char* sourcefile){
+  printf("loading phislice  lookup for (%dx%dx%d)x(%dx%dx%d) grid from %s\n",nr_roi,1,nz_roi,nr,nphi,nz,sourcefile);
+  unsigned long long totalelements=nr*nphi*nz*nr_roi*1*nz_roi;
+  unsigned long long percent=totalelements/100;
+  printf("total elements = %llu\n",totalelements);
+
+  TFile *input=TFile::Open(sourcefile,"READ");
+
+  TTree *tInfo=(TTree*)(input->Get("info"));
+  if (!tInfo) assert(1==3);
+
+  float file_rmin,file_rmax,file_zmin,file_zmax;
+  int file_rmin_roi, file_rmax_roi,file_zmin_roi,file_zmax_roi;
+  int file_nr, file_np, file_nz;
+  tInfo->Branch("rmin",&file_rmin);
+  tInfo->Branch("rmax",&file_rmax);
+  tInfo->Branch("zmin",&file_zmin);
+  tInfo->Branch("zmax",&file_zmax);
+  tInfo->Branch("rmin_roi_index",&file_rmin_roi);
+  tInfo->Branch("rmax_roi_index",&file_rmax_roi);
+  tInfo->Branch("zmin_roi_index",&file_zmin_roi);
+  tInfo->Branch("zmax_roi_index",&file_zmax_roi);
+  tInfo->Branch("nr",&file_nr);
+  tInfo->Branch("nphi",&file_np);
+  tInfo->Branch("nz",&file_nz);
+  tInfo->GetEntry(0);
+
+  if (file_rmin!=rmin || file_rmax!=rmax ||
+      file_zmin!=zmin || file_zmax!=zmax ||
+      file_rmin_roi!=rmin_roi || file_rmax_roi!=rmax_roi ||
+      file_zmin_roi!=zmin_roi || file_zmax_roi!=zmax_roi ||
+      file_zmin_roi!=zmin_roi || file_zmax_roi!=zmax_roi ||
+      file_nr!=nr || file_np!=nphi || file_nz!=nz){
+    printf("file parameters do not match fieldsim parameters\n");
+    assert(1==4);
+  }
+
+  TTree *tLookup=(TTree*)(input->Get("phislice"));
+  if (!tLookup) assert(1==5);
+   int ior,ifr,iophi,ioz,ifz;
+   TVector3 unitf; 
+   tLookup->Branch("ir_source",&ior);
+   tLookup->Branch("ir_target",&ifr);
+   tLookup->Branch("ip_source",&iophi);
+   //always zero: tLookup->Branch("ip_target",&ifphi);
+   tLookup->Branch("iz_source",&ioz);
+   tLookup->Branch("iz_target",&ifz);
+   tLookup->Branch("Evec",&unitf);
+
+   int el=0;
+   for (int i=0;i<tLookup->GetEntries();i++){
+     el++;
+     tLookup->GetEntry(i);
+     Epartial_phislice->Set(ifr-rmin_roi,0,ifz-zmin_roi,ior,iophi,ioz,unitf);
+     if (1){
+       if(!(el%percent)) {printf("lad_phislice_lookup %d%%:  ",(int)(el/percent));
+	 printf("field from (ir=%d,iphi=%d,iz=%d) to (or=%d,ophi=0,oz=%d) is (%E,%E,%E)\n",
+		ior,iophi,ioz,ifr,ifz,unitf.X(),unitf.Y(),unitf.Z());
+       }
+     }
+   }
+
+  input->Close();
+  return;
+}
+
+
+
+void  AnnularFieldSim::save_phislice_lookup(const char* destfile){
+  printf("saving phislice  lookup for (%dx%dx%d)x(%dx%dx%d) grid to %s\n",nr_roi,1,nz_roi,nr,nphi,nz,destfile);
+  unsigned long long totalelements=nr*nphi*nz*nr_roi*1*nz_roi;
+  unsigned long long percent=totalelements/100;
+  printf("total elements = %llu\n",totalelements);
+
+  TFile *output=TFile::Open(destfile,"RECREATE");
+
+  TTree *tInfo=new TTree("info","Information about Lookup Table");
+  tInfo->Branch("rmin",&rmin);
+  tInfo->Branch("rmax",&rmax);
+  tInfo->Branch("zmin",&zmin);
+  tInfo->Branch("zmax",&zmax);
+  tInfo->Branch("rmin_roi_index",&rmin_roi);
+  tInfo->Branch("rmax_roi_index",&rmax_roi);
+  tInfo->Branch("zmin_roi_index",&zmin_roi);
+  tInfo->Branch("zmax_roi_index",&zmax_roi);
+  tInfo->Branch("nr",&nr);
+  tInfo->Branch("nphi",&nphi);
+  tInfo->Branch("nz",&nz);
+  tInfo->Fill();
+
+   TTree *tLookup=new TTree("phislice","Phislice Lookup Table");
+   int ior,ifr,iophi,ioz,ifz;
+   TVector3 unitf;
+   tLookup->Branch("ir_source",&ior);
+  tLookup->Branch("ir_target",&ifr);
+  tLookup->Branch("ip_source",&iophi);
+  //always zero: tLookup->Branch("ip_target",&ifphi);
+  tLookup->Branch("iz_source",&ioz);
+  tLookup->Branch("iz_target",&ifz);
+  tLookup->Branch("Evec",&unitf);
+
+  int el=0;
+  for (ifr=rmin_roi;ifr<rmax_roi;ifr++){
+    for ( ifz=zmin_roi;ifz<zmax_roi;ifz++){
+      for ( ior=0;ior<nr;ior++){
+	for ( iophi=0;iophi<nphi;iophi++){
+	  for ( ioz=0;ioz<nz;ioz++){
+	    el++;
+	    unitf=Epartial_phislice->Get(ifr-rmin_roi,0,ifz-zmin_roi,ior,iophi,ioz);
+	      if (1){
+		if(!(el%percent)) {printf("save_phislice_lookup %d%%:  ",(int)(el/percent));
+				   printf("field from (ir=%d,iphi=%d,iz=%d) to (or=%d,ophi=0,oz=%d) is (%E,%E,%E)\n",
+					  ior,iophi,ioz,ifr,ifz,unitf.X(),unitf.Y(),unitf.Z());
+		}
+	      }
+
+	    tLookup->Fill();
+	  }
+	}
+      }
+    }
+  }
+  output->cd();
+  tInfo->Write();
+  tLookup->Write();
+  output->Close();
+  return;
+}
+
+
 
 void AnnularFieldSim::setFlatFields(float B, float E){
   //these only cover the roi, but since we address them flat, we don't need to know that here.

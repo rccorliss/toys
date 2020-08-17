@@ -1,6 +1,6 @@
 void PoorManSmooth(){
   TFile *source=TFile::Open("BeamXingNBeams.root","R");
-  TFile *output=TFile::Open("Smooth.50kHz.root","RECREATE");
+  TFile *output=TFile::Open("Smooth.temp.50kHz.root","RECREATE");
 
   //load the source histograms:
   TH3F *hIbfIn=(TH3F*)(source->Get("sphenix_minbias_IBF"));

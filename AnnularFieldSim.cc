@@ -1101,7 +1101,7 @@ void  AnnularFieldSim::populate_lookup(){
     printf("Populating lookup:  lookupCase==NoLookup ===> skipping!\n");
   } else {
     assert(1==2);
-  }
+        }
   return;
 }
 
@@ -1419,52 +1419,68 @@ void  AnnularFieldSim::load_phislice_lookup(const char* sourcefile){
   float file_rmin,file_rmax,file_zmin,file_zmax;
   int file_rmin_roi, file_rmax_roi,file_zmin_roi,file_zmax_roi;
   int file_nr, file_np, file_nz;
-  tInfo->Branch("rmin",&file_rmin);
-  tInfo->Branch("rmax",&file_rmax);
-  tInfo->Branch("zmin",&file_zmin);
-  tInfo->Branch("zmax",&file_zmax);
-  tInfo->Branch("rmin_roi_index",&file_rmin_roi);
-  tInfo->Branch("rmax_roi_index",&file_rmax_roi);
-  tInfo->Branch("zmin_roi_index",&file_zmin_roi);
-  tInfo->Branch("zmax_roi_index",&file_zmax_roi);
-  tInfo->Branch("nr",&file_nr);
-  tInfo->Branch("nphi",&file_np);
-  tInfo->Branch("nz",&file_nz);
+  tInfo->SetBranchAddress("rmin",&file_rmin);
+  tInfo->SetBranchAddress("rmax",&file_rmax);
+  tInfo->SetBranchAddress("zmin",&file_zmin);
+  tInfo->SetBranchAddress("zmax",&file_zmax);
+  tInfo->SetBranchAddress("rmin_roi_index",&file_rmin_roi);
+  tInfo->SetBranchAddress("rmax_roi_index",&file_rmax_roi);
+  tInfo->SetBranchAddress("zmin_roi_index",&file_zmin_roi);
+  tInfo->SetBranchAddress("zmax_roi_index",&file_zmax_roi);
+  tInfo->SetBranchAddress("nr",&file_nr);
+  tInfo->SetBranchAddress("nphi",&file_np);
+  tInfo->SetBranchAddress("nz",&file_nz);
   tInfo->GetEntry(0);
 
+    printf("param\tobj\tfile\n");
+    printf("nr\t%d\t%d\n",nr,file_nr);
+    printf("np\t%d\t%d\n",nphi,file_np);
+    printf("nz\t%d\t%d\n",nz,file_nz);
+    printf("rmin\t%2.2f\t%2.2f\n",rmin,file_rmin);
+    printf("rmax\t%2.2f\t%2.2f\n",rmax,file_rmax);
+    printf("zmin\t%2.2f\t%2.2f\n",zmin,file_zmin);
+    printf("zmax\t%2.2f\t%2.2f\n",zmax,file_zmax);
+    printf("rmin_roi\t%d\t%d\n",rmin_roi,file_rmin_roi);
+    printf("rmax_roi\t%d\t%d\n",rmax_roi,file_rmax_roi);
+    printf("zmin_roi\t%d\t%d\n",zmin_roi,file_zmin_roi);
+    printf("zmax_roi\t%d\t%d\n",zmax_roi,file_zmax_roi);
+  
   if (file_rmin!=rmin || file_rmax!=rmax ||
       file_zmin!=zmin || file_zmax!=zmax ||
       file_rmin_roi!=rmin_roi || file_rmax_roi!=rmax_roi ||
       file_zmin_roi!=zmin_roi || file_zmax_roi!=zmax_roi ||
-      file_zmin_roi!=zmin_roi || file_zmax_roi!=zmax_roi ||
       file_nr!=nr || file_np!=nphi || file_nz!=nz){
-    printf("file parameters do not match fieldsim parameters\n");
+    printf("file parameters do not match fieldsim parameters:\n");
+
+
     assert(1==4);
   }
 
   TTree *tLookup=(TTree*)(input->Get("phislice"));
   if (!tLookup) assert(1==5);
    int ior,ifr,iophi,ioz,ifz;
-   TVector3 unitf; 
-   tLookup->Branch("ir_source",&ior);
-   tLookup->Branch("ir_target",&ifr);
-   tLookup->Branch("ip_source",&iophi);
-   //always zero: tLookup->Branch("ip_target",&ifphi);
-   tLookup->Branch("iz_source",&ioz);
-   tLookup->Branch("iz_target",&ifz);
-   tLookup->Branch("Evec",&unitf);
+   TVector3 *unitf=0; 
+   tLookup->SetBranchAddress("ir_source",&ior);
+   tLookup->SetBranchAddress("ir_target",&ifr);
+   tLookup->SetBranchAddress("ip_source",&iophi);
+   //always zero: tLookup->SetBranchAddress("ip_target",&ifphi);
+   tLookup->SetBranchAddress("iz_source",&ioz);
+   tLookup->SetBranchAddress("iz_target",&ifz);
+   tLookup->SetBranchAddress("Evec",&unitf);
 
    int el=0;
-   for (int i=0;i<tLookup->GetEntries();i++){
+   printf("%s has %lld entries\n",sourcefile,tLookup->GetEntries());
+   for (int i=0;i<totalelements;i++){
      el++;
      tLookup->GetEntry(i);
-     Epartial_phislice->Set(ifr-rmin_roi,0,ifz-zmin_roi,ior,iophi,ioz,unitf);
-     if (1){
-       if(!(el%percent)) {printf("lad_phislice_lookup %d%%:  ",(int)(el/percent));
-	 printf("field from (ir=%d,iphi=%d,iz=%d) to (or=%d,ophi=0,oz=%d) is (%E,%E,%E)\n",
-		ior,iophi,ioz,ifr,ifz,unitf.X(),unitf.Y(),unitf.Z());
-       }
+     //printf("loading i=%d\n",i);
+     Epartial_phislice->Set(ifr-rmin_roi,0,ifz-zmin_roi,ior,iophi,ioz,*unitf);
+     if( !(el%percent)) {
+       printf("load_phislice_lookup %d%%:  ",(int)(el/percent));
+       printf("field from (ir=%d,iphi=%d,iz=%d) to (or=%d,ophi=0,oz=%d) is (%E,%E,%E)\n",
+	      ior,iophi,ioz,ifr,ifz,unitf->X(),unitf->Y(),unitf->Z());
      }
+     
    }
 
   input->Close();

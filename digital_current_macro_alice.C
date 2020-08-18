@@ -82,13 +82,13 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   
   //define a region of interest, in units of the intrinsic scale of the tpc histogram:
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
-  int nr=10;//10;//24;//159;//159 nominal
+  int nr=15;//10;//24;//159;//159 nominal
   int nr_roi_min=0;
-  int nr_roi=10;//10;
+  int nr_roi=15;//10;
   int nr_roi_max=nr_roi_min+nr_roi;
-  int nphi=10;//38;//360;//360 nominal
+  int nphi=30;//38;//360;//360 nominal
   int nphi_roi_min=0;
-  int nphi_roi=10;//38;
+  int nphi_roi=30;//38;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
   int nz=30;//62;//62 nominal
   int nz_roi_min=0;
@@ -174,16 +174,26 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 
 
   //load the greens functions:
+  char* lookupFilename=Form("ross_phislice_lookup_r%dxp%dxz%d.root",nr,nphi,nz);
+  TFile *fileptr=TFile::Open(lookupFilename,"READ");
+  bool lookupFileExists=(fileptr);
+  
+  if (!fileptr){ //generate the lookuptable
   //to use the full rossegger terms instead of trivial free-space greens functions, uncomment the line below:
-  tpc->load_rossegger();
-  now=gSystem->Now();
-  printf("loaded rossegger greens functions. (phi set to zero) the dtime is %lu\n",(unsigned long)(now-start));
-  start=now;
-  tpc->populate_lookup();
-  now=gSystem->Now();
+    tpc->load_rossegger();
+    now=gSystem->Now();
+    printf("loaded rossegger greens functions. (phi set to zero) the dtime is %lu\n",(unsigned long)(now-start));
+    start=now;
+    tpc->populate_lookup();
+    tpc->save_phislice_lookup(lookupFilename);
+
+  } else{ //load it from a file
+    fileptr->Close();
+    tpc->load_phislice_lookup(lookupFilename);
+  }
+    now=gSystem->Now();
   printf("populated lookup.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
-  tpc->save_phislice_lookup(Form("phislice_lookup_r%dxp%dxz%dx.root",nr,nphi,nz));
  
   
   //load the spacecharge:
@@ -583,22 +593,26 @@ void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int np
 	}
 	partZ+=0.5*deltaz;
 
-	
+	//differential distortion:
 	outpart=t->swimToInSteps(inpart.Z()+deltaz,inpart,nSteps,true, &validToStep);
 	distort=outpart-inpart;
 	distortR=distort.Perp();
 	distort.RotateZ(-inpart.Phi());//rotate so that that is on the x axis
 	distortP=distort.Y();//the phi component is now the y component.
+	distortR=distort.X();//added aug 18
 	distortZ=0;
 	hDistortionR->Fill(partP,partR,partZ+deltaz*0.5,distortR);
 	hDistortionP->Fill(partP,partR,partZ+deltaz*0.5,distortP);
 	hDistortionZ->Fill(partP,partR,partZ+deltaz*0.5,0);
 	dTree->Fill();
+
+	//integral distortion:
 	outpart=t->swimToInSteps(zf,inpart,nSteps,true, &validToStep);
 	distort=outpart-inpart;
 	distortR=distort.Perp();
 	distort.RotateZ(-inpart.Phi());//rotate so that that is on the x axis
 	distortP=distort.Y();//the phi component is now the y component.
+	distortR=distort.X();//added aug 18
 	distortZ=0;
 	//printf("part=(rpz)(%f,%f,%f),distortP=%f\n",partP,partR,partZ,distortP);
 	hIntDistortionR->Fill(partP,partR,partZ,distortR);
@@ -1002,15 +1016,23 @@ void PlotFieldSlices(AnnularFieldSim *t, TVector3 pos){
     hCharge[ax]=new TH2F(Form("hCharge%c",axis[ax]),
 			 Form("Spacecharge Distribution in the %c%c plane at %c=%2.3f;%c;%c",
 			      axis[ax+1],axis[ax+2],axis[ax],axisval[ax],axis[ax+1],axis[ax+2]),
-			 axn[ax+1],axbot[ax+1]-axstep[ax+1]/2,axtop[ax+1]-axstep[ax+1]/2,
-			 axn[ax+2],axbot[ax+2]-axstep[ax+2]/2,axtop[ax+2]-axstep[ax+2]/2);
+			 axn[ax+1],axbot[ax+1],axtop[ax+1],
+			 axn[ax+2],axbot[ax+2],axtop[ax+2]);
     for (int i=0;i<3;i++){
       //loop over which axis of the field to read
+      /* old version that centers the plotting region by extending half-steps beyond the sampling region:
       hEfield[ax][i]=new TH2F(Form("hEfield%c_%c%c",axis[i],axis[ax+1],axis[ax+2]),
 			      Form("%c component of E Field in the %c%c plane at %c=%2.3f;%c;%c",
 				   axis[i],axis[ax+1],axis[ax+2],axis[ax],axisval[ax],axis[ax+1],axis[ax+2]),
 			      axn[ax+1],axbot[ax+1]-axstep[ax+1]/2,axtop[ax+1]-axstep[ax+1]/2,
 			      axn[ax+2],axbot[ax+2]-axstep[ax+2]/2,axtop[ax+2]-axstep[ax+2]/2);
+      */
+      //new version that centers the sampling region by starting half-steps into the plotting region:
+      hEfield[ax][i]=new TH2F(Form("hEfield%c_%c%c",axis[i],axis[ax+1],axis[ax+2]),
+			      Form("%c component of E Field in the %c%c plane at %c=%2.3f;%c;%c",
+				   axis[i],axis[ax+1],axis[ax+2],axis[ax],axisval[ax],axis[ax+1],axis[ax+2]),
+			      axn[ax+1],axbot[ax+1],axtop[ax+1],
+			      axn[ax+2],axbot[ax+2],axtop[ax+2]);
       hEfieldComp[ax][i]=new TH1F(Form("hEfieldComp%c_%c%c",axis[i],axis[ax+1],axis[ax+2]),
 			      Form("Log Magnitude of %c component of E Field in the %c%c plane at %c=%2.3f;log10(mag)",
 				   axis[i],axis[ax+1],axis[ax+2],axis[ax],axisval[ax]),
@@ -1020,11 +1042,11 @@ void PlotFieldSlices(AnnularFieldSim *t, TVector3 pos){
 
   float rpz_coord[3];
   for (int ax=0;ax<3;ax++){
-    rpz_coord[ax]=axisval[ax];
+    rpz_coord[ax]=axisval[ax]+axstep[ax]/2;
     for (int i=0;i<axn[ax+1];i++){
-      rpz_coord[(ax+1)%3]=axbot[ax+1]+i*axstep[ax+1];
+      rpz_coord[(ax+1)%3]=axbot[ax+1]+(i+0.5)*axstep[ax+1];
       for (int j=0;j<axn[ax+2];j++){
-	rpz_coord[(ax+2)%3]=axbot[ax+2]+j*axstep[ax+2];
+	rpz_coord[(ax+2)%3]=axbot[ax+2]+(j+0.5)*axstep[ax+2];
 	lpos.SetXYZ(rpz_coord[0],0,rpz_coord[2]);
 	lpos.SetPhi(rpz_coord[1]);
 	if (0 && ax==0){

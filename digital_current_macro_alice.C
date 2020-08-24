@@ -147,7 +147,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 
 
    //step 3: load the spacecharge density map from the specified histogram (in the tpc parameters, above).
-  TFile *f=TFile::Open(Form("%s.root",scmapfilebase));
+  TFile *f=TFile::Open(TString::Format("%s.root",scmapfilebase));
   TH3F* tpc_average=(TH3F*)f->Get(scmaphistname);
   now=gSystem->Now();
   printf("loaded hist.  the dtime is %lu\n",(unsigned long)(now-start));
@@ -525,7 +525,13 @@ void GenerateAndSaveDistortionMap(const char* filebase,AnnularFieldSim *t,int np
   printf("R:  %d steps from %f to %f\n",nr,ri,rf);
   printf("Z:  %d steps from %f to %f\n",nz,zi,zf);
   printf("fieldsim ptr=%p\n",(void*)t);
-  TFile *outf=TFile::Open(Form("%s.distortion_map.hist.root",filebase),"RECREATE");
+  TString distortionFilename;
+  distortionFilename.Form("%s.distortion_map.hist.root",filebase);
+  TString summaryFilename;
+  summaryFilename.Form("%s.distortion_summary.pdf",filebase);
+  printf("filenames that are taken from perfectly trivial manipulations:\ndistortion: %s\nsummary: %s\n",distortionFilename.Data(),summaryFilename.Data());
+
+  TFile *outf=TFile::Open(distortionFilename.Data(),"RECREATE");
   outf->cd();
 
   //for interpolation, Henry needs one extra buffer bin on each side.
@@ -564,8 +570,8 @@ void GenerateAndSaveDistortionMap(const char* filebase,AnnularFieldSim *t,int np
     //loop over which plane to work in
     for (int i=0;i<2;i++){
       //loop over which axis of the distortion to read
-      hIntDist[ax][i]=new TH2F(Form("hIntDist%c_%c%c",axname[i],axname[ax+1],axname[ax+2]),
-			      Form("%c component of distortion in the %c%c plane at %c=%2.3f;%c;%c",
+      hIntDist[ax][i]=new TH2F(TString::Format("hIntDist%c_%c%c",axname[i],axname[ax+1],axname[ax+2]),
+			       TString::Format("%c component of distortion in the %c%c plane at %c=%2.3f;%c;%c",
 				   axname[i],axname[ax+1],axname[ax+2],axname[ax],axval[ax],axname[ax+1],axname[ax+2]),
 			      axn[ax+1],axbot[ax+1],axtop[ax+1],
 			      axn[ax+2],axbot[ax+2],axtop[ax+2]);
@@ -606,23 +612,9 @@ void GenerateAndSaveDistortionMap(const char* filebase,AnnularFieldSim *t,int np
 
   int el=0;
 
-  /*
-  for (iz=-1;iz<nz+1;iz++){
-    partZ=(iz)*deltaz+zi;
-    if (iz<0){
-      inpart.SetZ(partZ+deltaz);
-    } else if (iz==nz){
-      inpart.SetZ(partZ-deltaz);
-    } else {
-      inpart.SetZ(partZ);
-    }
-    partZ+=0.5*deltaz;
 
-    printf("iz=%d, zcoord=%2.2f, bin=%d\n",iz,partZ,  hIntDist[0][0]->GetYaxis()->FindBin(partZ));
-  }
-  assert(1==2);
-  return;
-  */
+
+  
   //we want to loop over the entire region to be mapped, but we also need to include
   //one additional bin at each edge, to allow the mc drift code to interpolate properly.
   //hence we count from -1 to n+1, and manually adjust the position in those edge cases
@@ -739,54 +731,9 @@ void GenerateAndSaveDistortionMap(const char* filebase,AnnularFieldSim *t,int np
     }
   }
 
-  /*
-  for (int ax=0;ax<3;ax++){
-    if (ax==0) axis=hIntDistortionR->GetYaxis();
-    if (ax==1) axis=hIntDistortionR->GetXaxis();
-    if (ax==2) axis=hIntDistortionR->GetZaxis();
-    axis->SetRange(xi[ax],xi[ax]+1);
-    c->cd(ax*4+1);
-    gPad->SetRightMargin(0.15);
-    hProjection[ih]=(TH2F*)hIntDistortionR->Project3D(Form("%c%c%d",axes[ax+1],axes[ax+2],ih));
-    hProjection[ih]->SetStats(0);
-    hProjection[ih]->Draw("colz");
-    ih++;
-    gPad->Modified();
+  printf("about to write map and summary to %s.\n",filebase);
 
-      c->cd(ax*4+2);
-      gPad->SetRightMargin(0.15);
-     hProjection[ih]=(TH2F*)hIntDistortionP->Project3D(Form("%c%c%d",axes[ax+1],axes[ax+2],ih));
-      hProjection[ih]->SetStats(0);
-      hProjection[ih]->Draw("colz");
-      ih++;
-      gPad->Modified();
-      axis->SetRange(0,0);
-
-  }
-  for (int ax=0;ax<3;ax++){
-    if (ax==0) axis=hIntDistortionR->GetYaxis();
-    if (ax==1) axis=hIntDistortionR->GetXaxis();
-    if (ax==2) axis=hIntDistortionR->GetZaxis();
-
-    c->cd(ax*4+3);
-    gPad->SetRightMargin(0.15);
-    hProjection[ih]=(TH2F*)hDistortionR->Project3D(Form("%c%c%d",axes[ax+1],axes[ax+2],ih));
-    hProjection[ih]->SetStats(0);
-    hProjection[ih]->Draw("colz");
-    ih++; 
-    gPad->Modified();
-    c->cd(ax*4+4);
-    gPad->SetRightMargin(0.15);
-    hProjection[ih]=(TH2F*)hDistortionP->Project3D(Form("%c%c%d",axes[ax+1],axes[ax+2],ih));
-    hProjection[ih]->SetStats(0);
-    hProjection[ih]->Draw("colz");
-    ih++; 
-    gPad->Modified();
-    axis->SetRange(0,0);
-	  
-  }
-  */
-  c->SaveAs(TString::Format("%s.distortion_summary.pdf",filebase));
+  c->SaveAs(summaryFilename.Data());
   hDistortionR->Write();
   hDistortionP->Write();
   hDistortionZ->Write();
@@ -795,7 +742,7 @@ void GenerateAndSaveDistortionMap(const char* filebase,AnnularFieldSim *t,int np
   hIntDistortionZ->Write();
   dTree->Write();
   //outf->Close();
-  printf("wrote map and summary to %s.\n",filebase);
+  printf("wrote map and summary to %s and %s.\n",distortionFilename.Data(),summaryFilename.Data());
   return;
 }
 

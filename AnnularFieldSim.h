@@ -33,7 +33,11 @@ class AnnularFieldSim{
   TVector3 zero_vector; //a shorthand way to return a vectorial zero.
   //static constexpr float k=8.987e13;//=1/(4*pi*eps0) in N*cm^2/C^2 in a vacuum. N*cm^2/C units, so that we supply space charge in coulomb units.
   static constexpr float k_perm=8.987e11;//=1/(4*pi*eps0) in (V*cm)/C in a vacuum. so that we supply space charge in Coulombs, distance in cm, and fields in V/cm
+
+  //gas constants:
   double vdrift; //gas drift speed in cm/s
+  double langevin_T1,langevin_T2; //gas tensor drift terms.
+  double omegatau_nominal; //nominal omegatau value, derived from vdrift and field strengths.  
   //double vprime; //first derivative of drift velocity at specific E
   //double vprime2; //second derivative of drift velocity at specific E
   float Enominal;//magnitude of the nominal field on which drift speed is based, in V/cm.
@@ -120,6 +124,7 @@ class AnnularFieldSim{
 
   //getters for internal states:
   const char* GetLookupString();
+  const char* GetGasString();
   //const char* GetFieldString();
   float GetNominalB(){return Bnominal;};
   float GetNominalE(){return Enominal;};
@@ -137,8 +142,8 @@ class AnnularFieldSim{
   void load_analytic_spacecharge(float scalefactor);
   void add_testcharge(float r, float phi, float z, float coulombs);
   
-  void setNominalB(float x){Bnominal=x;return;};
-  void setNominalE(float x){Enominal=x;return;};
+  void setNominalB(float x){Bnominal=x;  UpdateOmegaTau();return;};
+  void setNominalE(float x){Enominal=x;  UpdateOmegaTau();return;};
   void setFlatFields(float B, float E);
   void loadEfield(const char *filename, const char *treename);
   void loadBfield(const char *filename, const char *treename);
@@ -188,6 +193,8 @@ class AnnularFieldSim{
   BoundsCase GetRindexAndCheckBounds(float pos, int *r);
   BoundsCase GetPhiIndexAndCheckBounds(float pos, int *phi);
   BoundsCase GetZindexAndCheckBounds(float pos, int *z);
+
+  void UpdateOmegaTau(){omegatau_nominal=-10*(10*Bnominal)*(vdrift*1e-6)/(-1*Enominal);return;}; //various constants to match internal representation to the familiar formula.  Adding in these factors suggests I should switch to a unitful calculation throughout...
 
 
 };

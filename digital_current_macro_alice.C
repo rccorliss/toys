@@ -77,7 +77,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   const double tpc_chargescale=-1.6e-19*1000;//should be -19;//our hist. has charge in units of ions/cm^3, so we need to multiply by the electric charge of an electron to get out C/cm^3.  adding in a factor of 1k that I don't understand
 
   
-  const char scmapfilebase[]="Smooth.50kHz"; //expects suffix '.root' after this string.
+  const char scmapfilebase[]="HeuristicSc";//"Smooth.50kHz"; //expects suffix '.root' after this string.
   const char scmaphistname[]="sphenix_minbias_average";
 
 
@@ -149,6 +149,8 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
    //step 3: load the spacecharge density map from the specified histogram (in the tpc parameters, above).
   TFile *f=TFile::Open(TString::Format("%s.root",scmapfilebase));
   TH3F* tpc_average=(TH3F*)f->Get(scmaphistname);
+  printf("Sanity check:  histfile is '%s.root'.  Seeking histname '%s'\n",scmapfilebase,scmaphistname);
+  printf("Sanity check:  hist title is '%s'\n",tpc_average->GetTitle());
   now=gSystem->Now();
   printf("loaded hist.  the dtime is %lu\n",(unsigned long)(now-start));
 
@@ -218,8 +220,9 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
     return;
   }
 
-  if (0){ //load spacecharge from file
+  if (1){ //load spacecharge from file
     sprintf(sc_string,scmapfilebase);
+    printf("loading spacecharge from %s.root\n",scmapfilebase);
     tpc->load_spacecharge(tpc_average,0,tpc_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
   }
   if (0){ //load spacecharge from analytic formula
@@ -521,15 +524,15 @@ void GenerateAndSaveDistortionMap(const char* filebase,AnnularFieldSim *t,int np
   
   printf("generating distortion map...\n");
   printf("file=%s\n",filebase);
-  printf("Phi:  %d steps from %f to %f\n",np,pi,pf);
-  printf("R:  %d steps from %f to %f\n",nr,ri,rf);
-  printf("Z:  %d steps from %f to %f\n",nz,zi,zf);
+  printf("Phi:  %d steps from %f to %f (sim reports %d steps)\n",np,pi,pf,t->GetFieldStepsPhi());
+  printf("R:  %d steps from %f to %f (sim reports %d steps)\n",nr,ri,rf,t->GetFieldStepsR());
+  printf("Z:  %d steps from %f to %f (sim reports %d steps)\n",nz,zi,zf,t->GetFieldStepsZ());
   printf("fieldsim ptr=%p\n",(void*)t);
   TString distortionFilename;
   distortionFilename.Form("%s.distortion_map.hist.root",filebase);
   TString summaryFilename;
   summaryFilename.Form("%s.distortion_summary.pdf",filebase);
-  printf("filenames that are taken from perfectly trivial manipulations:\ndistortion: %s\nsummary: %s\n",distortionFilename.Data(),summaryFilename.Data());
+  //  printf("filenames that are taken from perfectly trivial manipulations:\ndistortion: %s\nsummary: %s\n",distortionFilename.Data(),summaryFilename.Data());
 
   TFile *outf=TFile::Open(distortionFilename.Data(),"RECREATE");
   outf->cd();
@@ -566,17 +569,21 @@ void GenerateAndSaveDistortionMap(const char* filebase,AnnularFieldSim *t,int np
   float axbot[]={rih,pih,zih,rih,pih,zih};
   float axtop[]={rfh,pfh,zfh,rfh,pfh,zfh};
   TH2F* hIntDist[3][2];
-  for (int ax=0;ax<3;ax++){
-    //loop over which plane to work in
-    for (int i=0;i<2;i++){
-      //loop over which axis of the distortion to read
+  TH1F* hRDist[2];
+  for (int i=0;i<2;i++){
+    //loop over which axis of the distortion to read
+    for (int ax=0;ax<3;ax++){
+      //loop over which plane to work in
       hIntDist[ax][i]=new TH2F(TString::Format("hIntDist%c_%c%c",axname[i],axname[ax+1],axname[ax+2]),
-			       TString::Format("%c component of distortion in the %c%c plane at %c=%2.3f;%c;%c",
-				   axname[i],axname[ax+1],axname[ax+2],axname[ax],axval[ax],axname[ax+1],axname[ax+2]),
-			      axn[ax+1],axbot[ax+1],axtop[ax+1],
-			      axn[ax+2],axbot[ax+2],axtop[ax+2]);
-
+			       TString::Format("%c component of int. distortion in  %c%c plane at %c=%2.3f;%c;%c",
+					       axname[i],axname[ax+1],axname[ax+2],axname[ax],axval[ax],axname[ax+1],axname[ax+2]),
+			       axn[ax+1],axbot[ax+1],axtop[ax+1],
+			       axn[ax+2],axbot[ax+2],axtop[ax+2]);
     }
+    hRDist[i]=new TH1F(TString::Format("hRDist%c",axname[i]),
+		       TString::Format("%c component of int. distortion vs r with %c=%2.3f and %c=%2.3f;r(cm);#delta (cm)",
+				       axname[i],axname[1],axval[1],axname[2],axval[2]),
+		       axn[0],axbot[0],axtop[0]);
   }
 
 
@@ -683,20 +690,26 @@ void GenerateAndSaveDistortionMap(const char* filebase,AnnularFieldSim *t,int np
 	//now we fill particular slices for visualizations:
 	if(ir==xi[0]){//r slice
 	  //printf("ir=%d, r=%f (pz)=(%d,%d), distortR=%2.2f, distortP=%2.2f\n",ir,partR,ip,iz,distortR,distortP);
-	    hIntDist[0][0]->Fill(partP,partZ,distortR);
-	    hIntDist[0][1]->Fill(partP,partZ,distortP);
+	  hIntDist[0][0]->Fill(partP,partZ,distortR);
+	  hIntDist[0][1]->Fill(partP,partZ,distortP);
 	}
 	if(ip==xi[1]){//phi slice
 	  //printf("ip=%d, p=%f (rz)=(%d,%d), distortR=%2.2f, distortP=%2.2f\n",ip,partP,ir,iz,distortR,distortP);
 
-	    hIntDist[1][0]->Fill(partZ,partR,distortR);
-	    hIntDist[1][1]->Fill(partZ,partR,distortP);
+	  hIntDist[1][0]->Fill(partZ,partR,distortR);
+	  hIntDist[1][1]->Fill(partZ,partR,distortP);
 	}
 	if(iz==xi[2]){//z slice
 	  //printf("iz=%d, z=%f (rp)=(%d,%d), distortR=%2.2f, distortP=%2.2f\n",iz,partZ,ir,ip,distortR,distortP);
 		  
-	    hIntDist[2][0]->Fill(partR,partP,distortR);
-	    hIntDist[2][1]->Fill(partR,partP,distortP);
+	  hIntDist[2][0]->Fill(partR,partP,distortR);
+	  hIntDist[2][1]->Fill(partR,partP,distortP);
+
+	  if(ip==xi[1]){//phi slice
+	    hRDist[0]->Fill(partR,distortR);	    
+	    hRDist[1]->Fill(partR,distortP);
+	  }
+
 	}
 
 	if(!(el%percent)) {printf("generating distortions %d%%:  ",(int)(el/percent));
@@ -713,24 +726,33 @@ void GenerateAndSaveDistortionMap(const char* filebase,AnnularFieldSim *t,int np
   TCanvas *c=new TCanvas("cdistort","distortion integrals",1200,800);
   const char axes[]="XYZXYZ";
 
-  c->Divide(3,2);
+  c->Divide(3,3);
   gStyle->SetOptStat();
   // TH2F *hProjection[12];
   TAxis * axis;
   int ih=0;
 
 
-  for (int ax=0;ax<3;ax++){
-    //plane
-    for (int i=0;i<2;i++){
-      //component
+  for (int i=0;i<2;i++){
+    //component
+    for (int ax=0;ax<3;ax++){
+      //plane
       c->cd(i*3+ax+1);
       gPad->SetRightMargin(0.15);
       hIntDist[ax][i]->SetStats(0);
       hIntDist[ax][i]->Draw("colz");
     }
+    c->cd(6+i+1);
+    hRDist[i]->SetStats(0);
+    hRDist[i]->Draw("hist");
   }
-
+  c->cd(9);
+  float texpos=0.9;float texshift=0.08;
+  TLatex *tex=new TLatex(0.0,texpos,"Fill Me In");
+  tex->DrawLatex(0.0,texpos,Form("Drift Field = %2.2f V/cm",t->GetNominalE()));texpos-=texshift;
+  tex->DrawLatex(0.0,texpos,Form("Drifting grid of (rp)=(%d x %d) electrons in %d steps",nr,np,nSteps));texpos-=texshift;
+  tex->DrawLatex(0.0,texpos,t->GetLookupString());texpos-=texshift;
+  tex->DrawLatex(0.0,texpos,t->GetGasString());texpos-=texshift;
   printf("about to write map and summary to %s.\n",filebase);
 
   c->SaveAs(summaryFilename.Data());
@@ -1010,7 +1032,7 @@ void PlotFieldSlices(const char *filebase, AnnularFieldSim *t, TVector3 pos){
   
   printf("plotting field slices...\n");
   printf("file=%s\n",filebase);
-  
+  TString plotfilename=TString::Format("%s.field_slices.pdf",filebase);
   TVector3 inner=t->GetInnerEdge();
   TVector3 outer=t->GetOuterEdge();
   TVector3 step=t->GetFieldStep();
@@ -1019,6 +1041,7 @@ void PlotFieldSlices(const char *filebase, AnnularFieldSim *t, TVector3 pos){
   int nr=t->GetFieldStepsR();
   int np=t->GetFieldStepsPhi();
   int nz=t->GetFieldStepsZ();
+  printf("tpc parameters nr=%d,np=%d,nz=%d\n",nr,np,nz);
 
   TCanvas *c;
   TPaletteAxis *pal;
@@ -1125,7 +1148,7 @@ void PlotFieldSlices(const char *filebase, AnnularFieldSim *t, TVector3 pos){
 	gPad->Modified();
       }
   }
-  c->SaveAs(TString::Format("%s.field_slices.pdf",filebase));
+  c->SaveAs(plotfilename);
   printf("after plotting field slices...\n");
   printf("file=%s\n",filebase);
   

@@ -183,8 +183,8 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
       if (phi<0) phi+=6.28319;
       //compute the bin volume:
       int bin=hCharge->GetYaxis()->FindBin(r/(cm));
-      double hr=hCharge->GetYaxis()->GetBinLowEdge(bin)*cm;
-      double vol=(hzstep*hphistep*(hr+hrstep*0.5)*hrstep)/cm/cm/cm;
+      double hr=hCharge->GetYaxis()->GetBinLowEdge(bin)*cm;//unitful because the histogram is in cm natively
+      double vol=(hzstep*hphistep*(hr+hrstep*0.5)*hrstep)/cm/cm/cm;//expressed in cm^3
       bool overFrame=IsOverFrame(r/(mm),phi);
 
       hCharge->Fill(phi,r/(cm),zprim/(cm),ne/vol); //primary ion, drifted by t0, in cm

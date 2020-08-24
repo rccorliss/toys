@@ -42,6 +42,11 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
   Enominal=400;//v/cm
   Bnominal=1.4;//Tesla
   vdrift=vdr;
+  langevin_T1=1.0;
+  langevin_T2=1.0;
+  omegatau_nominal=-10*(10*Bnominal)*(vdrift*1e-6)/(-1*Enominal);//to match to the familiar formula
+
+  
   rmin=in_innerRadius; rmax=in_outerRadius;
   zmin=0;zmax=in_outerZ;
   zero_vector.SetXYZ(0,0,0);
@@ -1562,6 +1567,7 @@ void AnnularFieldSim::setFlatFields(float B, float E){
     Bfield->GetFlat(i)->SetXYZ(0,0,B);
   Enominal=E;
   Bnominal=B;
+  UpdateOmegaTau();
   return;
 }
 
@@ -2065,8 +2071,7 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate, b
   omegatau=omegatau*1e-4;//*1m/100cm * 1m/100cm to get proper unitless.
   //or:  omegatau=-10*(10*B.Z())*(vdrift*1e6)/fieldz; //which is the same as my calculation up to a sign.
   //printf("omegatau=%f\n",omegatau);
-  double langevin_T1=1.0;
-  double langevin_T2=1.0;
+
   double T1om=langevin_T1*omegatau;
   double T2om2=langevin_T2*omegatau*langevin_T2*omegatau;
   double c0=1/(1+T2om2);//
@@ -2278,6 +2283,12 @@ const char* AnnularFieldSim::GetLookupString(){
   
   return "broken";
 }
+const char* AnnularFieldSim::GetGasString(){
+  return Form("vdrift=%2.4fcm/s, Enom=%2.2fV/cm, Bnom=%2.2fT, omtau=%2.4f",vdrift,Enominal,Bnominal,omegatau_nominal);
+}
+
+
+
 
 TVector3 AnnularFieldSim::GetFieldAt(TVector3 pos){
   int r,p,z;

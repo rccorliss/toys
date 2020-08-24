@@ -9,6 +9,29 @@ class TH3F;
 class TTree;
 
 class AnnularFieldSim{
+ private:
+  //units:
+  const float cm=1;//centimeters -- if you change this, check that all the loading functions are properly agnostic.
+  const float m=cm*0.01;//meters.
+  const float mm=cm*10;
+  const float um=mm*1e3;
+
+  const float C=1;//Coulombs
+  const float nC=C*1e9;
+  const float fC=C*1e15;
+
+  const float s=1;//seconds
+  const float us=s*1e6;
+  const float ns=s*1e9;
+
+  const float V=1;//volts 
+
+  const float Tesla=V*s/m/m;//Tesla=Vs/m^2
+  const float kGauss=Tesla*10;;//kGauss
+  
+  const float eps0=8.854e-12*(C/V)/m;//Farads(=Coulombs/Volts) per meter
+  const float k_perm=1/(4*3.1416*eps0);  
+  
  public:
   enum BoundsCase {InBounds,OnHighEdge, OnLowEdge,OutOfBounds}; //note that 'OnLowEdge' is qualitatively different from 'OnHighEdge'.  Low means there is a non-zero distance between the point and the edge of the bin.  High applies even if that distance is exactly zero.
   enum LookupCase {Full3D,HybridRes, PhiSlice, Analytic, NoLookup};
@@ -32,7 +55,7 @@ class AnnularFieldSim{
   //
   TVector3 zero_vector; //a shorthand way to return a vectorial zero.
   //static constexpr float k=8.987e13;//=1/(4*pi*eps0) in N*cm^2/C^2 in a vacuum. N*cm^2/C units, so that we supply space charge in coulomb units.
-  static constexpr float k_perm=8.987e11;//=1/(4*pi*eps0) in (V*cm)/C in a vacuum. so that we supply space charge in Coulombs, distance in cm, and fields in V/cm
+  //static constexpr float k_perm=8.987e11;//=1/(4*pi*eps0) in (V*cm)/C in a vacuum. so that we supply space charge in Coulombs, distance in cm, and fields in V/cm
 
   //gas constants:
   double vdrift; //gas drift speed in cm/s
@@ -184,7 +207,6 @@ class AnnularFieldSim{
   TVector3 sum_phislice_field_at(int r, int phi, int z);
   TVector3 swimToInAnalyticSteps(float zdest,TVector3 start,int steps, int *goodToStep);
   TVector3 swimToInSteps(float zdest,TVector3 start, int steps, bool interpolate, int *goodToStep);
-  TVector3 OldSwimToInSteps(float zdest,TVector3 start, int steps, bool interpolate, int *goodToStep);
   TVector3 swimTo(float zdest,TVector3 start, bool interpolate=true, bool useAnalytic=false);
   TVector3 GetStepDistortion(float zdest,TVector3 start, bool interpolate=true, bool useAnalytic=false);
 

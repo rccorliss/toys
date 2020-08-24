@@ -29,6 +29,10 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
 
 
   printf("AnnularFieldSim::AnnularFieldSim with (%dx%dx%d) grid\n",r,phi,z);
+  printf("units m=%1.2E, cm=%1.2E, mm=%1.2E, um=%1.2E,\n",m,cm,mm,um);
+  printf("units s=%1.2E, us=%1.2E, ns=%1.2E,\n",s,us,ns);
+  printf("units C=%1.2E, nC=%1.2E, fC=%1.2E, \n",C,nC,fC);
+  printf("units Tesla=%1.2E, kGauss=%1.2E\n",Tesla,kGauss);
 
   //debug defaults:
   //
@@ -39,16 +43,16 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
   
   
   //load constants of motion, dimensions, etc:
-  Enominal=400;//v/cm
-  Bnominal=1.4;//Tesla
-  vdrift=vdr;
+  Enominal=400*V/cm;//v/cm
+  Bnominal=1.4*Tesla;//Tesla
+  vdrift=vdr*cm/s;//cm/s
   langevin_T1=1.0;
   langevin_T2=1.0;
-  omegatau_nominal=-10*(10*Bnominal)*(vdrift*1e-6)/(-1*Enominal);//to match to the familiar formula
+  omegatau_nominal=-10*(Bnominal/kGauss)*(vdrift/(cm/us))/(Enominal/(V/cm));//to match to the familiar formula
 
   
-  rmin=in_innerRadius; rmax=in_outerRadius;
-  zmin=0;zmax=in_outerZ;
+  rmin=in_innerRadius*cm; rmax=in_outerRadius*cm;
+  zmin=0;zmax=in_outerZ*cm;
   zero_vector.SetXYZ(0,0,0);
 
  //define the size of the volume:
@@ -267,7 +271,7 @@ TVector3 AnnularFieldSim::calc_unit_field(TVector3 at, TVector3 from){
       //do nothing.  the vector is already zero, which will be our approximation.
       //field.SetMag(0);//no contribution if we're in the same cell. -- but root warns if trying to resize something of magnitude zero.
     } else{
-      field.SetMag(k_perm*1/(delr*delr));//scalar product on the bottom.
+      field.SetMag(k_perm*1/(delr*delr));//scalar product on the bottom. unitful, since we defined k_perm and delr with their correct units. (native units V=1 C=1 cm=1)
     }
     //printf("calc_unit_field at (%2.2f,%2.2f,%2.2f) from  (%2.2f,%2.2f,%2.2f).  Mag=%2.4fe-9\n",at.x(),at.Y(),at.Z(),from.X(),from.Y(),from.Z(),field.Mag()*1e9);
   }else{
@@ -395,6 +399,9 @@ TVector3 AnnularFieldSim::analyticFieldIntegral(float zdest,TVector3 start, Mult
   //integrates E dz, from the starting point to the selected z position.  The path is assumed to be along z for each step, with adjustments to x and y accumulated after each step.
   //if(debugFlag()) printf("%d: AnnularFieldSim::fieldIntegral(x=%f,y=%f, z=%f) to z=%f\n\n",__LINE__,start.X(),start.Y(),start.Z(),zdest);
   //  printf("AnnularFieldSim::analyticFieldIntegral calculating from (%f,%f,%f) (rphiz)=(%f,%f,%f) to z=%f.\n",start.X(),start.Y(),start.Z(),start.Perp(),start.Phi(),start.Z(),zdest);
+
+  //coordinates are assumed to be in native units (cm=1);
+
   int r, phi;
   bool rOkay=  (GetRindexAndCheckBounds(start.Perp(), &r) == InBounds);
   bool phiOkay=  (GetPhiIndexAndCheckBounds(start.Phi(), &phi) == InBounds);
@@ -697,16 +704,18 @@ TVector3 AnnularFieldSim::interpolatedFieldIntegral(float zdest,TVector3 start, 
 }
 
 void AnnularFieldSim::load_analytic_spacecharge(float scalefactor=1){
+  //scalefactor should be chosen so Rho(pos) returns C/cm^3
+
   //sphenix:
   //double ifc_radius=20;
   //double ofc_radius=78;
   //  double tpc_halfz=
 
-  double ifc_radius=83.5;
-  double ofc_radius=254.5;
-  double tpc_halfz=250;
+  double ifc_radius=83.5*cm;
+  double ofc_radius=254.5*cm;
+  double tpc_halfz=250*cm;
 
-  aliceModel=new AnalyticFieldModel(ifc_radius,ofc_radius,tpc_halfz,scalefactor);
+  aliceModel=new AnalyticFieldModel(ifc_radius/cm,ofc_radius/cm,tpc_halfz/cm,scalefactor);
   double totalcharge=0;
   double localcharge=0;
 
@@ -715,9 +724,10 @@ void AnnularFieldSim::load_analytic_spacecharge(float scalefactor=1){
     for (int ifphi=0;ifphi<nphi;ifphi++){
       for (int ifz=0;ifz<nz;ifz++){
 	pos=GetCellCenter(ifr,ifphi,ifz);
+	pos=pos*(1.0/cm); //divide by cm so we're in units of cm when we query the charge model.
 	double vol=step.Z()*step.Phi()*(2*(ifr*step.Perp()+rmin)+step.Perp())*step.Perp();
 	//if(debugFlag()) printf("%d: AnnularFieldSim::load_analytic_spacecharge adding Q=%f into cell (%d,%d,%d)\n",__LINE__,qbin,i,j,k,localr,localphi,localz);
-	localcharge=vol*aliceModel->Rho(pos);
+	localcharge=vol*aliceModel->Rho(pos);//TODO:  figure out what units this is in.
 	totalcharge+=localcharge;
 	q->Add(ifr,ifphi,ifz,localcharge); //scalefactor must be applied to charge _and_ field, and so is handled in the aliceModel code.
       }
@@ -748,7 +758,7 @@ void AnnularFieldSim::load_analytic_spacecharge(float scalefactor=1){
 
 void AnnularFieldSim::loadEfield(const char *filename, const char *treename){
     //prep variables so that loadField can just iterate over the tree entries and fill our selected tree agnostically
-
+  //assumes file stores fields as V/cm.
   TFile fieldFile(filename,"READ");
   TTree *fTree=(TTree*)(fieldFile.Get(treename));
   float r,z,phi; //coordinates
@@ -765,6 +775,7 @@ void AnnularFieldSim::loadEfield(const char *filename, const char *treename){
 }
 void AnnularFieldSim::loadBfield(const char *filename, const char *treename){
   //prep variables so that loadField can just iterate over the tree entries and fill our selected tree agnostically
+  //assumes file stores field as Tesla.
   TFile fieldFile(filename,"READ");
   TTree *fTree=(TTree*)(fieldFile.Get(treename));
   float r,z,phi; //coordinates
@@ -873,7 +884,7 @@ void AnnularFieldSim::loadField(MultiArray<TVector3> **field, TTree *source, flo
 
 
 void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefactor=1){
-  //load spacecharge densities from a histogram, where scalefactor translates into local units
+  //load spacecharge densities from a histogram, where scalefactor translates into local units of C/cm^3
   //noting that the histogram limits may differ from the simulation size, and have different granularity
   //hist is assumed/required to be x=phi, y=r, z=z
   //z offset 'drifts' the charge by that distance toward z=0.
@@ -965,7 +976,7 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefac
 	//volume is simplified from the basic formula:  float vol=hzstep*(hphistep*(hr+hrstep)*(hr+hrstep) - hphistep*hr*hr);
 	//should be lower radius and higher radius.  I'm off by a 0.5 on both of those.  Oops.
 	double vol=hzstep*hphistep*(hr+0.5*hrstep)*hrstep;
-	double qbin=scalefactor*vol*hist->GetBinContent(hist->GetBin(j+1,i+1,k+1));
+	double qbin=scalefactor*vol*hist->GetBinContent(hist->GetBin(j+1,i+1,k+1))*C;//store locally as Coulombs per bin.
 	//float qold=q->Get(localr,localphi,localz);
 	totalcharge+=qbin;
 	//if(debugFlag()) printf("%d: AnnularFieldSim::load_spacecharge adding Q=%f from hist(%d,%d,%d) into cell (%d,%d,%d)\n",__LINE__,qbin,i,j,k,localr,localphi,localz);
@@ -974,7 +985,7 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefac
     }
   }
 
-  printf("AnnularFieldSim::load_spacecharge:  Total charge Q=%E Coulombs\n",totalcharge);
+  printf("AnnularFieldSim::load_spacecharge:  Total charge Q=%E Coulombs\n",totalcharge/C);
 
   
 
@@ -1017,7 +1028,7 @@ void AnnularFieldSim::add_testcharge(float r, float phi, float z, float coulombs
     return;
   }
 
-  q->Add(rcell,phicell,zcell,coulombs);
+  q->Add(rcell,phicell,zcell,coulombs*C);
   if (lookupCase==HybridRes){
     printf("write the code you didn't write earlier about reloading the lowres map.\n");
     assert(1==2);
@@ -1471,7 +1482,7 @@ void  AnnularFieldSim::load_phislice_lookup(const char* sourcefile){
    //always zero: tLookup->SetBranchAddress("ip_target",&ifphi);
    tLookup->SetBranchAddress("iz_source",&ioz);
    tLookup->SetBranchAddress("iz_target",&ifz);
-   tLookup->SetBranchAddress("Evec",&unitf);
+   tLookup->SetBranchAddress("Evec",&unitf); //assume field has units V/(C*cm)
 
    int el=0;
    printf("%s has %lld entries\n",sourcefile,tLookup->GetEntries());
@@ -1479,7 +1490,7 @@ void  AnnularFieldSim::load_phislice_lookup(const char* sourcefile){
      el++;
      tLookup->GetEntry(i);
      //printf("loading i=%d\n",i);
-     Epartial_phislice->Set(ifr-rmin_roi,0,ifz-zmin_roi,ior,iophi,ioz,*unitf);
+     Epartial_phislice->Set(ifr-rmin_roi,0,ifz-zmin_roi,ior,iophi,ioz,(*unitf)*(V/(cm*C)));//load assuming field has units V/(C*cm), which is how we save it.
      if( !(el%percent)) {
        printf("load_phislice_lookup %d%%:  ",(int)(el/percent));
        printf("field from (ir=%d,iphi=%d,iz=%d) to (or=%d,ophi=0,oz=%d) is (%E,%E,%E)\n",
@@ -1534,7 +1545,7 @@ void  AnnularFieldSim::save_phislice_lookup(const char* destfile){
 	for ( iophi=0;iophi<nphi;iophi++){
 	  for ( ioz=0;ioz<nz;ioz++){
 	    el++;
-	    unitf=Epartial_phislice->Get(ifr-rmin_roi,0,ifz-zmin_roi,ior,iophi,ioz);
+	    unitf=Epartial_phislice->Get(ifr-rmin_roi,0,ifz-zmin_roi,ior,iophi,ioz)*(1/(V/(C*cm)));//save in units of V/(C*cm)
 	      if (1){
 		if(!(el%percent)) {printf("save_phislice_lookup %d%%:  ",(int)(el/percent));
 				   printf("field from (ir=%d,iphi=%d,iz=%d) to (or=%d,ophi=0,oz=%d) is (%E,%E,%E)\n",
@@ -1559,14 +1570,14 @@ void  AnnularFieldSim::save_phislice_lookup(const char* destfile){
 
 void AnnularFieldSim::setFlatFields(float B, float E){
   //these only cover the roi, but since we address them flat, we don't need to know that here.
-  printf("AnnularFieldSim::setFlatFields(B=%f,E=%f)\n",B,E);
+  printf("AnnularFieldSim::setFlatFields(B=%f Tesla,E=%f V/cm)\n",B,E);
   printf("lengths:  Eext=%d, Bfie=%d\n",Eexternal->Length(),Bfield->Length());
+  Enominal=E*(V/cm);
+  Bnominal=B*Tesla;
   for (int i=0;i<Eexternal->Length();i++)
-    Eexternal->GetFlat(i)->SetXYZ(0,0,E);
+    Eexternal->GetFlat(i)->SetXYZ(0,0,Enominal);
   for (int i=0;i<Bfield->Length();i++)
-    Bfield->GetFlat(i)->SetXYZ(0,0,B);
-  Enominal=E;
-  Bnominal=B;
+    Bfield->GetFlat(i)->SetXYZ(0,0,Bnominal);
   UpdateOmegaTau();
   return;
 }
@@ -1900,9 +1911,10 @@ TVector3 AnnularFieldSim::sum_phislice_field_at(int r,int phi, int z){
 }
 
 TVector3 AnnularFieldSim::swimToInAnalyticSteps(float zdest,TVector3 start,int steps=1, int *goodToStep=0){
-
-  double zdist=zdest-start.Z();
+  //assume coordinates are given in native units (cm=1 unless that changed!).
+  double zdist=(zdest-start.Z())*cm;
   double zstep=zdist/steps;
+  start=start*cm;//scale us to cm.
   
   TVector3 ret=start;
   TVector3 accumulated_distortion(0,0,0);
@@ -1921,15 +1933,15 @@ TVector3 AnnularFieldSim::swimToInAnalyticSteps(float zdest,TVector3 start,int s
 	|| GetPhiIndexAndCheckBounds(ret.Phi(),&pt)!=InBounds
 	|| (zBound==OutOfBounds)){
       printf("AnnularFieldSim::swimToInAnalyticSteps at step %d,"
-	     "asked to swim particle from (%f,%f,%f) (rphiz)=(%f,%f,%f)which is outside the ROI.\n",
-	     i,ret.X(),ret.Y(),ret.Z(),ret.Perp(),ret.Phi(),ret.Z());
+	     "asked to swim particle from (%f,%f,%f)(cm) (rphiz)=(%fcm,%frad,%fcm)which is outside the ROI.\n",
+	     i,ret.X()/cm,ret.Y()/cm,ret.Z()/cm,ret.Perp()/cm,ret.Phi(),ret.Z()/cm);
       printf(" -- %f <= r < %f \t%f <= phi < %f \t%f <= z < %f \n",
 	     rmin_roi*step.Perp()+rmin,rmax_roi*step.Perp()+rmin,
 	     phimin_roi*step.Phi(),phimax_roi*step.Phi(),
 	     zmin_roi*step.Z(),zmax_roi*step.Z());
     printf("Returning last valid position.\n");
       if (!(goodToStep==0)) *goodToStep=i-1;
-      return ret;
+      return ret*(1.0/cm);
     }
     //printf("AnnularFieldSim::swimToInAnalyticSteps at step %d, asked to swim particle from (%f,%f,%f) (rphiz)=(%f,%f,%f).\n",i,ret.X(),ret.Y(),ret.Z(),ret.Perp(),ret.Phi(),ret.Z());
     //rcc note: once I put the z distoriton back in, I need to check that ret.Z+zstep is still in bounds:
@@ -1941,14 +1953,15 @@ TVector3 AnnularFieldSim::swimToInAnalyticSteps(float zdest,TVector3 start,int s
 
   }
   
-  return ret;
+  return ret*(1.0/cm);
 }
 
 TVector3 AnnularFieldSim::swimToInSteps(float zdest,TVector3 start,int steps=1, bool interpolate=false, int *goodToStep=0){
   //short-circuit if we're out of range:
   
-  double zdist=zdest-start.Z();
+  double zdist=(zdest-start.Z())*cm;
   double zstep=zdist/steps;
+  start=start*cm;
   
   TVector3 ret=start;
   TVector3 accumulated_distortion(0,0,0);
@@ -1972,7 +1985,7 @@ TVector3 AnnularFieldSim::swimToInSteps(float zdest,TVector3 start,int steps=1, 
     printf("Returning last good position.\n");
       if (!(goodToStep==0)) *goodToStep=i-1;
       //assert (1==2);
-      return start+accumulated_drift+drift_step*(i-1);
+      return (start+accumulated_drift+drift_step*(i-1))*(1.0/cm);
     }
     last_distortion=accumulated_distortion;
     GetStepDistortion(start.Z()+zstep*(i+1),ret,true,false);
@@ -1983,45 +1996,15 @@ TVector3 AnnularFieldSim::swimToInSteps(float zdest,TVector3 start,int steps=1, 
     ret=start+accumulated_distortion+accumulated_drift;
   }
   *goodToStep=steps;
-  return ret;
-}
-
-TVector3 AnnularFieldSim::OldSwimToInSteps(float zdest,TVector3 start,int steps=1, bool interpolate=false, int *goodToStep=0){
-  //short-circuit if we're out of range:
-  
-  double zdist=zdest-start.Z();
-  double zstep=zdist/steps;
-  
-  TVector3 ret=start;
-  //printf("AnnularFieldSim::swimToInSteps at startup, asked to swim particle from (%f,%f,%f)\n",ret.Perp(),ret.Phi(),ret.Z());
-  int rt,pt,zt; //just placeholders for the bounds-checking.
-  BoundsCase zBound;
-  for (int i=0;i<steps;i++){
-    zBound=GetZindexAndCheckBounds(ret.Z(),&zt);
-    if (zBound==OnLowEdge){
-      //nudge it in z:
-      ret.SetZ(ret.Z()+ALMOST_ZERO);
-    }
-    if (GetRindexAndCheckBounds(ret.Perp(),&rt)!=InBounds
-	|| GetPhiIndexAndCheckBounds(ret.Phi(),&pt)!=InBounds
-	|| (zBound==OutOfBounds)){
-      printf("AnnularFieldSim::swimToInSteps at step %d, asked to swim particle from (%f,%f,%f) (rphiz)=(%f,%f,%f)which is outside the ROI.\n",i,ret.X(),ret.Y(),ret.Z(),ret.Perp(),ret.Phi(),ret.Z());
-    printf(" -- %f <= r < %f \t%f <= phi < %f \t%f <= z < %f \n",rmin_roi*step.Perp()+rmin,rmax_roi*step.Perp()+rmin, phimin_roi*step.Phi(),phimax_roi*step.Phi(),zmin_roi*step.Z(),zmax_roi*step.Z());
-    printf("Returning original position.\n");
-      if (!(goodToStep==0)) *goodToStep=i-1;
-      return ret;
-    }
-    ret=swimTo(start.Z()+zstep*(i+1),ret,true,false);
-  }
-  
-  return ret;
+  return ret*(1.0/cm);
 }
 
 TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate, bool useAnalytic){
-
+  //assumes coordinates are given in native units (cm=1).
+  
  //using second order langevin expansion from http://skipper.physics.sunysb.edu/~prakhar/tpc/Papers/ALICE-INT-2010-016.pdf
   //TVector3 (*field)[nr][ny][nz]=field_;
-  int rt,pt,zt; //just placeholders
+  int rt,pt,zt; //index of our starting point
   BoundsCase zBound=GetZindexAndCheckBounds(start.Z(),&zt);
   if (GetRindexAndCheckBounds(start.Perp(),&rt)!=InBounds
       || GetPhiIndexAndCheckBounds(start.Phi(),&pt)!=InBounds
@@ -2034,7 +2017,7 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate, b
   
   //set the direction of the external fields.
   //todo: get this from a field map
-  TVector3 B=Bfield->Get(0,0,0);//static field in tesla T=Vs/m^2
+  TVector3 B=Bfield->Get(rt,pt,zt);//magnetic field at starting point in native units (see header)
   
   double zdist=zdest-start.Z();
 
@@ -2066,9 +2049,12 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate, b
   //double fieldz=Enominal; // ideal field over path.
   
   double mu=vdrift/fieldz;//vdrift in [cm/s], field in [V/cm] hence mu in [cm^2/(V*s)];
-  double omegatau=1*mu*B.Z();//mu*Q_e*B, mu in [cm^2/(V*s)], B in [T] hence (thanks, google) omegatau in [0.0001] = [cm^2/m^2]
+  //unitful, hence:
+  double omegatau=mu*B.Z(); //since omtau is unitless, our units must all cancel.  That's the point of using unitful variables :).
+  //before I made this unitful I had:
+  //double omegatau=1*mu*B.Z();//mu*Q_e*B, mu in [cm^2/(V*s)], B in [T] hence (thanks, google) omegatau in [0.0001] = [cm^2/m^2]
   //originally the above was q*mu*B, but 'q' is really about flipping the direction of time.  if we do this, we negate both vdrift and q, so in the end we have no charge dependence -- we 'see' the charge by noting that we're asking to drift against the overall field.
-  omegatau=omegatau*1e-4;//*1m/100cm * 1m/100cm to get proper unitless.
+  //omegatau=omegatau*1e-4;//*1m/100cm * 1m/100cm to get proper unitless.
   //or:  omegatau=-10*(10*B.Z())*(vdrift*1e6)/fieldz; //which is the same as my calculation up to a sign.
   //printf("omegatau=%f\n",omegatau);
 
@@ -2091,7 +2077,7 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate, b
 
   
 
-  double vprime=5000/100;//cm/s per V/cm, hard-coded value for 50:50.  Eventually this needs to be part of the constructor, as do most of the repeated math terms here.
+  double vprime=(5000*cm/s)/(100*V/cm);//hard-coded value for 50:50.  Eventually this needs to be part of the constructor, as do most of the repeated math terms here.
   double vdoubleprime=0; //neglecting the v'' term for now.  Fair? It's pretty linear at our operating point, and it would require adding an additional term to the field integral.
 
   //note: as long as my step is very small, I am essentially just reading the field at a point and multiplying by the step size.
@@ -2186,16 +2172,14 @@ TVector3 AnnularFieldSim::GetStepDistortion(float zdest,TVector3 start, bool int
   //double fieldz=Enominal; // ideal field over path.
   
   double mu=vdrift/Enominal;//vdrift in [cm/s], field in [V/cm] hence mu in [cm^2/(V*s)];
-  double omegatau=1*mu*Bnominal;//mu*Q_e*B, mu in [cm^2/(V*s)], B in [T] hence (thanks, google) omegatau in [0.0001] = [cm^2/m^2]
-  //originally the above was q*mu*B, but 'q' is really about flipping the direction of time.  if we do this, we negate both vdrift and q, so in the end we have no charge dependence -- we 'see' the charge by noting that we're asking to drift against the overall field.
-  omegatau=omegatau*1e-4;//*1m/100cm * 1m/100cm to get proper unitless.
-  //or:  omegatau=-10*(10*B.Z())*(vdrift*1e6)/fieldz; //which is the same as my calculation up to a sign.
+  double omegatau=1*mu*Bnominal;
+  //or:  omegatau=-10*(10*B.Z()/Tesla)*(vdrift/(cm/us))/(fieldz/(V/cm)); //which is the same as my calculation up to a sign.
   //printf("omegatau=%f\n",omegatau);
-  double c0=1/(1+omegatau*omegatau);
-  double langevin_T1=1.0;
-  double langevin_T2=1.0;
+
+
   double T1om=langevin_T1*omegatau;
   double T2om2=langevin_T2*omegatau*langevin_T2*omegatau;
+  double c0=1/(1+T2om2);//
   double c1=T1om/(1+T1om*T1om);
   double c2=T2om2/(1+T2om2);
 
@@ -2212,7 +2196,7 @@ TVector3 AnnularFieldSim::GetStepDistortion(float zdest,TVector3 start, bool int
 
   
 
-  double vprime=5000/100;//cm/s per V/cm, hard-coded value for 50:50.  Eventually this needs to be part of the constructor, as do most of the repeated math terms here.
+  double vprime=(5000*cm/s)/(100*V/cm);//hard-coded value for 50:50.  Eventually this needs to be part of the constructor, as do most of the repeated math terms here.
   double vdoubleprime=0; //neglecting the v'' term for now.  Fair? It's pretty linear at our operating point, and it would require adding an additional term to the field integral.
 
   //note: as long as my step is very small, I am essentially just reading the field at a point and multiplying by the step size.
@@ -2291,6 +2275,8 @@ const char* AnnularFieldSim::GetGasString(){
 
 
 TVector3 AnnularFieldSim::GetFieldAt(TVector3 pos){
+  //assume pos is in native units (see header)
+
   int r,p,z;
 
   if( GetRindexAndCheckBounds(pos.Perp(),  &r)==BoundsCase::OutOfBounds) return zero_vector;
@@ -2299,6 +2285,7 @@ TVector3 AnnularFieldSim::GetFieldAt(TVector3 pos){
   return Efield->Get(r,p,z);
 }
 float AnnularFieldSim::GetChargeAt(TVector3 pos){
+  //assume pos is in native units (see header)
   int r,p,z;
 
   GetRindexAndCheckBounds(pos.Perp(),  &r);//==BoundsCase::OutOfBounds) return zero_vector;

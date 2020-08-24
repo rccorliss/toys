@@ -89,7 +89,7 @@ void CreateSpacechargeHist(const char *dirname, const char *filename, int istart
   //float vIon=16.0*um/us;
   float ampGain=2e3;
   float ampIBFfrac=0.02;
-  float ionsPerEle=ampGain*ampIBFfrac;
+  float ionsPerEle=ampGain*ampIBFfrac;//definitely not realistic.  expect 10x fewer ions.
   float mbRate=freqKhz*kHz;
   float xingRate=9.0*MHz;
   float z_rdo=105.5*cm;

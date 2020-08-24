@@ -12,22 +12,22 @@ class AnnularFieldSim{
  private:
   //units:
   const float cm=1;//centimeters -- if you change this, check that all the loading functions are properly agnostic.
-  const float m=cm*0.01;//meters.
-  const float mm=cm*10;
-  const float um=mm*1e3;
+  const float m=100*cm;//meters.
+  const float mm=cm/10;
+  const float um=mm/1e3;
 
   const float C=1;//Coulombs
-  const float nC=C*1e9;
-  const float fC=C*1e15;
+  const float nC=C/1e9;
+  const float fC=C/1e15;
 
   const float s=1;//seconds
-  const float us=s*1e6;
-  const float ns=s*1e9;
+  const float us=s/1e6;
+  const float ns=s/1e9;
 
   const float V=1;//volts 
 
   const float Tesla=V*s/m/m;//Tesla=Vs/m^2
-  const float kGauss=Tesla*10;;//kGauss
+  const float kGauss=Tesla/10;;//kGauss
   
   const float eps0=8.854e-12*(C/V)/m;//Farads(=Coulombs/Volts) per meter
   const float k_perm=1/(4*3.1416*eps0);  
@@ -216,7 +216,7 @@ class AnnularFieldSim{
   BoundsCase GetPhiIndexAndCheckBounds(float pos, int *phi);
   BoundsCase GetZindexAndCheckBounds(float pos, int *z);
 
-  void UpdateOmegaTau(){omegatau_nominal=-10*(10*Bnominal)*(vdrift*1e-6)/(-1*Enominal);return;}; //various constants to match internal representation to the familiar formula.  Adding in these factors suggests I should switch to a unitful calculation throughout...
+  void UpdateOmegaTau(){omegatau_nominal=-Bnominal*vdrift/Enominal;return;}; //various constants to match internal representation to the familiar formula.  Adding in these factors suggests I should switch to a unitful calculation throughout...
 
 
 };

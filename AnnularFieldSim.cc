@@ -2172,7 +2172,7 @@ TVector3 AnnularFieldSim::GetStepDistortion(float zdest,TVector3 start, bool int
   //double fieldz=Enominal; // ideal field over path.
   
   double mu=vdrift/Enominal;//vdrift in [cm/s], field in [V/cm] hence mu in [cm^2/(V*s)];
-  double omegatau=1*mu*Bnominal;
+  double omegatau=-1*mu*Bnominal;
   //or:  omegatau=-10*(10*B.Z()/Tesla)*(vdrift/(cm/us))/(fieldz/(V/cm)); //which is the same as my calculation up to a sign.
   //printf("omegatau=%f\n",omegatau);
 
@@ -2180,7 +2180,7 @@ TVector3 AnnularFieldSim::GetStepDistortion(float zdest,TVector3 start, bool int
   double T1om=langevin_T1*omegatau;
   double T2om2=langevin_T2*omegatau*langevin_T2*omegatau;
   double c0=1/(1+T2om2);//
-  double c1=T1om/(1+T1om*T1om);
+  double c1=T1om*T1om/(1+T1om*T1om);//not correct, trying to match Carlos
   double c2=T2om2/(1+T2om2);
 
   TVector3 EintOverEz=1/EfieldZ*fieldInt; //integral of E/E_z= integral of E / integral of E_z * delta_z
@@ -2268,7 +2268,7 @@ const char* AnnularFieldSim::GetLookupString(){
   return "broken";
 }
 const char* AnnularFieldSim::GetGasString(){
-  return Form("vdrift=%2.4fcm/s, Enom=%2.2fV/cm, Bnom=%2.2fT, omtau=%2.4f",vdrift,Enominal,Bnominal,omegatau_nominal);
+  return Form("vdrift=%2.2fcm/us, Enom=%2.2fV/cm, Bnom=%2.2fT, omtau=%2.4E",vdrift/(cm/us),Enominal/(V/cm),Bnominal/Tesla,omegatau_nominal);
 }
 
 

@@ -63,21 +63,22 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   float tpc_deltar=tpc_rmax-tpc_rmin;
   const float tpc_z=105.5;
   const float tpc_driftVolt=-400*tpc_z; //V =V_CM-V_RDO -- volts per cm times the length of the drift volume.
-  const float tpc_magField=0.5;//T -- The old value used in pedro's studies.
-  const float tpc_driftVel=4.0*1e6;//cm per s  -- used in pedro's studies
-
-  
-
-  //  const float tpc_driftVel=8.0*1e6;//cm per s  -- 2019 nominal value
-  //const float tpc_magField=1.4;//T -- 2019 nominal value
-  const double epsilonnaught=8.854e-12;// units of C/(V*m)
-  const double eps_in_cm=epsilonnaught/100; //units of C/(V*cm)
+  //const float tpc_magField=0.5;//T -- The old value used in pedro's studies.
+  //const float tpc_driftVel=4.0*1e6;//cm per s  -- used in pedro's studies
+  const float tpc_driftVel=8.0*1e6;//cm per s  -- 2019 nominal value
+  const float tpc_magField=1.4;//T -- 2019 nominal value
+  //const double epsilonnaught=8.854e-12;// units of C/(V*m)
+  //const double eps_in_cm=epsilonnaught/100; //units of C/(V*cm)
   //old map const double tpc_chargescale=-0.5*1.6e-19*10*1000;//should be -19;//our hist. has charge in units of ions/cm^3, so we need to multiply by the electric charge of an electron to get out C/cm^3.  adding in a factor of 0.5 for the double-counting in the original 10khz sample, a factor of 10 to get to 100khz, and a factor 0f 1k that I don't understand
   //old map const char scmapfilename[]="G4Hits_sHijing_0-12fm_10kHz.rcc_sc.hist.root";
-  const double tpc_chargescale=-1.6e-19*1000;//should be -19;//our hist. has charge in units of ions/cm^3, so we need to multiply by the electric charge of an electron to get out C/cm^3.  adding in a factor of 1k that I don't understand
+  //const double tpc_chargescale=-1.6e-19*1000;//should be -19;//our hist. has charge in units of ions/cm^3, so we need to multiply by the electric charge of an electron to get out C/cm^3.  adding in a factor of 1k that I don't understand
+
+  //Each unit of '1 ion' is tpc_chargescale coulombs.
+  const double tpc_chargescale=-1.6e-19;//our hist. has charge in units of ions/cm^3, so we need to multiply by the electric charge of an electron to get out C/cm^3.  
 
   
-  const char scmapfilebase[]="HeuristicSc";//"Smooth.50kHz"; //expects suffix '.root' after this string.
+  //const char scmapfilebase[]="HeuristicSc_test";//"Smooth.50kHz"; //expects suffix '.root' after this string.
+  const char scmapfilebase[]="Smooth.50kHz"; //expects suffix '.root' after this string.
   const char scmaphistname[]="sphenix_minbias_average";
 
 
@@ -176,7 +177,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   tpc->setFlatFields(tpc_magField,tpc_driftVolt/tpc_z);
   char *field_string=Form("flat_B%2.1f_E%2.1f",tpc_magField,tpc_driftVolt/tpc_z);
 
-  if (1){
+  if (0){
     tpc->loadBfield("sPHENIX.2d.root","fieldmap");
     tpc->loadEfield("externalEfield.ttree.root","fTree");
     sprintf(field_string,"real_B%2.1f_E%2.1f",tpc_magField,tpc_driftVolt/tpc_z);

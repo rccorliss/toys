@@ -1561,6 +1561,7 @@ void AnnularFieldSim::setFlatFields(float B, float E){
   for (int i=0;i<Bfield->Length();i++)
     Bfield->GetFlat(i)->SetXYZ(0,0,B);
   Enominal=E;
+  Bnominal=B;
   return;
 }
 
@@ -2064,11 +2065,11 @@ TVector3 AnnularFieldSim::swimTo(float zdest,TVector3 start, bool interpolate, b
   omegatau=omegatau*1e-4;//*1m/100cm * 1m/100cm to get proper unitless.
   //or:  omegatau=-10*(10*B.Z())*(vdrift*1e6)/fieldz; //which is the same as my calculation up to a sign.
   //printf("omegatau=%f\n",omegatau);
-  double c0=1/(1+omegatau*omegatau);
   double langevin_T1=1.0;
   double langevin_T2=1.0;
   double T1om=langevin_T1*omegatau;
   double T2om2=langevin_T2*omegatau*langevin_T2*omegatau;
+  double c0=1/(1+T2om2);//
   double c1=T1om/(1+T1om*T1om);
   double c2=T2om2/(1+T2om2);
 

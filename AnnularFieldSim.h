@@ -120,6 +120,7 @@ class AnnularFieldSim{
 
   //getters for internal states:
   const char* GetLookupString();
+  //const char* GetFieldString();
   float GetNominalB(){return Bnominal;};
   float GetNominalE(){return Enominal;};
   float GetChargeAt(TVector3 pos);

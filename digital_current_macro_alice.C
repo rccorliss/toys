@@ -17,11 +17,11 @@ R__LOAD_LIBRARY(.libs/libfieldsim)
 void TestChargeSign(AnnularFieldSim *t);
 
 //plot the fields at a certain point.
-void PlotFieldSlices(AnnularFieldSim *t, TVector3 pos);
+void PlotFieldSlices(const char* filebase, AnnularFieldSim *t, TVector3 pos);
 
 
 //place test electrons along a fixed grid and drift them one grid-length in z to calculate local distortions
-void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int nphi,float pi,float pf,int nr,float ri,float rf,int nz,float zi,float zf);
+void GenerateAndSaveDistortionMap(const char* filebase,AnnularFieldSim *t,int nphi,float pi,float pf,int nr,float ri,float rf,int nz,float zi,float zf);
 //reads the charge object from the tpc and saves it to file.  Useful to make sure things are being filled correctly.
 void SaveChargeAndProjections(const char* filename,AnnularFieldSim *t,int nphi,float pi,float pf,int nr,float ri,float rf,int nz,float zi,float zf);
 
@@ -32,7 +32,6 @@ void SaveField(const char* filename,AnnularFieldSim *t,int pi,int pf,int ri, int
 
 void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false, const char* fname="pre-hybrid_fixed_reduction_0.ttree.root"){
 
-  printf("hello\n");
   if (loadOutputFromFile) printf("loading out1 vectors from %s\n",fname);
 
   TTime now, start;
@@ -64,14 +63,21 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   float tpc_deltar=tpc_rmax-tpc_rmin;
   const float tpc_z=105.5;
   const float tpc_driftVolt=-400*tpc_z; //V =V_CM-V_RDO -- volts per cm times the length of the drift volume.
-  const float tpc_driftVel=8.0*1e6;//cm per s
-  const float tpc_magField=1.4;//T
+  const float tpc_magField=0.5;//T -- The old value used in pedro's studies.
+  const float tpc_driftVel=4.0*1e6;//cm per s  -- used in pedro's studies
+
+  
+
+  //  const float tpc_driftVel=8.0*1e6;//cm per s  -- 2019 nominal value
+  //const float tpc_magField=1.4;//T -- 2019 nominal value
   const double epsilonnaught=8.854e-12;// units of C/(V*m)
   const double eps_in_cm=epsilonnaught/100; //units of C/(V*cm)
   //old map const double tpc_chargescale=-0.5*1.6e-19*10*1000;//should be -19;//our hist. has charge in units of ions/cm^3, so we need to multiply by the electric charge of an electron to get out C/cm^3.  adding in a factor of 0.5 for the double-counting in the original 10khz sample, a factor of 10 to get to 100khz, and a factor 0f 1k that I don't understand
   //old map const char scmapfilename[]="G4Hits_sHijing_0-12fm_10kHz.rcc_sc.hist.root";
   const double tpc_chargescale=-1.6e-19*1000;//should be -19;//our hist. has charge in units of ions/cm^3, so we need to multiply by the electric charge of an electron to get out C/cm^3.  adding in a factor of 1k that I don't understand
-  const char scmapfilename[]="Smooth.50kHz.root";
+
+  
+  const char scmapfilebase[]="Smooth.50kHz"; //expects suffix '.root' after this string.
   const char scmaphistname[]="sphenix_minbias_average";
 
 
@@ -82,15 +88,15 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   
   //define a region of interest, in units of the intrinsic scale of the tpc histogram:
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
-  int nr=15;//10;//24;//159;//159 nominal
+  int nr=16;//10;//24;//159;//159 nominal
   int nr_roi_min=0;
-  int nr_roi=15;//10;
+  int nr_roi=16;//10;
   int nr_roi_max=nr_roi_min+nr_roi;
-  int nphi=30;//38;//360;//360 nominal
+  int nphi=36;//38;//360;//360 nominal
   int nphi_roi_min=0;
-  int nphi_roi=30;//38;
+  int nphi_roi=36;//38;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
-  int nz=30;//62;//62 nominal
+  int nz=40;//62;//62 nominal
   int nz_roi_min=0;
   int nz_roi=nz;
   int nz_roi_max=nz_roi_min+nz_roi;
@@ -141,7 +147,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 
 
    //step 3: load the spacecharge density map from the specified histogram (in the tpc parameters, above).
-  TFile *f=TFile::Open(scmapfilename);
+  TFile *f=TFile::Open(Form("%s.root",scmapfilebase));
   TH3F* tpc_average=(TH3F*)f->Get(scmaphistname);
   now=gSystem->Now();
   printf("loaded hist.  the dtime is %lu\n",(unsigned long)(now-start));
@@ -166,15 +172,21 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   printf("created sim obj.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   tpc->setFlatFields(tpc_magField,tpc_driftVolt/tpc_z);
-  //tpc->loadBfield("sPHENIX.2d.root","fieldmap");
-  //tpc->loadEfield("externalEfield.ttree.root","fTree");
-  now=gSystem->Now();
+  char *field_string=Form("flat_B%2.1f_E%2.1f",tpc_magField,tpc_driftVolt/tpc_z);
+
+  if (1){
+    tpc->loadBfield("sPHENIX.2d.root","fieldmap");
+    tpc->loadEfield("externalEfield.ttree.root","fTree");
+    sprintf(field_string,"real_B%2.1f_E%2.1f",tpc_magField,tpc_driftVolt/tpc_z);
+  }
+    now=gSystem->Now();
   printf("set fields.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
 
 
   //load the greens functions:
-  char* lookupFilename=Form("ross_phislice_lookup_r%dxp%dxz%d.root",nr,nphi,nz);
+  char* lookup_string=Form("ross_phislice_lookup_r%dxp%dxz%d",nr,nphi,nz);
+  char* lookupFilename=Form("%s.root",lookup_string);
   TFile *fileptr=TFile::Open(lookupFilename,"READ");
   bool lookupFileExists=(fileptr);
   
@@ -197,18 +209,28 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
  
   
   //load the spacecharge:
+
+  char sc_string[100];
+  sprintf(sc_string,"zero_spacecharge");
+  
   if (0){
-    TestChargeSign(tpc); //adds a test charge, and looks at how electrons deflect and draws some plots.
+    TestChargeSign(tpc); //adds a test charge, looks at how electrons deflect, and draws some plots.
     return;
   }
-  
-  tpc->load_spacecharge(tpc_average,0,tpc_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
-  //computed the correction to get the same spacecharge as in the tpc histogram:
-  //todo: make the analytic scale proportional to the tpc_chargescale.
-  double tpc_analytic_scale=1.237320E-06/9.526278E-11;
 
-  //to use an analytic spacecharge model instead of the one loaded from the file earlier, uncomment the line below:
-  //tpc->load_analytic_spacecharge(0);//tpc_analytic_scale);
+  if (0){ //load spacecharge from file
+    sprintf(sc_string,scmapfilebase);
+    tpc->load_spacecharge(tpc_average,0,tpc_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
+  }
+  if (0){ //load spacecharge from analytic formula
+    sprintf(sc_string,"analytic_spacecharge");
+    //computed the correction to get the same spacecharge as in the tpc histogram:
+    //todo: make the analytic scale proportional to the tpc_chargescale.
+    double tpc_analytic_scale=1.237320E-06/9.526278E-11;
+    tpc->load_analytic_spacecharge(0);//tpc_analytic_scale);
+  }
+  
+
   now=gSystem->Now();
 
   
@@ -220,9 +242,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   start=now;
   //printf("consistency check:  integrate field along IR and OR, confirm V:\n");
 
-  TVector3 pos(0.5*(rmax_roi+rmin_roi),0,0.5*(zmax_roi+zmin_roi));
-  pos.SetPhi(0.5*(phimax_roi+phimin_roi));
-  PlotFieldSlices(tpc, pos);
+
 
   
 
@@ -235,12 +255,28 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   //SaveField("last_macro.field.hist.root",tpc,nr_roi_min,nr_roi_max,nphi_roi_min,nphi_roi_max,nz_roi_min,nz_roi_max);
 
 
-    printf("fieldsim ptr=%p\n",(void*)tpc);
+  printf("fieldsim ptr=%p\n",(void*)tpc);
 
   
   //generate the distortions by throwing particles at each z step and letting them propagate to the next:
-  //eventually this should be folded into AnnularFieldSim.  
-  GenerateAndSaveDistortionMap("last_macro.distortion_map.hist.root",tpc,
+  //eventually this should be folded into AnnularFieldSim.
+
+
+  //filename should be:  spacecharge+fieldtype+greenlookuptype-and-dimensions
+  char* distortionFilebase=Form("%s.%s.%s",sc_string,field_string,lookup_string);
+
+  
+  //char* distortionFilename=Form("zero_sc.realfield.ross_phislice_lookup_r%dxp%dxz%d.distortion_map.hist.root",nr,nphi,nz);
+
+
+  //save some diagnostic plots about the field:
+  TVector3 pos(0.5*(rmax_roi+rmin_roi),0,0.5*(zmax_roi+zmin_roi));
+  pos.SetPhi(0.5*(phimax_roi+phimin_roi));
+  printf("distortionFilebase before plot=%s\n",distortionFilebase);
+  PlotFieldSlices(distortionFilebase,tpc, pos);
+  printf("distortionFilebase before generate=%s\n",distortionFilebase);
+  //generate distortions based on those fields:
+  GenerateAndSaveDistortionMap(distortionFilebase,tpc,
 			       nphi_roi,phimin_roi,phimax_roi,
 			       nr_roi,rmin_roi,rmax_roi,
 			       nz_roi,zmin_roi,zmax_roi);
@@ -476,31 +512,34 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 }
 
 //rcchere
-void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int np,float pi,float pf,int nr,float ri,float rf,int nz,float zi,float zf){
+void GenerateAndSaveDistortionMap(const char* filebase,AnnularFieldSim *t,int np,float pi,float pf,int nr,float ri,float rf,int nz,float zi,float zf){
   //scan over the tpc physical volume in nphi steps from pi to pf, and similar for the other two dimensions.
   //set a particle at those coordinates and drift it to the next coordinate in z, then save the delta in histograms.
 
   //by doing this per-bin, we can properly apply fractional distortions to particles that are not along a bin boundary, though this may be a minor concern.  If we integrated, we would lose this power.
+
+  
   printf("generating distortion map...\n");
-  printf("file=%s\n",filename);
+  printf("file=%s\n",filebase);
   printf("Phi:  %d steps from %f to %f\n",np,pi,pf);
   printf("R:  %d steps from %f to %f\n",nr,ri,rf);
   printf("Z:  %d steps from %f to %f\n",nz,zi,zf);
   printf("fieldsim ptr=%p\n",(void*)t);
-  TFile *outf=TFile::Open(filename,"RECREATE");
+  TFile *outf=TFile::Open(Form("%s.distortion_map.hist.root",filebase),"RECREATE");
   outf->cd();
 
   //for interpolation, Henry needs one extra buffer bin on each side.
   TVector3 step((rf-ri)/(1.0*nr),0,(zf-zi)/(1.0*nz));
   step.SetPhi((pf-pi)/(1.0*np));
-  //so we define the histogram bounds (the 'h' suffix) as an additional step in each direction.
+  //so we define the histogram bounds (the 'h' suffix) to be the full range
+  //plus an additional step in each direction so interpolation can work at the edges
   int nph=np+2;
   int nrh=nr+2;
   int nzh=nz+2;
-  float pih=pi-step.Phi();
-  float pfh=pf+step.Phi();
   float rih=ri-step.Perp();
   float rfh=rf+step.Perp();
+  float pih=pi-step.Phi();
+  float pfh=pf+step.Phi();
   float zih=zi-step.Z();
   float zfh=zf+step.Z();
   
@@ -516,7 +555,7 @@ void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int np
     pos.SetPhi((nph/2+0.5)*step.Phi()+pih);
   int xi[3]={nrh/2,nph/2,nzh/2};
   const char axname[]="rpzrpz";
-  int axn[]={nrh,nrh,nrh,nrh,nrh,nrh};
+  int axn[]={nrh,nph,nzh,nrh,nph,nzh};
   float axval[]={(float)pos.Perp(),(float)pos.Phi(),(float)pos.Z(),(float)pos.Perp(),(float)pos.Phi(),(float)pos.Z()};
   float axbot[]={rih,pih,zih,rih,pih,zih};
   float axtop[]={rfh,pfh,zfh,rfh,pfh,zfh};
@@ -536,9 +575,9 @@ void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int np
 
 
   
-  float deltar=(rf-ri)/nr;
-  float deltap=(pf-pi)/np;
-  float deltaz=(zf-zi)/nz;
+  float deltar=step.Perp();//(rf-ri)/nr;
+  float deltap=step.Phi();//(pf-pi)/np;
+  float deltaz=step.Z();//(zf-zi)/nz;
   TVector3 inpart,outpart;
   TVector3 distort;
   int validToStep;
@@ -567,7 +606,30 @@ void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int np
 
   int el=0;
 
-  
+  /*
+  for (iz=-1;iz<nz+1;iz++){
+    partZ=(iz)*deltaz+zi;
+    if (iz<0){
+      inpart.SetZ(partZ+deltaz);
+    } else if (iz==nz){
+      inpart.SetZ(partZ-deltaz);
+    } else {
+      inpart.SetZ(partZ);
+    }
+    partZ+=0.5*deltaz;
+
+    printf("iz=%d, zcoord=%2.2f, bin=%d\n",iz,partZ,  hIntDist[0][0]->GetYaxis()->FindBin(partZ));
+  }
+  assert(1==2);
+  return;
+  */
+  //we want to loop over the entire region to be mapped, but we also need to include
+  //one additional bin at each edge, to allow the mc drift code to interpolate properly.
+  //hence we count from -1 to n+1, and manually adjust the position in those edge cases
+  //to avoid sampling nonphysical regions in r and z.  the phi case is free to wrap as
+  // normal.
+
+  //note that we adjust the particle position (inpart) and not the plotted position (partR etc)
   inpart.SetXYZ(1,0,0);
   for (ir=-1;ir<nr+1;ir++){
     partR=(ir+0.5)*deltar+ri;
@@ -593,41 +655,54 @@ void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int np
 	}
 	partZ+=0.5*deltaz;
 
+	//printf("iz=%d, zcoord=%2.2f, bin=%d\n",iz,partZ,  hIntDist[0][0]->GetYaxis()->FindBin(partZ));
+
 	//differential distortion:
+	//be careful with the math of a distortion.  The R distortion is NOT the perp() component of outpart-inpart -- that's the transverse magnitude of the distortion!
 	outpart=t->swimToInSteps(inpart.Z()+deltaz,inpart,nSteps,true, &validToStep);
 	distort=outpart-inpart;
-	distortR=distort.Perp();
 	distort.RotateZ(-inpart.Phi());//rotate so that that is on the x axis
 	distortP=distort.Y();//the phi component is now the y component.
-	distortR=distort.X();//added aug 18
+	distortR=distort.X();//and the r component is the z component
 	distortZ=0;
-	hDistortionR->Fill(partP,partR,partZ+deltaz*0.5,distortR);
-	hDistortionP->Fill(partP,partR,partZ+deltaz*0.5,distortP);
-	hDistortionZ->Fill(partP,partR,partZ+deltaz*0.5,0);
+	// also works, but not as good:
+	//distortR=outpart.Perp()-inpart.Perp();
+	//distortP=outpart.Perp()*(outpart.Phi()-inpart.Phi()); //this will have a seam.
+	//distortZ=0;
+	
+	hDistortionR->Fill(partP,partR,partZ,distortR);
+	hDistortionP->Fill(partP,partR,partZ,distortP);
+	hDistortionZ->Fill(partP,partR,partZ,distortZ);
 	dTree->Fill();
 
 	//integral distortion:
 	outpart=t->swimToInSteps(zf,inpart,nSteps,true, &validToStep);
 	distort=outpart-inpart;
-	distortR=distort.Perp();
 	distort.RotateZ(-inpart.Phi());//rotate so that that is on the x axis
 	distortP=distort.Y();//the phi component is now the y component.
-	distortR=distort.X();//added aug 18
+	distortR=distort.X();//and the r component is the z component
 	distortZ=0;
+
 	//printf("part=(rpz)(%f,%f,%f),distortP=%f\n",partP,partR,partZ,distortP);
 	hIntDistortionR->Fill(partP,partR,partZ,distortR);
 	hIntDistortionP->Fill(partP,partR,partZ,distortP);
-	hIntDistortionZ->Fill(partP,partR,partZ,0);
+	hIntDistortionZ->Fill(partP,partR,partZ,distortZ);
 
-	if(ir==xi[0]){
+	//now we fill particular slices for visualizations:
+	if(ir==xi[0]){//r slice
+	  //printf("ir=%d, r=%f (pz)=(%d,%d), distortR=%2.2f, distortP=%2.2f\n",ir,partR,ip,iz,distortR,distortP);
 	    hIntDist[0][0]->Fill(partP,partZ,distortR);
 	    hIntDist[0][1]->Fill(partP,partZ,distortP);
 	}
-	if(ip==xi[1]){
+	if(ip==xi[1]){//phi slice
+	  //printf("ip=%d, p=%f (rz)=(%d,%d), distortR=%2.2f, distortP=%2.2f\n",ip,partP,ir,iz,distortR,distortP);
+
 	    hIntDist[1][0]->Fill(partZ,partR,distortR);
 	    hIntDist[1][1]->Fill(partZ,partR,distortP);
 	}
-	if(iz==xi[2]){
+	if(iz==xi[2]){//z slice
+	  //printf("iz=%d, z=%f (rp)=(%d,%d), distortR=%2.2f, distortP=%2.2f\n",iz,partZ,ir,ip,distortR,distortP);
+		  
 	    hIntDist[2][0]->Fill(partR,partP,distortR);
 	    hIntDist[2][1]->Fill(partR,partP,distortP);
 	}
@@ -711,7 +786,7 @@ void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int np
 	  
   }
   */
-  c->SaveAs("Distortion.Summary.pdf");
+  c->SaveAs(TString::Format("%s.distortion_summary.pdf",filebase));
   hDistortionR->Write();
   hDistortionP->Write();
   hDistortionZ->Write();
@@ -720,7 +795,7 @@ void GenerateAndSaveDistortionMap(const char* filename,AnnularFieldSim *t,int np
   hIntDistortionZ->Write();
   dTree->Write();
   //outf->Close();
-  printf("closed outfile, done saving distortion.\n");
+  printf("wrote map and summary to %s.\n",filebase);
   return;
 }
 
@@ -841,7 +916,7 @@ void TestChargeSign(AnnularFieldSim *t){
   t->add_testcharge(cpos.Perp(),cpos.Phi(),cpos.Z(),charge);
   t->populate_fieldmap();
 
-  PlotFieldSlices(t,cpos);
+  PlotFieldSlices("testcharge",t,cpos);
 
   int nr=47;
   float deltar=span.Perp()/nr;
@@ -983,8 +1058,12 @@ void TestChargeSign(AnnularFieldSim *t){
 }
 
 
-void PlotFieldSlices(AnnularFieldSim *t, TVector3 pos){
+void PlotFieldSlices(const char *filebase, AnnularFieldSim *t, TVector3 pos){
 
+  
+  printf("plotting field slices...\n");
+  printf("file=%s\n",filebase);
+  
   TVector3 inner=t->GetInnerEdge();
   TVector3 outer=t->GetOuterEdge();
   TVector3 step=t->GetFieldStep();
@@ -1099,5 +1178,9 @@ void PlotFieldSlices(AnnularFieldSim *t, TVector3 pos){
 	gPad->Modified();
       }
   }
+  c->SaveAs(TString::Format("%s.field_slices.pdf",filebase));
+  printf("after plotting field slices...\n");
+  printf("file=%s\n",filebase);
+  
 return;
 }

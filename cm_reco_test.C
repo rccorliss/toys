@@ -50,8 +50,41 @@ void cm_reco_test(){
   for (int i=0;i<nPart;i++){
     distSum+=(-distort[i]+distort[i+nCells]);//remove the oldest distortion from the sum and add the new one
     xf[i+1]=distSum+xSmear->GetRandom();
-  }
+}
 
+  float xi,yi,zi;
+  float xf,yf,zf;
+
+  /* for Sara:
+//making a tree using the get-distortions stuff written above
+  float partR,partP,partZ;
+  float xiSara,xfSara;
+  TTree *sTree=new TTree("saraTree","made-up blah.");
+  sTree->Branch("xi",&xiSara);
+  sTree->Branch("xf",&xfSara);
+
+  for (int i=0;i<inTree->GetEntries();i++){
+xiSara=math to get xi;
+xfSara=math to get xf;
+	sTree->Fill();
+}
+
+
+  //filename comes from henry.
+  char *treename="whateverHenryCallsTheTree";
+  TFile *input=TFile::Open(fname);
+  TTree *inTree=(TTree*)input->Get(treename);
+  inTree->SetBranchAddress("xbefore",&xi);
+  inTree->SetBranchAddress("xafter",&xf);
+  //repeat for all other variable names
+  for (int i=0;i<inTree->GetEntries();i++){
+    inTree->GetEntry(i);
+    printf("i=%d xi=%f\n",i, xi, xf);
+    //process this laser flash, store it the way it was being stored before?
+  }
+    input->Close();
+  */
+  
   //rcc note:  rethink the ncells size.  I tried to catch all my errors, but it was late.
   
   //now we do the math.  We know there are nCells segments, so:

@@ -44,6 +44,8 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
   debug_printActionEveryN=-1;
   debug_printCounter=0;
   debug_distortionScale.SetXYZ(0,0,0);
+  debug_npercent=5;
+
   //internal states used for the debug flag
   //goes with: if(debugFlag()) printf("%d: blah\n",__LINE__);
   
@@ -1083,7 +1085,7 @@ void AnnularFieldSim::populate_fieldmap(){
 
   printf("populating fieldmap for (%dx%dx%d) grid with (%dx%dx%d) source \n",nr_roi,nphi_roi,nz_roi,nr,nphi,nz);
   unsigned long long totalelements=nr_roi*nphi_roi*nz_roi;
-  unsigned long long percent=totalelements/100;
+  unsigned long long percent=totalelements/100*debug_npercent;
   printf("total elements = %llu\n",totalelements*nr*nphi*nz);
 
 
@@ -1095,7 +1097,7 @@ void AnnularFieldSim::populate_fieldmap(){
     for (int iphi=phimin_roi;iphi<phimax_roi;iphi++){
       for (int iz=zmin_roi;iz<zmax_roi;iz++){
 	localF=sum_field_at(ir,iphi,iz); //asks in global coordinates
-	if(!(el%percent)) {printf("populate_fieldmap %d%%:  ",(int)(el/percent));
+	if(!(el%percent)) {printf("populate_fieldmap %d%%:  ",(int)(debug_npercent*el/percent));
 	  printf("sum_field_at (ir=%d,iphi=%d,iz=%d) gives (%E,%E,%E)\n",
 		 ir,iphi,iz,localF.X(),localF.Y(),localF.Z());
 	}
@@ -1103,7 +1105,7 @@ void AnnularFieldSim::populate_fieldmap(){
 
 	Efield->Set(ir-rmin_roi,iphi-phimin_roi,iz-zmin_roi,localF);
 	//if (localF.Mag()>1e-9)
-	if(debugFlag()) printf("%d: AnnularFieldSim::populate_fieldmap fieldmap@ (%d,%d,%d) mag=%f\n",__LINE__,ir,iphi,iz,localF.Mag());
+	//if(debugFlag()) printf("%d: AnnularFieldSim::populate_fieldmap fieldmap@ (%d,%d,%d) mag=%f\n",__LINE__,ir,iphi,iz,localF.Mag());
       }
     }
   }
@@ -1144,7 +1146,7 @@ void  AnnularFieldSim::populate_full3d_lookup(){
   printf("populating full lookup table for (%dx%dx%d)x(%dx%dx%d) grid\n",
 	 (rmax_roi-rmin_roi),(phimax_roi-phimin_roi),(zmax_roi-zmin_roi),nr,nphi,nz);
   unsigned long long totalelements=(rmax_roi-rmin_roi)*(phimax_roi-phimin_roi)*(zmax_roi-zmin_roi)*nr*nphi*nz;
-  unsigned long long percent=totalelements/100;
+  unsigned long long percent=totalelements/100*debug_npercent;
   printf("total elements = %llu\n",totalelements);
   TVector3 at(1,0,0);
   TVector3 from(1,0,0);
@@ -1159,7 +1161,7 @@ void  AnnularFieldSim::populate_full3d_lookup(){
 	  for (int iophi=0;iophi<nphi;iophi++){
 	    for (int ioz=0;ioz<nz;ioz++){
 	      el++;
-	      if(!(el%percent)) printf("populate_full3d_lookup %d%%\n",(int)(el/percent));
+	      if(!(el%percent)) printf("populate_full3d_lookup %d%%\n",(int)(debug_npercent*el/percent));
 	      from=GetCellCenter(ior, iophi, ioz);
 
 	      //*f[ifx][ify][ifz][iox][ioy][ioz]=cacl_unit_field(at,from);
@@ -1396,7 +1398,7 @@ void  AnnularFieldSim::populate_phislice_lookup(){
   //  TVector3 (*f)[fx][fy][fz][ox][oy][oz]=field_;
   printf("populating phislice  lookup for (%dx%dx%d)x(%dx%dx%d) grid\n",nr_roi,1,nz_roi,nr,nphi,nz);
   unsigned long long totalelements=nr*nphi*nz*nr_roi*1*nz_roi;
-  unsigned long long percent=totalelements/100;
+  unsigned long long percent=totalelements/100*debug_npercent;
   printf("total elements = %llu\n",totalelements);
   TVector3 at(1,0,0);
   TVector3 from(1,0,0);
@@ -1414,7 +1416,7 @@ void  AnnularFieldSim::populate_phislice_lookup(){
 	    //*f[ifx][ify][ifz][iox][ioy][ioz]=cacl_unit_field(at,from);
 	    //printf("calc_unit_field...\n");
 	    if (ifr==ior && 0==iophi && ifz==ioz){
-		if(!(el%percent)) {printf("populate_phislice_lookup %d%%:  ",(int)(el/percent));
+		if(!(el%percent)) {printf("populate_phislice_lookup %d%%:  ",(int)(debug_npercent*el/percent));
 		  printf("self-to-self is zero (ir=%d,iphi=%d,iz=%d) to (or=%d,ophi=0,oz=%d) gives (%E,%E,%E)\n",
 		  	 ior,iophi,ioz,ifr,ifz,zero.X(),zero.Y(),zero.Z());
 		}
@@ -1422,7 +1424,7 @@ void  AnnularFieldSim::populate_phislice_lookup(){
 	    } else{
 	      TVector3 unitf=calc_unit_field(at,from);
 	      if (1){
-		if(!(el%percent)) {printf("populate_phislice_lookup %d%%:  ",(int)(el/percent));
+		if(!(el%percent)) {printf("populate_phislice_lookup %d%%:  ",(int)(debug_npercent*el/percent));
 		  printf("calc_unit_field (ir=%d,iphi=%d,iz=%d) to (or=%d,ophi=0,oz=%d) gives (%E,%E,%E)\n",
 		  	 ior,iophi,ioz,ifr,ifz,unitf.X(),unitf.Y(),unitf.Z());
 		}
@@ -1442,7 +1444,7 @@ void  AnnularFieldSim::populate_phislice_lookup(){
 void  AnnularFieldSim::load_phislice_lookup(const char* sourcefile){
   printf("loading phislice  lookup for (%dx%dx%d)x(%dx%dx%d) grid from %s\n",nr_roi,1,nz_roi,nr,nphi,nz,sourcefile);
   unsigned long long totalelements=nr*nphi*nz*nr_roi*1*nz_roi;
-  unsigned long long percent=totalelements/100;
+  unsigned long long percent=totalelements/100*debug_npercent;
   printf("total elements = %llu\n",totalelements);
 
   TFile *input=TFile::Open(sourcefile,"READ");
@@ -1510,7 +1512,7 @@ void  AnnularFieldSim::load_phislice_lookup(const char* sourcefile){
      //printf("loading i=%d\n",i);
      Epartial_phislice->Set(ifr-rmin_roi,0,ifz-zmin_roi,ior,iophi,ioz,(*unitf)*(V/(cm*C)));//load assuming field has units V/(C*cm), which is how we save it.
      if( !(el%percent)) {
-       printf("load_phislice_lookup %d%%:  ",(int)(el/percent));
+       printf("load_phislice_lookup %d%%:  ",(int)(debug_npercent*el/percent));
        printf("field from (ir=%d,iphi=%d,iz=%d) to (or=%d,ophi=0,oz=%d) is (%E,%E,%E)\n",
 	      ior,iophi,ioz,ifr,ifz,unitf->X(),unitf->Y(),unitf->Z());
      }
@@ -1526,7 +1528,7 @@ void  AnnularFieldSim::load_phislice_lookup(const char* sourcefile){
 void  AnnularFieldSim::save_phislice_lookup(const char* destfile){
   printf("saving phislice  lookup for (%dx%dx%d)x(%dx%dx%d) grid to %s\n",nr_roi,1,nz_roi,nr,nphi,nz,destfile);
   unsigned long long totalelements=nr*nphi*nz*nr_roi*1*nz_roi;
-  unsigned long long percent=totalelements/100;
+  unsigned long long percent=totalelements/100*debug_npercent;
   printf("total elements = %llu\n",totalelements);
 
   TFile *output=TFile::Open(destfile,"RECREATE");
@@ -1565,7 +1567,7 @@ void  AnnularFieldSim::save_phislice_lookup(const char* destfile){
 	    el++;
 	    unitf=Epartial_phislice->Get(ifr-rmin_roi,0,ifz-zmin_roi,ior,iophi,ioz)*(1/(V/(C*cm)));//save in units of V/(C*cm)
 	      if (1){
-		if(!(el%percent)) {printf("save_phislice_lookup %d%%:  ",(int)(el/percent));
+		if(!(el%percent)) {printf("save_phislice_lookup %d%%:  ",(int)(debug_npercent*el/percent));
 				   printf("field from (ir=%d,iphi=%d,iz=%d) to (or=%d,ophi=0,oz=%d) is (%E,%E,%E)\n",
 					  ior,iophi,ioz,ifr,ifz,unitf.X(),unitf.Y(),unitf.Z());
 		}
@@ -2088,6 +2090,115 @@ TVector3 AnnularFieldSim::GetTotalDistortion(float zdest,TVector3 start,int step
   return accumulated_distortion;
 }
 
+void AnnularFieldSim::PlotFieldSlices(const char *filebase,TVector3 pos){
+
+  
+  printf("plotting field slices...\n");
+  printf("file=%s\n",filebase);
+  TString plotfilename=TString::Format("%s.field_slices.pdf",filebase);
+  TVector3 inner=GetInnerEdge();
+  TVector3 outer=GetOuterEdge();
+  TVector3 step=GetFieldStep();
+  
+
+  TCanvas *c;
+
+  TH2F *hEfield[3][3];
+  TH2F *hCharge[3];
+  TH1F *hEfieldComp[3][3];
+  char axis[]="rpzrpz";
+  float axisval[]={(float)pos.Perp(),(float)pos.Phi(),(float)pos.Z(),(float)pos.Perp(),(float)pos.Phi(),(float)pos.Z()};
+  int axn[]={nr_roi,nphi_roi,nz_roi,nr_roi,nphi_roi,nz_roi};
+  float axtop[]={(float)outer.Perp(),TMath::TwoPi(),(float)outer.Z(),(float)outer.Perp(),TMath::TwoPi(),(float)outer.Z()};
+  float axbot[]={(float)inner.Perp(),0,(float)inner.Z(),(float)inner.Perp(),0,(float)inner.Z()};
+  float axstep[6];
+  for (int i=0;i<6;i++){
+    axstep[i]=(axtop[i]-axbot[i])/(1.0*axn[i]);
+  }
+  TVector3 field;
+  TVector3 lpos;
+
+
+  //it's a bit meta, but this loop over axes is a compact way to generate all the histogram titles.
+  for (int ax=0;ax<3;ax++){
+    //loop over which axis slice to take
+    hCharge[ax]=new TH2F(Form("hCharge%c",axis[ax]),
+			 Form("Spacecharge Distribution in the %c%c plane at %c=%2.3f;%c;%c",
+			      axis[ax+1],axis[ax+2],axis[ax],axisval[ax],axis[ax+1],axis[ax+2]),
+			 axn[ax+1],axbot[ax+1],axtop[ax+1],
+			 axn[ax+2],axbot[ax+2],axtop[ax+2]);
+    for (int i=0;i<3;i++){
+      //loop over which axis of the field to read
+      hEfield[ax][i]=new TH2F(Form("hEfield%c_%c%c",axis[i],axis[ax+1],axis[ax+2]),
+			      Form("%c component of E Field in the %c%c plane at %c=%2.3f;%c;%c",
+				   axis[i],axis[ax+1],axis[ax+2],axis[ax],axisval[ax],axis[ax+1],axis[ax+2]),
+			      axn[ax+1],axbot[ax+1],axtop[ax+1],
+			      axn[ax+2],axbot[ax+2],axtop[ax+2]);
+      hEfieldComp[ax][i]=new TH1F(Form("hEfieldComp%c_%c%c",axis[i],axis[ax+1],axis[ax+2]),
+			      Form("Log Magnitude of %c component of E Field in the %c%c plane at %c=%2.3f;log10(mag)",
+				   axis[i],axis[ax+1],axis[ax+2],axis[ax],axisval[ax]),
+				  200,-5,5);
+    }
+  }
+
+  float rpz_coord[3];
+  for (int ax=0;ax<3;ax++){
+    rpz_coord[ax]=axisval[ax]+axstep[ax]/2;
+    for (int i=0;i<axn[ax+1];i++){
+      rpz_coord[(ax+1)%3]=axbot[ax+1]+(i+0.5)*axstep[ax+1];
+      for (int j=0;j<axn[ax+2];j++){
+	rpz_coord[(ax+2)%3]=axbot[ax+2]+(j+0.5)*axstep[ax+2];
+	lpos.SetXYZ(rpz_coord[0],0,rpz_coord[2]);
+	lpos.SetPhi(rpz_coord[1]);
+	if (0 && ax==0){
+	  printf("sampling rpz=(%f,%f,%f)=(%f,%f,%f) after conversion to xyz=(%f,%f,%f)\n",
+		 rpz_coord[0],rpz_coord[1],rpz_coord[2],
+		 lpos.Perp(),lpos.Phi(),lpos.Z(),lpos.X(),lpos.Y(),lpos.Z());
+	}
+	field=GetFieldAt(lpos);
+	field.RotateZ(-rpz_coord[1]);//rotate us so we can read the y component as the phi component
+	//if (field.Mag()>0) continue; //nothing has mag zero because of the drift field.
+	hEfield[ax][0]->Fill(rpz_coord[(ax+1)%3],rpz_coord[(ax+2)%3],field.X());
+	hEfield[ax][1]->Fill(rpz_coord[(ax+1)%3],rpz_coord[(ax+2)%3],field.Y());
+	hEfield[ax][2]->Fill(rpz_coord[(ax+1)%3],rpz_coord[(ax+2)%3],field.Z());
+	hCharge[ax]->Fill(rpz_coord[(ax+1)%3],rpz_coord[(ax+2)%3],GetChargeAt(lpos));
+	hEfieldComp[ax][0]->Fill((abs(field.X())));
+	hEfieldComp[ax][1]->Fill((abs(field.Y())));
+	hEfieldComp[ax][2]->Fill((abs(field.Z())));
+      }
+    }
+  }
+
+  c=new TCanvas("cfieldslices","electric field",1200,800);
+  c->Divide(4,3);
+  gStyle->SetOptStat();
+  for (int ax=0;ax<3;ax++){
+    for (int i=0;i<3;i++){
+      c->cd(ax*4+i+1);
+      gPad->SetRightMargin(0.15);
+      hEfield[ax][i]->SetStats(0);
+      hEfield[ax][i]->Draw("colz");
+      //hEfield[ax][i]->GetListOfFunctions()->Print();
+      	gPad->Modified();
+      //hEfieldComp[ax][i]->Draw();//"colz");
+    }
+    c->cd(ax*4+4);
+    gPad->SetRightMargin(0.15);
+    hCharge[ax]->SetStats(0);
+    hCharge[ax]->Draw("colz");
+    //pal=dynamic_cast<TPaletteAxis*>(hCharge[ax]->GetListOfFunctions()->FindObject("palette"));
+      if (0){
+	//pal->SetX1NDC(0.86);
+	//pal->SetX2NDC(0.91);
+	gPad->Modified();
+      }
+  }
+  c->SaveAs(plotfilename);
+  printf("after plotting field slices...\n");
+  printf("file=%s\n",filebase);
+  
+return;
+}
 
 
 void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamples, int p_subsamples, int z_subsamples, int z_substeps){
@@ -2214,7 +2325,7 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
 
   printf("generating distortion map with (%dx%dx%d) grid \n",nrh,nph,nzh);
   unsigned long long totalelements=nrh*nph*nzh;
-  unsigned long long percent=totalelements/100;
+  unsigned long long percent=totalelements/100*debug_npercent;
   printf("total elements = %llu\n",totalelements);
 
 
@@ -2313,7 +2424,7 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
 
 	}
 
-	if(!(el%percent)) {printf("generating distortions %d%%:  ",(int)(el/percent));
+	if(!(el%percent)) {printf("generating distortions %d%%:  ",(int)(debug_npercent*el/percent));
 	  printf("distortion at (ir=%d,ip=%d,iz=%d) is (%E,%E,%E)\n",
 		 ir,ip,iz,distortR,distortP,distortZ);
 	}
@@ -2359,20 +2470,53 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
     texpos-=texshift;
   }
   printf("about to write map and summary to %s.\n",filebase);
+  printf("map:%s.\n",distortionFilename.Data());
+  printf("summary:%s.\n",summaryFilename.Data());
+  
   canvas->cd();
   c->Draw();
   canvas->cd();
   textpad->Draw();
-  
   canvas->SaveAs(summaryFilename.Data());
+
+    printf("map:%s.\n",distortionFilename.Data());
+
+  outf->cd();
+  printf("map:%s. cd'd\n",distortionFilename.Data());
+
   hDistortionR->Write();
   hDistortionP->Write();
   hDistortionZ->Write();
+  printf("map:%s. distort written\n",distortionFilename.Data());
   hIntDistortionR->Write();
   hIntDistortionP->Write();
   hIntDistortionZ->Write();
+  printf("map:%s. integrals written\n",distortionFilename.Data());
   dTree->Write();
   outf->Close();
+  printf("map:%s.closed\n",distortionFilename.Data());
+
+  /*
+  //all histograms associated with this file should be deleted when we closed the file.
+  //delete the histograms we made:
+  TH3F *m;
+  m = (TH3F*)gROOT­>FindObject("hDistortionR");  if(m) { printf("found in memory still.\n"); m­>Delete();}
+  m = (TH3F*)gROOT­>FindObject("hDistortionP");  if(m) m­>Delete();
+  m = (TH3F*)gROOT­>FindObject("hDistortionZ");  if(m) m­>Delete();
+  m = (TH3F*)gROOT­>FindObject("hIntDistortionR");  if(m) m­>Delete();
+  m = (TH3F*)gROOT­>FindObject("hIntDistortionP");  if(m) m­>Delete();
+  m = (TH3F*)gROOT­>FindObject("hIntDistortionZ");  if(m) m­>Delete();
+
+  printf("map:%s.deleted via convoluted call.  sigh.\n",distortionFilename.Data());
+  for (int i=0;i<3;i++){
+    //loop over which axis of the distortion to read
+    for (int ax=0;ax<3;ax++){
+      //loop over which plane to work in
+      hIntDist[ax][i]->Delete();
+    }
+    hRDist[i]->Delete();
+  }
+  */
   printf("wrote map and summary to %s and %s.\n",distortionFilename.Data(),summaryFilename.Data());
   return;
 }

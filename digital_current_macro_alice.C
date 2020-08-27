@@ -179,7 +179,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   tpc->setFlatFields(tpc_magField,tpc_driftVolt/tpc_z);
   char *field_string=Form("flat_B%2.1f_E%2.1f",tpc_magField,tpc_driftVolt/tpc_z);
 
-  if (0){
+  if (1){
     tpc->loadBfield("sPHENIX.2d.root","fieldmap");
     tpc->loadEfield("externalEfield.ttree.root","fTree");
     sprintf(field_string,"real_B%2.1f_E%2.1f",tpc_magField,tpc_driftVolt/tpc_z);
@@ -221,7 +221,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   char sc_filename[200];
   sprintf(sc_string,"zero_spacecharge");
 
-
+  /*
   
   if (0){
     TestChargeSign(tpc); //adds a test charge, looks at how electrons deflect, and draws some plots.
@@ -257,7 +257,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   
 
 
-    
+  */
   //set a point we can use to look at the field slices:
   TVector3 pos;
   pos.SetXYZ(0.5*(rmax_roi+rmin_roi),0,0.5*(zmax_roi+zmin_roi));
@@ -266,12 +266,13 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   
   //filename should be:  spacecharge+fieldtype+greenlookuptype-and-dimensions
   char distortionFilebase[200];
+  /*
   sprintf(distortionFilebase,"%s.%s.%s",sc_string,field_string,lookup_string);
   //printf("distortionFilebase before plot=%s\n",distortionFilebase);
   //PlotFieldSlices(distortionFilebase,tpc, pos);
   //printf("distortionFilebase before generate=%s\n",distortionFilebase);
    tpc->GenerateDistortionMaps(distortionFilebase,2,2,2,1);
-
+*/
 
   const int nfiles=2;
   char *scbasenames[nfiles]={"Smooth.50kHz","BeamXingNBeams"};

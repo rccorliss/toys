@@ -48,6 +48,7 @@ class AnnularFieldSim{
   //debug items
   //
   int debug_printActionEveryN;
+  int debug_npercent;
   int debug_printCounter;
   TVector3 debug_distortionScale;
   
@@ -140,13 +141,13 @@ class AnnularFieldSim{
 		  float vdr,LookupCase in_lookupCase, ChargeCase in_chargeCase);
 
   //debug functions:
-  void UpdateEveryN(int n){debug_printActionEveryN=n; return;};
+  void UpdateEveryN(int n){debug_npercent=n;
+debug_printActionEveryN=0; return;};
   bool debugFlag(){
     if(debug_printActionEveryN>0 && debug_printCounter++>=debug_printActionEveryN){
       debug_printCounter=0;return true;
     } return false;};
   void SetDistortionScaleRPZ(float a, float b, float c){debug_distortionScale.SetXYZ(a,b,c); return;};
-
 
   //getters for internal states:
   const char* GetLookupString();
@@ -163,8 +164,9 @@ class AnnularFieldSim{
   TVector3 GetInnerEdge(){return TVector3(rmin,0,zmin);};
   TVector3 GetOuterEdge(){return TVector3(rmax,0,zmax);};
 
-  //getters for complex mapping questions:
+  //file-writing functions for complex mapping questions:
   void GenerateDistortionMaps(const char* filebase, int r_subsamples=1, int p_subsamples=1, int z_subsamples=1, int z_substeps=1);
+  void PlotFieldSlices(const char *filebase,TVector3 pos);
 
   
  

@@ -2661,9 +2661,11 @@ TVector3 AnnularFieldSim::GetStepDistortion(float zdest,TVector3 start, bool int
 
   TVector3 shift(deltaX,deltaY,deltaZ);
   if (debug_distortionScale.Mag()>0){
-    TVector3 localScale=debug_distortionScale;
-    localScale.RotateZ(start.Phi());
-    shift.SetXYZ(deltaX*localScale.X(),deltaY*localScale.Y(),deltaZ*localScale.Z());
+    shift.RotateZ(-start.Phi());
+    //TVector3 localScale=debug_distortionScale;
+    //localScale.RotateZ(start.Phi());
+    shift.SetXYZ(shift.X()*debug_distortionScale.X(),shift.Y()*debug_distortionScale.Y(),shift.Z()*debug_distortionScale.Z());
+    shift.RotateZ(start.Phi());
   }
 
   

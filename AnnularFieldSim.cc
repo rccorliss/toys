@@ -2289,7 +2289,7 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
 	  //printf("ir=%d, r=%f (pz)=(%d,%d), distortR=%2.2f, distortP=%2.2f\n",ir,partR,ip,iz,distortR,distortP);
 	  hIntDist[0][0]->Fill(partP,partZ,distortR);
 	  hIntDist[0][1]->Fill(partP,partZ,distortP);
-	  hIntDist[0][1]->Fill(partP,partZ,distortZ);
+	  hIntDist[0][2]->Fill(partP,partZ,distortZ);
 	}
 	if(ip==xi[1]){//phi slice
 	  //printf("ip=%d, p=%f (rz)=(%d,%d), distortR=%2.2f, distortP=%2.2f\n",ip,partP,ir,iz,distortR,distortP);

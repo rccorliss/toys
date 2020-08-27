@@ -190,8 +190,10 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 
 
   //load the greens functions:
-  char* lookup_string=Form("ross_phislice_lookup_r%dxp%dxz%d",nr,nphi,nz);
-  char* lookupFilename=Form("%s.root",lookup_string);
+  char lookup_string[200];
+  sprintf(lookup_string,"ross_phislice_lookup_r%dxp%dxz%d",nr,nphi,nz);
+  char lookupFilename[200];
+  sprintf(lookupFilename,"%s.root",lookup_string);
   TFile *fileptr=TFile::Open(lookupFilename,"READ");
   bool lookupFileExists=(fileptr);
   
@@ -215,8 +217,11 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   
   //load the spacecharge:
 
-  char sc_string[100];
+  char sc_string[200];
+  char sc_filename[200];
   sprintf(sc_string,"zero_spacecharge");
+
+
   
   if (0){
     TestChargeSign(tpc); //adds a test charge, looks at how electrons deflect, and draws some plots.
@@ -225,6 +230,7 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 
   if (1){ //load spacecharge from file
     sprintf(sc_string,"%s",scmapfilebase);//temporary fudge!
+    sprintf(sc_filename,"%s",scmapfilebase);//temporary fudge!
     printf("loading spacecharge from %s.root\n",scmapfilebase);
     //tpc->load_spacecharge(tpc_average,0,tpc_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
     tpc->load_spacecharge(Form("%s.root",scmapfilebase),scmaphistname,0,tpc_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
@@ -248,75 +254,58 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   printf("populated fieldmap.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
   //printf("consistency check:  integrate field along IR and OR, confirm V:\n");
-
-
-
   
 
-  //some sanity checks: 
-  if (reduction==0){
-    //save the charge into a histogram with size and dimensions matching the native tpc object:
-    //  SaveChargeAndProjections("last_macro.charge_projections.hist.root",tpc,nphi,0,6.281,nr,tpc_rmin,tpc_rmax,nz,0,tpc_z);
+
+    
+  //set a point we can use to look at the field slices:
+  TVector3 pos;
+  pos.SetXYZ(0.5*(rmax_roi+rmin_roi),0,0.5*(zmax_roi+zmin_roi));
+  pos.SetPhi(0.5*(phimax_roi+phimin_roi));
+
+  
+  //filename should be:  spacecharge+fieldtype+greenlookuptype-and-dimensions
+  char distortionFilebase[200];
+  sprintf(distortionFilebase,"%s.%s.%s",sc_string,field_string,lookup_string);
+  //printf("distortionFilebase before plot=%s\n",distortionFilebase);
+  //PlotFieldSlices(distortionFilebase,tpc, pos);
+  //printf("distortionFilebase before generate=%s\n",distortionFilebase);
+   tpc->GenerateDistortionMaps(distortionFilebase,2,2,2,1);
+
+
+  const int nfiles=2;
+  char *scbasenames[nfiles]={"Smooth.50kHz","BeamXingNBeams"};
+  char *schistnames[nfiles]={"sphenix_minbias_average","sphenix_minbias_charge"};
+  const int nscales=5;
+  float scale[nscales]={0,1,10,100,1000};
+
+
+  for (int i=0;i<nfiles;i++){
+    tpc->load_spacecharge(Form("%s.root",scbasenames[i]),schistnames[i],0,tpc_chargescale);
+    tpc->populate_fieldmap();
+    for (int j=0;j<nscales;j++){
+      printf("%s file has %s hist.  field=%s, lookup=%s. scaling to %2.2f\n",scbasenames[i],schistnames[i],field_string,lookup_string,scale[j]);	  
+      tpc->SetDistortionScaleRPZ(scale[j],scale[j],scale[j]);
+      sprintf(distortionFilebase,"%s.scale%1.0f.%s.%s",sc_string,scale[j],field_string,lookup_string);
+      tpc->GenerateDistortionMaps(distortionFilebase,2,2,2,1);
+      //save fieldslices too
+    }
   }
 
-  //SaveField("last_macro.field.hist.root",tpc,nr_roi_min,nr_roi_max,nphi_roi_min,nphi_roi_max,nz_roi_min,nz_roi_max);
-
-
-  printf("fieldsim ptr=%p\n",(void*)tpc);
-
+  return;
   
-  //generate the distortions by throwing particles at each z step and letting them propagate to the next:
-  //eventually this should be folded into AnnularFieldSim.
-
-
-  //filename should be:  spacecharge+fieldtype+greenlookuptype-and-dimensions
-  char* distortionFilebase=Form("%s.%s.%s",sc_string,field_string,lookup_string);
-
+  tpc->load_spacecharge("BeamXingNBeams.root","sphenix_minbias_charge",0,tpc_chargescale);
+  printf("populated fieldmap.\n");
+  sprintf(distortionFilebase,"%s.%s.%s","BeamXingNBeams",field_string,lookup_string);
+  //save some diagnostic plots about the field:
+  printf("distortionFilebase before plot=%s\n",distortionFilebase);
+  PlotFieldSlices(distortionFilebase,tpc, pos);
+  printf("distortionFilebase before generate=%s\n",distortionFilebase);
   tpc->GenerateDistortionMaps(distortionFilebase,1,1,1,1);
+  
   return;
   //char* distortionFilename=Form("zero_sc.realfield.ross_phislice_lookup_r%dxp%dxz%d.distortion_map.hist.root",nr,nphi,nz);
 
-
-  //save some diagnostic plots about the field:
-  TVector3 pos(0.5*(rmax_roi+rmin_roi),0,0.5*(zmax_roi+zmin_roi));
-  pos.SetPhi(0.5*(phimax_roi+phimin_roi));
-  printf("distortionFilebase before plot=%s\n",distortionFilebase);
-  PlotFieldSlices(distortionFilebase,tpc, pos);
-  printf("distortionFilebase before generate=%s\n",distortionFilebase);
-  //generate distortions based on those fields:
-  GenerateAndSaveDistortionMap(distortionFilebase,tpc,
-			       nphi_roi,phimin_roi,phimax_roi,
-			       nr_roi,rmin_roi,rmax_roi,
-			       nz_roi,zmin_roi,zmax_roi);
-
-
-
-  return;
-  //repeat if desired:
-
-  if(0){
-  //load spacecharge from file:
-  //f=TFile::Open("BeamXingNBeams.root");
-  //tpc_average=(TH3F*)f->Get("sphenix_minbias_charge");
-  sprintf(sc_string,"%s","BeamXingBeams");//temporary fudge!
-    printf("loading spacecharge from %s.root\n",scmapfilebase);
-    //tpc->load_spacecharge(tpc_average,0,tpc_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
-    tpc->populate_fieldmap();
-    printf("populated fieldmap.\n");
-    distortionFilebase=Form("%s.%s.%s",sc_string,field_string,lookup_string);
-
-  //save some diagnostic plots about the field:
-    pos.SetXYZ(0.5*(rmax_roi+rmin_roi),0,0.5*(zmax_roi+zmin_roi));
-  pos.SetPhi(0.5*(phimax_roi+phimin_roi));
-  printf("distortionFilebase before plot=%s\n",distortionFilebase);
-  PlotFieldSlices(distortionFilebase,tpc, pos);
-  printf("distortionFilebase before generate=%s\n",distortionFilebase);
-  //generate distortions based on those fields:
-  GenerateAndSaveDistortionMap(distortionFilebase,tpc,
-			       nphi_roi,phimin_roi,phimax_roi,
-			       nr_roi,rmin_roi,rmax_roi,
-			       nz_roi,zmin_roi,zmax_roi);
-  }
 
   
   printf("all done.\n");

@@ -77,9 +77,11 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   const double tpc_chargescale=-1.6e-19;//our hist. has charge in units of ions/cm^3, so we need to multiply by the electric charge of an electron to get out C/cm^3.  
 
   
-  //const char scmapfilebase[]="HeuristicSc_test";//"Smooth.50kHz"; //expects suffix '.root' after this string.
+  // const char scmapfilebase[]="HeuristicSc_test";//"Smooth.50kHz"; //expects suffix '.root' after this string.
   const char scmapfilebase[]="Smooth.50kHz"; //expects suffix '.root' after this string.
-  const char scmaphistname[]="sphenix_minbias_average";
+   const char scmaphistname[]="sphenix_minbias_average";
+  //const char scmapfilebase[]="BeamXingNBeams"; //expects suffix '.root' after this string.
+  //const char scmaphistname[]="sphenix_minbias_charge";
 
 
 
@@ -91,11 +93,11 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
   int nr=16;//10;//24;//159;//159 nominal
   int nr_roi_min=0;
-  int nr_roi=16;//10;
+  int nr_roi=nr;//10;
   int nr_roi_max=nr_roi_min+nr_roi;
   int nphi=36;//38;//360;//360 nominal
   int nphi_roi_min=0;
-  int nphi_roi=36;//38;
+  int nphi_roi=nphi;//38;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
   int nz=40;//62;//62 nominal
   int nz_roi_min=0;
@@ -148,10 +150,10 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 
 
    //step 3: load the spacecharge density map from the specified histogram (in the tpc parameters, above).
-  TFile *f=TFile::Open(TString::Format("%s.root",scmapfilebase));
-  TH3F* tpc_average=(TH3F*)f->Get(scmaphistname);
-  printf("Sanity check:  histfile is '%s.root'.  Seeking histname '%s'\n",scmapfilebase,scmaphistname);
-  printf("Sanity check:  hist title is '%s'\n",tpc_average->GetTitle());
+  //TFile *f=TFile::Open(TString::Format("%s.root",scmapfilebase));
+  //TH3F* tpc_average=(TH3F*)f->Get(scmaphistname);
+  //printf("Sanity check:  histfile is '%s.root'.  Seeking histname '%s'\n",scmapfilebase,scmaphistname);
+  //printf("Sanity check:  hist title is '%s'\n",tpc_average->GetTitle());
   now=gSystem->Now();
   printf("loaded hist.  the dtime is %lu\n",(unsigned long)(now-start));
 
@@ -222,9 +224,10 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   }
 
   if (1){ //load spacecharge from file
-    sprintf(sc_string,scmapfilebase);
+    sprintf(sc_string,"%s",scmapfilebase);//temporary fudge!
     printf("loading spacecharge from %s.root\n",scmapfilebase);
-    tpc->load_spacecharge(tpc_average,0,tpc_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
+    //tpc->load_spacecharge(tpc_average,0,tpc_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
+    tpc->load_spacecharge(Form("%s.root",scmapfilebase),scmaphistname,0,tpc_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
   }
   if (0){ //load spacecharge from analytic formula
     sprintf(sc_string,"analytic_spacecharge");
@@ -269,7 +272,8 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   //filename should be:  spacecharge+fieldtype+greenlookuptype-and-dimensions
   char* distortionFilebase=Form("%s.%s.%s",sc_string,field_string,lookup_string);
 
-  
+  tpc->GenerateDistortionMaps(distortionFilebase,1,1,1,1);
+  return;
   //char* distortionFilename=Form("zero_sc.realfield.ross_phislice_lookup_r%dxp%dxz%d.distortion_map.hist.root",nr,nphi,nz);
 
 
@@ -285,6 +289,36 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
 			       nr_roi,rmin_roi,rmax_roi,
 			       nz_roi,zmin_roi,zmax_roi);
 
+
+
+  return;
+  //repeat if desired:
+
+  if(0){
+  //load spacecharge from file:
+  //f=TFile::Open("BeamXingNBeams.root");
+  //tpc_average=(TH3F*)f->Get("sphenix_minbias_charge");
+  sprintf(sc_string,"%s","BeamXingBeams");//temporary fudge!
+    printf("loading spacecharge from %s.root\n",scmapfilebase);
+    //tpc->load_spacecharge(tpc_average,0,tpc_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
+    tpc->populate_fieldmap();
+    printf("populated fieldmap.\n");
+    distortionFilebase=Form("%s.%s.%s",sc_string,field_string,lookup_string);
+
+  //save some diagnostic plots about the field:
+    pos.SetXYZ(0.5*(rmax_roi+rmin_roi),0,0.5*(zmax_roi+zmin_roi));
+  pos.SetPhi(0.5*(phimax_roi+phimin_roi));
+  printf("distortionFilebase before plot=%s\n",distortionFilebase);
+  PlotFieldSlices(distortionFilebase,tpc, pos);
+  printf("distortionFilebase before generate=%s\n",distortionFilebase);
+  //generate distortions based on those fields:
+  GenerateAndSaveDistortionMap(distortionFilebase,tpc,
+			       nphi_roi,phimin_roi,phimax_roi,
+			       nr_roi,rmin_roi,rmax_roi,
+			       nz_roi,zmin_roi,zmax_roi);
+  }
+
+  
   printf("all done.\n");
   return;
 
@@ -595,7 +629,7 @@ void GenerateAndSaveDistortionMap(const char* filebase,AnnularFieldSim *t,int np
   TVector3 inpart,outpart;
   TVector3 distort;
   int validToStep;
-  int nSteps=100;
+  int nSteps=500;
 
   float partR,partP,partZ;
   int ir,ip,iz;

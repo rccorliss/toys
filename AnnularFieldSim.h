@@ -49,6 +49,8 @@ class AnnularFieldSim{
   //
   int debug_printActionEveryN;
   int debug_printCounter;
+  TVector3 debug_distortionScale;
+  
   AnalyticFieldModel *aliceModel;
   
   //constants of motion, dimensions, etc:
@@ -143,6 +145,7 @@ class AnnularFieldSim{
     if(debug_printActionEveryN>0 && debug_printCounter++>=debug_printActionEveryN){
       debug_printCounter=0;return true;
     } return false;};
+  void SetDistortionScaleRPZ(float a, float b, float c){debug_distortionScale.SetXYZ(a,b,c); return;};
 
 
   //getters for internal states:
@@ -159,8 +162,14 @@ class AnnularFieldSim{
   int GetFieldStepsZ(){return nz_roi;};
   TVector3 GetInnerEdge(){return TVector3(rmin,0,zmin);};
   TVector3 GetOuterEdge(){return TVector3(rmax,0,zmax);};
+
+  //getters for complex mapping questions:
+  void GenerateDistortionMaps(const char* filebase, int r_subsamples=1, int p_subsamples=1, int z_subsamples=1, int z_substeps=1);
+
+  
  
   
+  void load_spacecharge(const char *filename, const char *histname, float zoffset, float scalefactor);
   void load_spacecharge(TH3F *hist, float zoffset, float scalefactor);
   void load_analytic_spacecharge(float scalefactor);
   void add_testcharge(float r, float phi, float z, float coulombs);
@@ -209,6 +218,7 @@ class AnnularFieldSim{
   TVector3 swimToInSteps(float zdest,TVector3 start, int steps, bool interpolate, int *goodToStep);
   TVector3 swimTo(float zdest,TVector3 start, bool interpolate=true, bool useAnalytic=false);
   TVector3 GetStepDistortion(float zdest,TVector3 start, bool interpolate=true, bool useAnalytic=false);
+  TVector3 GetTotalDistortion(float zdest,TVector3 start, int nsteps, bool interpolate=true, int *goodToStep=0);
 
 
  private:

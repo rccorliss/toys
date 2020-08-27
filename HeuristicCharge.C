@@ -12,18 +12,31 @@ void HeuristicCharge(){
   //these settings are for 50kHz Au+Au collisions?
   float e0 = 8.854187817e-12; //[C]/[Vm]
   float gas = 1.0/76628.0; //[Vs] -- something about the ionization per unit volume and the time it takes to clear the gas, in units I don't grok.
-  float mult = 400.0; //950.0;
-  float rate = 5e+4; //[1/s]
+  double gas_e0=e0*gas;
+  
+  //note:  gas*eps0 [Cs/m]=C/m*s=pseudorapidity_averaged_charge_per_cm*pseudorapidity_averaged_drift_length/velocity?
+  float ion_mobility=2.3;//3.37;//[cm/s*cm/V];
+  float drift_v=400;//[V/cm]
+  float ion_velocity= ion_mobility*drift_v;// ion velocity in [cm/s]
+  float ave_dwell_time=z_rdo/ion_velocity;//[s] time charge deposited at z=outer_edge will be in the tpc.
+  float ions_per_cm=5000*1.2;//[ions/m] approximate ions per radial cm -- ions per charge * (1+sqrt(2))/2
+  float proton_charge=1.6e-4;//[C/ion] proton charge in fC
+
+  gas_e0=ions_per_cm*proton_charge*1e-15*ave_dwell_time;//[C*s/m]
+  gas=gas_e0/e0;
+  printf("gas calc: %1.9f=(1/%5.2f)\n",gas,1/gas);
+  
+  double mult = 400.0; //950.0;
+  double rate = 5e+4; //[1/s]
   double a=mult*rate*e0*gas; // C/m;
   float b=1.0/z_rdo; //[1/cm]
-  float c=2.0/3.0*20.0;
+   float c=(2.0/3.0*1/100)*2000.0;//gain of 2k, 0.67% IBF per unit gain.
   a=a*1e15; //fC/m
   a=a/100;//fC/cm
   //rho= a/r^2*(1-bz+c)
   //so c is the gain times the backflow percentage -- the number of ions per electron.
   //in the plot I am trying to match, we have gain = 2000 and IBF=0.3% --> c=2000*0.3/100=6, which is actually half of the listed value.
   
-  const double proton_charge=1.6e-4;//proton charge in fC
   double a_ions=a/proton_charge;//ion number density per cm?
 
 

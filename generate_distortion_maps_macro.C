@@ -89,6 +89,12 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   start=now;
 
 
+
+
+
+
+  
+
     //load the field maps, either flat or actual maps
   tpc->setFlatFields(tpc_magField,tpc_driftVolt/tpc_z);
   char field_string[200];
@@ -104,14 +110,15 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   start=now;
 
 
+
+
   //load the greens functions:
   char lookup_string[200];
   sprintf(lookup_string,"ross_phislice_lookup_r%dxp%dxz%d",nr,nphi,nz);
   char lookupFilename[200];
   sprintf(lookupFilename,"%s.root",lookup_string);
   TFile *fileptr=TFile::Open(lookupFilename,"READ");
-  bool lookupFileExists=(fileptr);
-  
+
   if (!fileptr){ //generate the lookuptable
   //to use the full rossegger terms instead of trivial free-space greens functions, uncomment the line below:
     tpc->load_rossegger();
@@ -128,6 +135,10 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
     now=gSystem->Now();
   printf("populated lookup.  the dtime is %lu\n",(unsigned long)(now-start));
   start=now;
+
+
+
+  
  
   
    //set a point we will use to look at the field slices:
@@ -162,7 +173,7 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
 
   for (int i=0;i<nfiles;i++){
     for (int ihist=0;ihist<nhistsper;ihist++){
-      tpc->load_spacecharge(scfilename[i],schistname[ihist],0,tpc_chargescale, 0.01);
+      tpc->load_spacecharge(scfilename[i],schistname[ihist],0,tpc_chargescale,1);
       tpc->populate_fieldmap();
       for (int j=0;j<nscales;j++){
 	printf("%s file has %s hist.  field=%s, lookup=%s. scaling to %2.2f\n",

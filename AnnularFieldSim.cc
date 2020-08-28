@@ -2427,7 +2427,7 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
 
 	}
 
-	if(!(el%percent)) {printf("generating distortions %d%%:  ",(int)(debug_npercent*el/percent));
+	if(!(el%percent)) {printf("generating distortions %d%%:  ",(int)(debug_npercent*(el/percent)));
 	  printf("distortion at (ir=%d,ip=%d,iz=%d) is (%E,%E,%E)\n",
 		 ir,ip,iz,distortR,distortP,distortZ);
 	}

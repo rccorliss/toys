@@ -2453,7 +2453,26 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
     }
     c->cd(i*4+4);
     hRDist[i]->SetStats(0);
+    hRDist[i]->SetFillColor(kRed);
     hRDist[i]->Draw("hist");
+
+    /*
+      double Cut = 40;
+      h->SetFillColor(kRed);
+      TH1F *hNeg = (TH1F*)hRDist[i]->Clone(Form("hNegRDist%d",i));
+      hNeg->SetFillColor(kGreen);
+      for (int n = 1; n <= hNeg->GetNbinsX(); n++) {
+      hNeg->SetBinContent(n,Cut);
+      }
+      h3->Draw(); h.Draw("same");
+      TH1F *h2 = (TH1F*)h->Clone("h2");
+      h2->SetFillColor(kGray-4);
+      h2->SetMaximum(Cut);
+      h2->Draw("same");
+    */
+
+
+    
   }
   textpad->cd();
   float texpos=0.9;float texshift=0.12;

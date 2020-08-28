@@ -51,23 +51,18 @@ Rossegger::Rossegger(double InnerRadius, double OuterRadius, double Rdo_Z)
   pi = 2.0 * asin(1.0);
   cout << pi << endl;
 
+  PrecalcFreeConstants();
   
-  //char limufile[]="limu_table.csv";
-  //char kimufile[]="kimu_table.csv";
-  /*
-  LoadCsvToHist(&hLimu,limufile);
-  LoadCsvToHist(&hKimu,kimufile);
-  */
-  //cout << "hKimu is real, see:" <<  hKimu->GetXaxis()->GetNbins() << endl;
   FindMunk(0.0001);
   FindBetamn(0.0001);
+
+  PrecalcDerivedConstants();
  
 
   cout << "Rossegger object initialized as follows:" << endl;
   cout << "  Inner Radius = " << a << " cm." << endl;
   cout << "  Outer Radius = " << b << " cm." << endl;
   cout << "  Half  Length = " << L << " cm." << endl;
-  //cout << "  Limu Dataset = " << limufile << endl;
 
   assert(CheckZeroes(0.01));
   // assert(1==2);
@@ -199,7 +194,7 @@ void Rossegger::FindMunk(double epsilon)
 	  double step = 0.001;
 
 	      for (double r=a; r<b; r+=step){
-		double rnkval=Rnk(n,k,r);
+		double rnkval=Rnk_(n,k,r);//must used un-optimized.  We don't have those values yet...
 
 		integral += rnkval*rnkval/r*step;
 	      }
@@ -243,6 +238,43 @@ bool Rossegger::CheckZeroes(double epsilon){
   return true;
 }
 
+void Rossegger::PrecalcFreeConstants(){ //Routine used to fill the arrays of other values used repeatedly
+  //these constants depend only on the geometry of the detector
+  printf("Precalcing %d geometric constants\n",3*NumberOfOrders+5*NumberOfOrders*NumberOfOrders);
+  for (int n=0;n<NumberOfOrders;n++){
+    BetaN[n]=(n+1)*pi/L;  //  BetaN=(n+1)*pi/L as used in eg 5.32, .46
+    BetaN_a[n]=BetaN[n]*a;  //  BetaN*a as used in eg 5.32, .46
+    BetaN_b[n]=BetaN[n]*b;  //  BetaN*b as used in eg 5.32, .46
+    for (int m=0;m<NumberOfOrders;m++){
+      km_BetaN_a[m][n]=kn(m,BetaN_a[n]);  //kn(m,BetaN*a) as used in Rossegger 5.32
+      im_BetaN_a[m][n]=in(m,BetaN_a[n]);  //in(m,BetaN*a) as used in Rossegger 5.32
+      km_BetaN_b[m][n]=kn(m,BetaN_b[n]); //kn(m,BetaN*b) as used in Rossegger 5.33
+      im_BetaN_b[m][n]=in(m,BetaN_b[n]); //in(m,BetaN*b) as used in Rossegger 5.33
+      bessel_denominator[m][n]=BesselI(m,BetaN_a[n])*BesselK(m,BetaN_b[n])-BesselI(m,BetaN_b[n])*BesselK(m,BetaN_a[n]);  //BesselI(m,BetaN*a)*BesselK(m,BetaN*b)-BesselI(m,BetaN*b)*BesselK(m,BetaN*a) as in Rossegger 5.65
+      
+    }
+  }
+  return;
+}
+void Rossegger::PrecalcDerivedConstants(){ //Routine used to fill the arrays of other values used repeatedly
+  //these constants depend on geometry and the zeroes of special functions
+    printf("Precalcing %d geometric constants\n",6*NumberOfOrders*NumberOfOrders);
+
+  for (int n=0;n<NumberOfOrders;n++){
+    for (int m=0;m<NumberOfOrders;m++){
+      ym_Betamn_a[m][n]=yn(m,Betamn[m][n]*a);  //yn(m,Betamn[m][n]*a) as used in Rossegger 5.11
+      jm_Betamn_a[m][n]=jn(m,Betamn[m][n]*a);  //jn(m,Betamn[m][n]*a) as used in Rossegger 5.11
+      sinh_Betamn_L[m][n]=sinh(Betamn[m][n]*L); //sinh(Betamn[m][n]*L)  as in Rossegger 5.64
+    }
+    for (int k=0;k<NumberOfOrders;k++){
+      liMunk_BetaN_a[n][k]=limu(Munk[n][k],BetaN_a[n]);  //limu(Munk[n][k],BetaN*a) as used in Rossegger 5.45
+      kiMunk_BetaN_a[n][k]=kimu(Munk[n][k],BetaN_a[n]);  //kimu(Munk[n][k],BetaN*a) as used in Rossegger 5.45
+      sinh_pi_Munk[n][k]=sinh(pi*Munk[n][k]); //sinh(pi*Munk[n][k]) as in Rossegger 5.66
+    }
+  }
+  return;
+}
+
 
  double Rossegger::Limu(double mu, double x){
    //defined in Rossegger eqn 5.44, also a canonical 'satisfactory companion' to Kimu.
@@ -259,36 +291,6 @@ bool Rossegger::CheckZeroes(double epsilon){
   double X=x;
   dlia_( &IFAC, &X, &A, &DLI, &DERR, &IERRO);
   return DLI;
-  //short-circuiting the tables with the fortran routine, if I can.
-
-
-
-   
-   if (verbosity>1) {
-     printf("Limu::mu=%f,x=%f\n",mu,x);
-     printf("limu axis bounds= mu:(%f to %f) x:(%f to %f)\n",
-	    hLimu->GetXaxis()->GetXmin(),hLimu->GetXaxis()->GetXmax(),
-	    hLimu->GetYaxis()->GetXmin(),hLimu->GetYaxis()->GetXmax());
-   }
-   int xbin=hLimu->GetXaxis()->FindBin(mu);
-
-   if (xbin<1 || xbin>hLimu->GetXaxis()->GetNbins()) {
-     printf("Limu::mu=%f,x=%f is out of bounds\n",mu,x);
-     printf("Limu axis bounds= mu:(%f to %f) x:(%f to %f)\n",
-	    hLimu->GetXaxis()->GetXmin(),hLimu->GetXaxis()->GetXmax(),
-	    hLimu->GetYaxis()->GetXmin(),hLimu->GetYaxis()->GetXmax());
-     assert(1==3);
-   }
-   int ybin=hLimu->GetYaxis()->FindBin(x);
-   if (ybin<1 || ybin>hLimu->GetYaxis()->GetNbins()) {
-     printf("Limu::mu=%f,x=%f is out of bounds\n",mu,x);
-     printf("Limu axis bounds= mu:(%f to %f) x:(%f to %f)\n",
-	    hLimu->GetXaxis()->GetXmin(),hLimu->GetXaxis()->GetXmax(),
-	    hLimu->GetYaxis()->GetXmin(),hLimu->GetYaxis()->GetXmax());
-     assert(1==3);
-   }
-
-   return hLimu->GetBinContent(xbin,ybin); //this should really be interpolating, but we'll deal with that later.
  }
  double Rossegger::Kimu(double mu, double x){
 
@@ -301,33 +303,6 @@ bool Rossegger::CheckZeroes(double epsilon){
   double X=x;
   dkia_( &IFAC, &X, &A, &DKI, &DERR, &IERRO);
   return DKI;
-  //short-circuiting the tables with the fortran routine, if I can.
-
-   
-   //could use Griddit?
-   if (verbosity>1) {
-     printf("Kimu::mu=%f,x=%f\n",mu,x);
-   }
-   int xbin=hKimu->GetXaxis()->FindBin(mu);
-   if (verbosity>1) {
-	printf("Kimu:: ybin=%d\n",xbin);
-   }
-   if (xbin<1 || xbin>hKimu->GetXaxis()->GetNbins()) {
-     printf("Kimu::mu=%f,x=%f is out of bounds\n",mu,x);
-     printf("Kimu axis bounds= mu:(%f to %f) x:(%f to %f)\n",
-	    hKimu->GetXaxis()->GetXmin(),hKimu->GetXaxis()->GetXmax(),
-	    hKimu->GetYaxis()->GetXmin(),hKimu->GetYaxis()->GetXmax());
-     assert(1==3);
-   }
-   int ybin=hKimu->GetYaxis()->FindBin(x);
-   if (ybin<1 || ybin>hKimu->GetYaxis()->GetNbins()) {
-     printf("Kimu::mu=%f,x=%f is out of bounds\n",mu,x);
-     printf("Kimu axis bounds= mu:(%f to %f) x:(%f to %f)\n",
-	    hKimu->GetXaxis()->GetXmin(),hKimu->GetXaxis()->GetXmax(),
-	    hKimu->GetYaxis()->GetXmin(),hKimu->GetYaxis()->GetXmax());
-     assert(1==3);
-   }
-   return hKimu->GetBinContent(xbin,ybin); //this should really be interpolating, but we'll deal with that later.
  }
 
  double Rossegger::Rmn_for_zeroes(int m, double x){
@@ -338,6 +313,30 @@ bool Rossegger::CheckZeroes(double epsilon){
  }
 
 double Rossegger::Rmn(int m, int n, double r){
+  if (verbosity>100) cout << "Determine Rmn("<<m<<","<<n<<","<<r<<") = ";
+
+  //  Check input arguments for sanity...
+  int error=0;
+  if (m<0 || m>NumberOfOrders) error=1;
+  if (n<0 || n>NumberOfOrders) error=1;
+  if (r<a || r>b)              error=1;
+  if (error)
+    {
+      cout << "Invalid arguments Rmn("<<m<<","<<n<<","<<r<<")" << endl;;
+      return 0;
+    }
+
+  //  Calculate the function using C-libraries from boost
+  //  Rossegger Equation 5.11:
+  //         Rmn(r) = Ym(Beta_mn a)*Jm(Beta_mn r) - Jm(Beta_mn a)*Ym(Beta_mn r)
+  double R=0;
+  R = ym_Betamn_a[m][n]*jn(m,Betamn[m][n]*r) - jm_Betamn_a[m][n]*yn(m,Betamn[m][n]*r);
+
+  if (verbosity>100) cout << R << endl;
+  return R;
+}
+
+double Rossegger::Rmn_(int m, int n, double r){
   if (verbosity>100) cout << "Determine Rmn("<<m<<","<<n<<","<<r<<") = ";
 
   //  Check input arguments for sanity...
@@ -378,8 +377,30 @@ double Rossegger::Rmn1(int m, int n, double r)
   //  Rossegger Equation 5.32
   //         Rmn1(r) = Km(BetaN a)Im(BetaN r) - Im(BetaN a) Km(BetaN r)
   double R=0;
-  double BetaN = (n+1)*pi/L;
-  R = kn(m,BetaN*a)*in(m,BetaN*r)-in(m,BetaN*a)*kn(m,BetaN*r);
+  R = km_BetaN_a[m][n]*in(m,BetaN[n]*r)-im_BetaN_a[m][n]*kn(m,BetaN[n]*r);
+
+  return R;
+}
+
+double Rossegger::Rmn1_(int m, int n, double r)
+{
+ //  Check input arguments for sanity...
+  int error=0;
+  if (m<0 || m>NumberOfOrders) error=1;
+  if (n<0 || n>NumberOfOrders) error=1;
+  if (r<a || r>b)              error=1;
+  if (error)
+    {
+      cout << "Invalid arguments Rmn1("<<m<<","<<n<<","<<r<<")" << endl;;
+      return 0;
+    }
+
+  //  Calculate using the TMath functions from root.
+  //  Rossegger Equation 5.32
+  //         Rmn1(r) = Km(BetaN a)Im(BetaN r) - Im(BetaN a) Km(BetaN r)
+  double R=0;
+  double BetaN_ = (n+1)*pi/L;
+  R = kn(m,BetaN_*a)*in(m,BetaN_*r)-in(m,BetaN_*a)*kn(m,BetaN_*r);
 
   return R;
 }
@@ -401,8 +422,30 @@ double Rossegger::Rmn2(int m, int n, double r)
   //  Rossegger Equation 5.33
   //         Rmn2(r) = Km(BetaN b)Im(BetaN r) - Im(BetaN b) Km(BetaN r)
   double R=0;
-  double BetaN = (n+1)*pi/L;
-  R = kn(m,BetaN*b)*in(m,BetaN*r)-in(m,BetaN*b)*kn(m,BetaN*r);
+  R = km_BetaN_b[m][n]*in(m,BetaN[n]*r)-im_BetaN_b[m][n]*kn(m,BetaN[n]*r);
+
+  return R;
+}
+
+double Rossegger::Rmn2_(int m, int n, double r)
+{
+ //  Check input arguments for sanity...
+  int error=0;
+  if (m<0 || m>NumberOfOrders) error=1;
+  if (n<0 || n>NumberOfOrders) error=1;
+  if (r<a || r>b)              error=1;
+  if (error)
+    {
+      cout << "Invalid arguments Rmn2("<<m<<","<<n<<","<<r<<")" << endl;;
+      return 0;
+    }
+
+  //  Calculate using the TMath functions from root.
+  //  Rossegger Equation 5.33
+  //         Rmn2(r) = Km(BetaN b)Im(BetaN r) - Im(BetaN b) Km(BetaN r)
+  double R=0;
+  double BetaN_ = (n+1)*pi/L;
+  R = kn(m,BetaN_*b)*in(m,BetaN_*r)-in(m,BetaN_*b)*kn(m,BetaN_*r);
 
   return R;
 }
@@ -429,27 +472,69 @@ double Rossegger::RPrime(int m, int n, double ref, double r)
   //  NOTE:  K-m(z) = Km(z) and I-m(z) = Im(z)... though boost handles negative orders.
   //
   // with: s -> ref,  t -> r, 
-  //  NOTE:  BetaN is defined near Rossegger Equation 5.27, 5.43, and other places: BetaN= n*pi / L
-  //  to match our change in definition of order 0 in " !!!  Off by one from Rossegger convention  !!!", we move n->n+1
-  double BetaN = (n+1)*pi/L;
-  double term1 = kn(m,BetaN*ref)*( in(m-1,BetaN*r) + in(m+1,BetaN*r) );
-  double term2 = in(m,BetaN*ref)*( kn(m-1,BetaN*r) + kn(m+1,BetaN*r) );
-  R = BetaN/2.0*(term1 + term2);
+  double BetaN_ = BetaN[n];
+  double term1 = kn(m,BetaN_*ref)*( in(m-1,BetaN_*r) + in(m+1,BetaN_*r) );
+  double term2 = in(m,BetaN_*ref)*( kn(m-1,BetaN_*r) + kn(m+1,BetaN_*r) );
+  R = BetaN_/2.0*(term1 + term2);
 
   return R;
 }
 
-double Rossegger::Rnk_for_zeroes(int n, double mu){
+double Rossegger::RPrime_(int m, int n, double ref, double r)
+{
+ //  Check input arguments for sanity...
+  int error=0;
+  if (m<0   || m>NumberOfOrders) error=1;
+  if (n<0   || n>NumberOfOrders) error=1;
+  if (ref<a || ref>b)            error=1;
+  if (r<a   || r>b)              error=1;
+  if (error)
+    {
+      cout << "Invalid arguments RPrime("<<m<<","<<n<<","<<ref<<","<<r<<")" << endl;;
+      return 0;
+    }
+
+  double R=0;
+  //  Rossegger Equation 5.65
+  //         Rmn2(ref,r) = BetaN/2* [   Km(BetaN ref) {Im-1(BetaN r) + Im+1(BetaN r)}
+  //                                  - Im(BetaN ref) {Km-1(BetaN r) + Km+1(BetaN r)}  ]
+  //  NOTE:  K-m(z) = Km(z) and I-m(z) = Im(z)... though boost handles negative orders.
+  //
+  // with: s -> ref,  t -> r, 
+  double BetaN_ = (n+1)*pi/L;
+  double term1 = kn(m,BetaN_*ref)*( in(m-1,BetaN_*r) + in(m+1,BetaN_*r) );
+  double term2 = in(m,BetaN_*ref)*( kn(m-1,BetaN_*r) + kn(m+1,BetaN_*r) );
+  R = BetaN_/2.0*(term1 + term2);
+
+  return R;
+}
+
+
+
+
+double Rossegger::Rnk_for_zeroes_(int n, double mu){
   //unlike Rossegger, we count 'k' and 'n' from zero.
   if (verbosity>10) printf("Rnk_for_zeroes called with n=%d,mu=%f\n",n,mu);
-  double BetaN=(n+1)*pi/L; //this is defined in the paragraph before 5.46
-  double betana=BetaN*a;
-  double betanb=BetaN*b;
+  double betana=BetaN_a[n];
+  double betanb=BetaN_b[n];
     //  Rossegger Equation 5.46
   //       Rnk(r) = Limu_nk (BetaN a) Kimu_nk (BetaN b) - Kimu_nk(BetaN a) Limu_nk (BetaN b)
   
   return limu(mu,betana)*kimu(mu,betanb)- kimu(mu,betana)*limu(mu,betanb);
 }
+
+double Rossegger::Rnk_for_zeroes(int n, double mu){
+  //unlike Rossegger, we count 'k' and 'n' from zero.
+  if (verbosity>10) printf("Rnk_for_zeroes called with n=%d,mu=%f\n",n,mu);
+  double BetaN_=(n+1)*pi/L; //this is defined in the paragraph before 5.46
+  double betana=BetaN_*a;
+  double betanb=BetaN_*b;
+    //  Rossegger Equation 5.46
+  //       Rnk(r) = Limu_nk (BetaN a) Kimu_nk (BetaN b) - Kimu_nk(BetaN a) Limu_nk (BetaN b)
+  
+  return limu(mu,betana)*kimu(mu,betanb)- kimu(mu,betana)*limu(mu,betanb);
+}
+
 double Rossegger::Rnk(int n, int k, double r)
 {
  //  Check input arguments for sanity...
@@ -462,16 +547,88 @@ double Rossegger::Rnk(int n, int k, double r)
       cout << "Invalid arguments Rnk("<<n<<","<<k<<","<<r<<")" << endl;;
       return 0;
     }
-  double BetaN=(n+1)*pi/L;
    //  Rossegger Equation 5.45
   //       Rnk(r) = Limu_nk (BetaN a) Kimu_nk (BetaN r) - Kimu_nk(BetaN a) Limu_nk (BetaN r)
 
-  return limu(Munk[n][k],BetaN*a)*kimu(Munk[n][k],BetaN*r)- kimu(Munk[n][k],BetaN*a)*limu(Munk[n][k],BetaN*r);
-
+  return liMunk_BetaN_a[n][k]*kimu(Munk[n][k],BetaN[n]*r)- kiMunk_BetaN_a[n][k]*limu(Munk[n][k],BetaN[n]*r);
 }
 
+double Rossegger::Rnk_(int n, int k, double r)
+{
+ //  Check input arguments for sanity...
+  int error=0;
+  if (n<0   || n>NumberOfOrders) error=1;
+  if (k<0   || k>NumberOfOrders) error=1;
+  if (r<a   || r>b)              error=1;
+  if (error)
+    {
+      cout << "Invalid arguments Rnk("<<n<<","<<k<<","<<r<<")" << endl;;
+      return 0;
+    }
+  double BetaN_=(n+1)*pi/L;
+   //  Rossegger Equation 5.45
+  //       Rnk(r) = Limu_nk (BetaN a) Kimu_nk (BetaN r) - Kimu_nk(BetaN a) Limu_nk (BetaN r)
+
+  return limu(Munk[n][k],BetaN_*a)*kimu(Munk[n][k],BetaN_*r)- kimu(Munk[n][k],BetaN_*a)*limu(Munk[n][k],BetaN_*r);
+}
 
 double Rossegger::Ez(double r, double phi, double z, double r1, double phi1, double z1)
+{
+  //rcc streamlined Ez
+   int error=0;
+  if (r<a    || r>b)         error=1;
+  if (phi<0  || phi>2*pi)    error=1;
+  if (z<0    || z>L)         error=1;
+  if (r1<a   || r1>b)        error=1;
+  if (phi1<0 || phi1>2*pi)   error=1;
+  if (z1<0   || z1>L)        error=1;
+  if (error)
+    {
+      cout << "Invalid arguments Ez(";
+      cout <<r<<",";
+      cout <<phi<<",";
+      cout <<z<<",";
+      cout <<r1<<",";
+      cout <<phi1<<",";
+      cout <<z1;
+      cout <<")" << endl;;
+      return 0;
+    }
+  //Rossegger Equation 5.64
+  double G=0;
+  for (int m=0; m<NumberOfOrders; m++)
+    {
+      if (verbosity>10) cout << endl << m;
+      for (int n=0; n<NumberOfOrders; n++)
+	{
+	  if (verbosity>10) cout << " " << n;
+	  double term = 1;
+	  if (verbosity>10) cout << " " << term; 
+	  term *= (2 - ((m==0)?1:0))*cos(m*(phi-phi1));
+	  if (verbosity>10) cout << " " << term; 
+	  term *= Rmn(m,n,r)*Rmn(m,n,r1)/N2mn[m][n];
+	  if (verbosity>10) cout << " " << term; 
+	  if (z<z1)
+	    {
+	      term *=  cosh(Betamn[m][n]*z)*sinh(Betamn[m][n]*(L-z1))/sinh_Betamn_L[m][n];
+	    }
+	  else
+	    {
+	      term *= -cosh(Betamn[m][n]*(L-z))*sinh(Betamn[m][n]*z1)/sinh_Betamn_L[m][n];
+	    }
+	  if (verbosity>10) cout << " " << term; 
+	  G += term;
+	  if (verbosity>10) cout << " " << term << " " << G << endl;
+	}
+    }
+
+  G=G/(2.0*pi);
+  if (verbosity) cout << "Ez = " << G << endl;
+
+  return G;
+}
+
+double Rossegger::Ez_(double r, double phi, double z, double r1, double phi1, double z1)
 {
   //if(fByFile && fabs(r-r1)>MinimumDR && fabs(z-z1)>MinimumDZ) return ByFileEZ(r,phi,z,r1,phi1,z1);
   //  Check input arguments for sanity...
@@ -527,8 +684,67 @@ double Rossegger::Ez(double r, double phi, double z, double r1, double phi1, dou
 }
 
 
+
 double Rossegger::Er(double r, double phi, double z, double r1, double phi1, double z1)
 {
+  //rcc streamlined Er
+
+  //as in Rossegger 5.65
+  //field at r, phi, z due to unit charge at r1, phi1, z1;
+  //if(fByFile && fabs(r-r1)>MinimumDR && fabs(z-z1)>MinimumDZ) return ByFileER(r,phi,z,r1,phi1,z1);
+  //  Check input arguments for sanity...
+  int error=0;
+  if (r<a    || r>b)         error=1;
+  if (phi<0  || phi>2*pi)    error=1;
+  if (z<0    || z>L)         error=1;
+  if (r1<a   || r1>b)        error=1;
+  if (phi1<0 || phi1>2*pi)   error=1;
+  if (z1<0   || z1>L)        error=1;
+  if (error)
+    {
+      cout << "Invalid arguments Er(";
+      cout <<r<<",";
+      cout <<phi<<",";
+      cout <<z<<",";
+      cout <<r1<<",";
+      cout <<phi1<<",";
+      cout <<z1;
+      cout <<")" << endl;;
+      return 0;
+    }
+
+  double part=0;
+  double G=0;
+  for (int m=0; m<NumberOfOrders; m++) {
+    for (int n=0; n<NumberOfOrders; n++) {
+      double term = 1;
+      part=(2 - ((m==0)?1:0))*cos(m*(phi-phi1));
+      if (verbosity>10) printf("(2 - ((m==0)?1:0))*cos(m*(phi-phi1)); = %f\n",part);
+      term *=part;
+      part= sin(BetaN[n]*z)*sin(BetaN[n]*z1);
+      if (verbosity>10) printf("sin(BetaN[n]*z)*sin(BetaN[n]*z1); = %f\n",part);
+      term *=part;
+
+      if (r<r1) {
+	term *= RPrime(m,n,a,r)*Rmn2(m,n,r1);
+      } else {
+	term *= Rmn1(m,n,r1)*RPrime(m,n,b,r);
+      }
+      term /= bessel_denominator[m][n];
+      G += term;
+    }
+  }
+
+  G=G/(L*pi);
+  if (verbosity) cout << "Er = " << G << endl;
+
+  return G;
+}
+
+double Rossegger::Er_(double r, double phi, double z, double r1, double phi1, double z1)
+{
+  //doesn't take advantage of precalcs.  
+  //as in Rossegger 5.65
   //field at r, phi, z due to unit charge at r1, phi1, z1;
   //if(fByFile && fabs(r-r1)>MinimumDR && fabs(z-z1)>MinimumDZ) return ByFileER(r,phi,z,r1,phi1,z1);
   //  Check input arguments for sanity...
@@ -558,22 +774,19 @@ double Rossegger::Er(double r, double phi, double z, double r1, double phi1, dou
       for (int n=0; n<NumberOfOrders; n++)
 	{
 	  double term = 1/(L*pi);
-
 	  term *= (2 - ((m==0)?1:0))*cos(m*(phi-phi1));
-
-	  double BetaN = (n+1)*pi/L;
-	  term *= sin(BetaN*z)*sin(BetaN*z1);
-
+	  double BetaN_ = (n+1)*pi/L;
+	  term *= sin(BetaN_*z)*sin(BetaN_*z1);
 	  if (r<r1)
 	    {
-	      term *= RPrime(m,n,a,r)*Rmn2(m,n,r1);
+	      term *= RPrime_(m,n,a,r)*Rmn2_(m,n,r1);
 	    }
 	  else
 	    {
-	      term *= Rmn1(m,n,r1)*RPrime(m,n,b,r);
+	      term *= Rmn1_(m,n,r1)*RPrime_(m,n,b,r);
 	    }
 
-	  term /= BesselI(m,BetaN*a)*BesselK(m,BetaN*b)-BesselI(m,BetaN*b)*BesselK(m,BetaN*a);
+	  term /= BesselI(m,BetaN_*a)*BesselK(m,BetaN_*b)-BesselI(m,BetaN_*b)*BesselK(m,BetaN_*a);
 
 	  G += term;
 	}
@@ -586,6 +799,7 @@ double Rossegger::Er(double r, double phi, double z, double r1, double phi1, dou
 
 double Rossegger::Ephi(double r, double phi, double z, double r1, double phi1, double z1)
 {
+  //rcc streamlined Ephi term
   //compute field at rphiz from charge at r1phi1z1
   //  Check input arguments for sanity...
   int error=0;
@@ -610,19 +824,72 @@ double Rossegger::Ephi(double r, double phi, double z, double r1, double phi1, d
 
   double G=0;
   //Rossegger Eqn. 5.66:
+  for (int k=0; k<NumberOfOrders; k++) {
+    for (int n=0; n<NumberOfOrders; n++) {
+      double term = 1;
+      term *= sin(BetaN[n]*z)*sin(BetaN[n]*z1);
+      term *= Rnk(n,k,r)*Rnk(n,k,r1)/N2nk[n][k];
+
+      //the derivative of cosh(munk(pi-|phi-phi1|)
+      if (phi>phi1){
+	term *= -sinh(Munk[n][k]*(pi-(phi-phi1)));
+      }else{
+	term *= sinh(Munk[n][k]*(pi-(phi1-phi)));
+      }
+      term *= 1/sinh_pi_Munk[n][k];
+      G += term;
+    }
+  }
+
+  G=G/L;
+  if (verbosity) cout << "Ephi = " << G << endl;
+ 
+  return G;
+}
+
+
+double Rossegger::Ephi_(double r, double phi, double z, double r1, double phi1, double z1)
+{
+  //compute field at rphiz from charge at r1phi1z1
+  //  Check input arguments for sanity...
+  int error=0;
+  if (r<a    || r>b)         error=1;
+  if (phi<0  || phi>2*pi)    error=1;
+  if (z<0    || z>L)         error=1;
+  if (r1<a   || r1>b)        error=1;
+  if (phi1<0 || phi1>2*pi)   error=1;
+  if (z1<0   || z1>L)        error=1;
+  if (error)
+    {
+      cout << "Invalid arguments Ephi(";
+      cout <<r<<",";
+      cout <<phi<<",";
+      cout <<z<<",";
+      cout <<r1<<",";
+      cout <<phi1<<",";
+      cout <<z1;
+      cout <<")" << endl;;
+      return 0;
+    }
+
+  verbosity=1;
+  double G=0;
+  //Rossegger Eqn. 5.66:
   for (int k=0; k<NumberOfOrders; k++) //off by one from Rossegger convention!
     {
       if (verbosity) cout << "\nk=" << k;
       for (int n=0; n<NumberOfOrders; n++) //off by one from Rossegger convention!
 	{
 	  if (verbosity) cout << " n=" << n;
-	  double BetaN = (n+1)*pi/L;	  
+	  double BetaN_ = (n+1)*pi/L;	  
 	  double term = 1/L;
 	  if (verbosity) cout << " 1/L=" << term; 
-	  term *= sin(BetaN*z)*sin(BetaN*z1);
+	  term *= sin(BetaN_*z)*sin(BetaN_*z1);
 	  if (verbosity) cout << " *sinsin=" << term; 
-	  term *= Rnk(n,k,r)*Rnk(n,k,r1)/N2nk[n][k];
-	  if (verbosity) cout << " *rnkrnk/nnknnk=" << term;
+	  term *= Rnk_(n,k,r)*Rnk_(n,k,r1);
+	  if (verbosity) cout << " *rnkrnk=" << term;
+	  term/=N2nk[n][k];
+	  if (verbosity) cout << " */nnknnk=" << term;
 
 	  //the derivative of cosh(munk(pi-|phi-phi1|)
 	  if (phi>phi1)
@@ -637,7 +904,7 @@ double Rossegger::Ephi(double r, double phi, double z, double r1, double phi1, d
 	      //term *=  -Munk[n][k]*sinh(Munk[n][k]*pi*(phi-phi1));
 	      //this originally has a factor of Munk in front, but that cancels with one in the denominator
 	    }
-	  if (verbosity) cout << " *sinh=" << term;
+	  if (verbosity) cout << " *sinh(mu*pi-phi-phi)=" << term;
 	  term *= 1/(sinh(pi*Munk[n][k]));
 	  //term *= 1/(Munk[n][k]*sinh(pi*Munk[n][k]));
 	      //this originally has a factor of Munk in front, but that cancels with one in the numerator
@@ -646,80 +913,7 @@ double Rossegger::Ephi(double r, double phi, double z, double r1, double phi1, d
 	}
     }
   if (verbosity) cout << "Ephi = " << G << endl;
- 
+   verbosity=0;
+
   return G;
-}
-
-
-void Rossegger::LoadCsvToHist(TH2** hist, char* sourcefile){
-  cout << "trying to load " << sourcefile << endl;
-  std::ifstream inf(sourcefile);
-  string line;
-  string token;
-  printf("opened.\n");
-  printf("status? %d\n",inf.is_open()?1:0);
-  //    inf>>line;
-  //  printf("%s\n",line.c_str());
-
-  double val[3];//={-12345,-12345,-12345};
-  double mu, x, f;
-  
-  //delete hist; // get rid of it if we already had it around.
-
-  //read the histogram bounds from the file:
-  string axisname[2];
-  double firstelement[2];
-  double lastelement[2];
-  int nsteps[2];
-  double stepsize[2];
-  double lbound[2];
-  double ubound[2];
-  for (int i=0;(i<2 && !inf.eof());i++){
-    inf>>line;
-    cout << line << endl;
-    //printf("%s\n",line.c_str());
-    stringstream lineparser(line);
-    getline(lineparser,token,',');
-    axisname[i]=token;
-    getline(lineparser,token,',');
-    firstelement[i]=std::stod(token);
-    getline(lineparser,token,',');
-    lastelement[i]=std::stod(token);
-    getline(lineparser,token,',');
-    nsteps[i]=std::stoi(token);
-    stepsize[i]=(lastelement[i]-firstelement[i])/(nsteps[i]-1);
-    lbound[i]=firstelement[i]-stepsize[i]/2;
-    ubound[i]=lastelement[i]+stepsize[i]/2;
-    printf("loaded axis=%s,limits=%f,%f,steps=%d from file\n",axisname[i].c_str(),firstelement[i],lastelement[i],nsteps[i]);
-
-  }
-
-  
-
-  
-  *hist=new TH2D(sourcefile,Form("%s;%s;%s",sourcefile,axisname[0].c_str(),axisname[1].c_str()),
-		nsteps[0],lbound[0],ubound[0],
-		nsteps[1],lbound[1],ubound[1]);
-  printf("hist has name %s, xaxis bins=%d\n",(*hist)->GetName(),(*hist)->GetXaxis()->GetNbins());
-  int nlines=0;
-  while (!inf.eof()){
-    inf>>line;//mu>>x>>val;
-    //printf("%s\n",line.c_str());
-    stringstream lineparser(line);
-    for (int i=0;i<3;i++){
-      getline(lineparser,token,',');
-      //printf("token=%s\n",token.c_str());
-      val[i]=std::stod(token);
-      //printf("double=%f\n",val[i]);
-    }
-    mu=val[0];
-    x=val[1];
-    f=val[2];
-    //printf("loaded %f,%f,%f from file\n",mu,x,f);
-    (*hist)->Fill(mu,x,f);
-    nlines++;
-    //if(nlines>100) assert(1==2);
-  }
-    
-  return;
 }

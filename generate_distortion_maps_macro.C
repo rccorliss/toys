@@ -172,7 +172,7 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   char *scbasename[]={"Smooth.50kHz","Single.50kHz"};
   char *scfilename[]={"Smooth.50kHz.root","BeamXingNBeams.root"};
   char *schistname[]={"sphenix_minbias_average","sphenix_minbias_charge"};
-  const int nscales=3;
+  const int nscales=2;
   float scale[]={0,10,100,1000};
 
 

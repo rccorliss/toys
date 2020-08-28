@@ -9,6 +9,8 @@ lib_LTLIBRARIES = libfieldsim.la
 AM_LDFLAGS = -L$(libdir) -L$(OFFLINE_MAIN)/lib
 
 #libfieldsim_la_LIBADD = \
+#  -L$(ROOTSYS)/lib \
+# -lGpad -lHist -lGraf -lGraf3d -lTree -lRint -lPostscript -lMatrix -lPhysics -lMathCore -lRIO -lNet -lThread -lCore -lCint -lm -ldl -lSpectrum
 #-lfun4all \
 #  -lphool \
 #  -lSubsysReco
@@ -21,9 +23,7 @@ AM_LDFLAGS = -L$(libdir) -L$(OFFLINE_MAIN)/lib
 ROOTDICTS = \
   AnnularFieldSim_Dict.cc \
   AnalyticFieldModel_Dict.cc \
-    QPileUp_Dict.cc
-#  CylindricalFieldSim_Dict.cc 
-#  FieldSim_Dict.cc 
+  QPileUp_Dict.cc
 
 # for root6 we need pcm and dictionaries but only for
 # i/o classes. For root5 we need only dictionaries but
@@ -35,8 +35,8 @@ if MAKEROOT6
 pcmdir = $(libdir)
 nobase_dist_pcm_DATA = \
   AnnularFieldSim_rdict.pcm \
-AnalyticFieldModel_rdict.pcm \
-Rossegger_rdict.pcm \
+  AnalyticFieldModel_rdict.pcm \
+  Rossegger_rdict.pcm \
   QPileUp_rdict.pcm
 
 #  CylindricalFieldSim_rdict.pcm \
@@ -47,10 +47,6 @@ else
     AnalyticFieldModel_Dict.cc \
     Rossegger_Dict.cc \
     QPileUp_Dict.cc
-
-#rcc note that these all need trailing backslashes if not commented out.
-#    CylindricalFieldSim_Dict.cc 
-#    FieldSim_Dict.cc  
 endif
 
 # the below previously also had: # ROOT5_DICTS with a trailing slash
@@ -59,10 +55,10 @@ libfieldsim_la_SOURCES = \
   AnnularFieldSim.cc \
   AnalyticFieldModel.cc \
   Rossegger.cc \
+  src.f \
+  airy.f \
+  d1mach.f \
   QPileUp.cc 
-
-#FieldSim.cc 
-#  CylindricalFieldSim.cc 
 
 pkginclude_HEADERS = \
   AnnularFieldSim.h \
@@ -70,8 +66,6 @@ pkginclude_HEADERS = \
   Rossegger.h \
   QPileUp.h \
   Constants.h
-#  FieldSim.h  
-#  CylindricalFieldSim.h
 
 BUILT_SOURCES = \
   testexternals.cc

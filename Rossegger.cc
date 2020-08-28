@@ -11,6 +11,13 @@
 //#include "/usr/local/include/complex_bessel.h"
 #include <boost/math/special_functions.hpp> //covers all the special functions.
 
+// the limu and kimu terms, that i need to think about a little while longer...
+extern"C"{
+  void dkia_(int *IFAC, double *X, double *A, double *DKI, double *DKID, int *IERRO);
+  void dlia_(int *IFAC, double *X, double *A, double *DLI, double *DLID, int *IERRO);
+}
+//
+
 #include "TH2D.h"
 #include "TH3.h"
 
@@ -44,13 +51,15 @@ Rossegger::Rossegger(double InnerRadius, double OuterRadius, double Rdo_Z)
   pi = 2.0 * asin(1.0);
   cout << pi << endl;
 
- 
-  char limufile[]="limu_table.csv";
-  char kimufile[]="kimu_table.csv";
+  
+  //char limufile[]="limu_table.csv";
+  //char kimufile[]="kimu_table.csv";
+  /*
   LoadCsvToHist(&hLimu,limufile);
   LoadCsvToHist(&hKimu,kimufile);
-  cout << "hKimu is real, see:" <<  hKimu->GetXaxis()->GetNbins() << endl;
-  FindMunk(0.01);
+  */
+  //cout << "hKimu is real, see:" <<  hKimu->GetXaxis()->GetNbins() << endl;
+  FindMunk(0.0001);
   FindBetamn(0.0001);
  
 
@@ -58,8 +67,10 @@ Rossegger::Rossegger(double InnerRadius, double OuterRadius, double Rdo_Z)
   cout << "  Inner Radius = " << a << " cm." << endl;
   cout << "  Outer Radius = " << b << " cm." << endl;
   cout << "  Half  Length = " << L << " cm." << endl;
-  cout << "  Limu Dataset = " << limufile << endl;
+  //cout << "  Limu Dataset = " << limufile << endl;
 
+  assert(CheckZeroes(0.01));
+  // assert(1==2);
   return ;
 }
 
@@ -100,11 +111,10 @@ double Rossegger::FindNextZero(double xstart,double epsilon,int order, double (R
 
 }
 
-
-  
 void Rossegger::FindBetamn(double epsilon)
 {
   cout << "Now filling the Beta[m][n] Array..."<<endl;
+  if (verbosity>5) cout << "numberOfOrders= " << NumberOfOrders <<endl;
   for (int m=0; m<NumberOfOrders; m++)
     {
       if (verbosity) cout << "Filling Beta["<<m<<"][n]..." << endl;
@@ -136,7 +146,9 @@ void Rossegger::FindBetamn(double epsilon)
 	  if (verbosity>1)
 	    {
 	      for (double r=a; r<b; r+=step){
-		integral += Rmn(m,n,r)*Rmn(m,n,r)*r*step;
+		double rmnval=Rmn(m,n,r);
+		
+		integral += rmnval*rmnval*r*step;//Rmn(m,n,r)*Rmn(m,n,r)*r*step;
 	      }
 	      cout << " Int: " << integral << endl;
 	    }
@@ -151,6 +163,7 @@ void Rossegger::FindBetamn(double epsilon)
 void Rossegger::FindMunk(double epsilon)
 {
   cout << "Now filling the Mu[n][k] Array..."<<endl;
+  if (verbosity>5)  cout << "numberOfOrders= " << NumberOfOrders <<endl;
   // We're looking for the zeroes of Rossegger eqn. 5.46:
   // R_nk(mu_nk;a,b)=Limu(Beta_n*a)Kimu(Beta_n*b)-Kimu(Beta_n*a)Limu(Beta_n*b)=0
   // since a and b are fixed, R_nk is a function solely of mu_nk and n.
@@ -168,8 +181,8 @@ void Rossegger::FindMunk(double epsilon)
 	  printf("Mu[%d][%d]=%E\n",n,k,Munk[n][k]);	  
 	  printf("adjacent values are Rnk[mu-epsilon]=%E\tRnk[mu+epsilon]=%E\n",
 		 Rnk_for_zeroes(n,x-epsilon),Rnk_for_zeroes(n,x+epsilon));
-	  printf("values of argument to limu and kimu are %f and %f\n",
-		 (n+1)*pi/L*a,(n+1)*pi/L*b);
+	  if (verbosity>100)	  printf("values of argument to limu and kimu are %f and %f\n",
+					 (n+1)*pi/L*a,(n+1)*pi/L*b);
 	}
       }
     }
@@ -183,16 +196,18 @@ void Rossegger::FindMunk(double epsilon)
 	  //  Integral of R_nk(r)*R_ns(r) dr/r= delta_ks*N2nk
 	  //  note that unlike N2mn, there is no convenient shortcut here.
 	  double integral=0.0;
-	  double step = 0.01;
+	  double step = 0.001;
 
 	      for (double r=a; r<b; r+=step){
-		integral += Rnk(n,k,r)*Rnk(n,k,r)/r*step;
+		double rnkval=Rnk(n,k,r);
+
+		integral += rnkval*rnkval/r*step;
 	      }
 	  if (verbosity>1)
 	    {	      cout << " Int: " << integral << endl;
 	    }
 	  N2nk[n][k] = integral;
-	  if (verbosity>1) cout << "n: " << n << " k: " << k << " N2nk[n][k]: " << N2nk[n][n];
+	  if (verbosity>1) cout << "n: " << n << " k: " << k << " N2nk[n][k]: " << N2nk[n][k];
 
 	}
     }
@@ -203,9 +218,52 @@ void Rossegger::FindMunk(double epsilon)
   return;
 }
 
+bool Rossegger::CheckZeroes(double epsilon){
+  //confirm that the tabulated zeroes are all zeroes of their respective functions:
+  double result;
+  for (int m=0; m<NumberOfOrders; m++){
+    for (int n=0;n<NumberOfOrders;n++){//  !!!  Off by one from Rossegger convention  !!!
+      result=Rmn_for_zeroes(m, Betamn[m][n]*b);
+      printf("(m=%d,n=%d) Jm(x)Ym(lx)-Jm(lx)Ym(x) = %f for x=b*%f\n",m,n,result,Betamn[m][n]);
+      if (abs(result)>epsilon) return false;
+    }
+  }
+
+
+  // R_nk(mu_nk;a,b)=Limu(Beta_n*a)Kimu(Beta_n*b)-Kimu(Beta_n*a)Limu(Beta_n*b)=0
+  for (int n=0; n<NumberOfOrders; n++){
+    for (int k=0;k<NumberOfOrders;k++){//  !!!  Off by one from Rossegger convention  !!!
+      result=Rnk_for_zeroes(n, Munk[n][k]);
+      printf("(n=%d,k=%d) limu(npi*a/L)kimu(npi*b/L)-kimu(npi*a/L)kimu(npi*b/L) = %f for mu=%f\n",
+			    n,k,result,Munk[n][k]);
+      if (abs(result)>epsilon) return false;
+    }
+  }
+
+  return true;
+}
+
+
  double Rossegger::Limu(double mu, double x){
    //defined in Rossegger eqn 5.44, also a canonical 'satisfactory companion' to Kimu.
    //could use Griddit?
+ //  Rossegger Equation 5.45
+  //       Rnk(r) = Limu_nk (BetaN a) Kimu_nk (BetaN r) - Kimu_nk(BetaN a) Limu_nk (BetaN r)
+
+   int IFAC=1;
+  double A=mu;
+  double DLI=0; 
+  double DERR=0;
+  int IERRO=0;
+
+  double X=x;
+  dlia_( &IFAC, &X, &A, &DLI, &DERR, &IERRO);
+  return DLI;
+  //short-circuiting the tables with the fortran routine, if I can.
+
+
+
+   
    if (verbosity>1) {
      printf("Limu::mu=%f,x=%f\n",mu,x);
      printf("limu axis bounds= mu:(%f to %f) x:(%f to %f)\n",
@@ -233,6 +291,19 @@ void Rossegger::FindMunk(double epsilon)
    return hLimu->GetBinContent(xbin,ybin); //this should really be interpolating, but we'll deal with that later.
  }
  double Rossegger::Kimu(double mu, double x){
+
+   int IFAC=1;
+  double A=mu;
+  double DKI=0; 
+  double DERR=0;
+  int IERRO=0;
+
+  double X=x;
+  dkia_( &IFAC, &X, &A, &DKI, &DERR, &IERRO);
+  return DKI;
+  //short-circuiting the tables with the fortran routine, if I can.
+
+   
    //could use Griddit?
    if (verbosity>1) {
      printf("Kimu::mu=%f,x=%f\n",mu,x);
@@ -261,11 +332,13 @@ void Rossegger::FindMunk(double epsilon)
 
  double Rossegger::Rmn_for_zeroes(int m, double x){
    double lx = a*x/b;
+     //  Rossegger Equation 5.12:
+
    return jn(m,x)*yn(m,lx) - jn(m,lx)*yn(m,x);
  }
 
 double Rossegger::Rmn(int m, int n, double r){
-  if (verbosity>1) cout << "Determine Rmn("<<m<<","<<n<<","<<r<<") = ";
+  if (verbosity>100) cout << "Determine Rmn("<<m<<","<<n<<","<<r<<") = ";
 
   //  Check input arguments for sanity...
   int error=0;
@@ -284,7 +357,7 @@ double Rossegger::Rmn(int m, int n, double r){
   double R=0;
   R = yn(m,Betamn[m][n]*a)*jn(m,Betamn[m][n]*r) - jn(m,Betamn[m][n]*a)*yn(m,Betamn[m][n]*r);
 
-  if (verbosity>1) cout << R << endl;
+  if (verbosity>100) cout << R << endl;
   return R;
 }
 
@@ -368,12 +441,14 @@ double Rossegger::RPrime(int m, int n, double ref, double r)
 
 double Rossegger::Rnk_for_zeroes(int n, double mu){
   //unlike Rossegger, we count 'k' and 'n' from zero.
-  if (verbosity>1) printf("Rnk_for_zeroes called with n=%d,mu=%f\n",n,mu);
-  double BetaN=(n+1)*pi/L;
+  if (verbosity>10) printf("Rnk_for_zeroes called with n=%d,mu=%f\n",n,mu);
+  double BetaN=(n+1)*pi/L; //this is defined in the paragraph before 5.46
+  double betana=BetaN*a;
+  double betanb=BetaN*b;
     //  Rossegger Equation 5.46
   //       Rnk(r) = Limu_nk (BetaN a) Kimu_nk (BetaN b) - Kimu_nk(BetaN a) Limu_nk (BetaN b)
   
-  return limu(mu,BetaN*a)*kimu(mu,BetaN*b)- kimu(mu,BetaN*a)*limu(mu,BetaN*b);
+  return limu(mu,betana)*kimu(mu,betanb)- kimu(mu,betana)*limu(mu,betanb);
 }
 double Rossegger::Rnk(int n, int k, double r)
 {
@@ -423,16 +498,16 @@ double Rossegger::Ez(double r, double phi, double z, double r1, double phi1, dou
   double G=0;
   for (int m=0; m<NumberOfOrders; m++)
     {
-      if (verbosity) cout << endl << m;
+      if (verbosity>10) cout << endl << m;
       for (int n=0; n<NumberOfOrders; n++)
 	{
-	  if (verbosity) cout << " " << n;
+	  if (verbosity>10) cout << " " << n;
 	  double term = 1/(2.0*pi);
-	  if (verbosity) cout << " " << term; 
+	  if (verbosity>10) cout << " " << term; 
 	  term *= (2 - ((m==0)?1:0))*cos(m*(phi-phi1));
-	  if (verbosity) cout << " " << term; 
+	  if (verbosity>10) cout << " " << term; 
 	  term *= Rmn(m,n,r)*Rmn(m,n,r1)/N2mn[m][n];
-	  if (verbosity) cout << " " << term; 
+	  if (verbosity>10) cout << " " << term; 
 	  if (z<z1)
 	    {
 	      term *=  cosh(Betamn[m][n]*z)*sinh(Betamn[m][n]*(L-z1))/sinh(Betamn[m][n]*L);
@@ -441,9 +516,9 @@ double Rossegger::Ez(double r, double phi, double z, double r1, double phi1, dou
 	    {
 	      term *= -cosh(Betamn[m][n]*(L-z))*sinh(Betamn[m][n]*z1)/sinh(Betamn[m][n]*L);;
 	    }
-	  if (verbosity) cout << " " << term; 
+	  if (verbosity>10) cout << " " << term; 
 	  G += term;
-	  if (verbosity) cout << " " << term << " " << G << endl;
+	  if (verbosity>10) cout << " " << term << " " << G << endl;
 	}
     }
   if (verbosity) cout << "Ez = " << G << endl;
@@ -547,16 +622,18 @@ double Rossegger::Ephi(double r, double phi, double z, double r1, double phi1, d
 	  term *= sin(BetaN*z)*sin(BetaN*z1);
 	  if (verbosity) cout << " *sinsin=" << term; 
 	  term *= Rnk(n,k,r)*Rnk(n,k,r1)/N2nk[n][k];
-	  if (verbosity) cout << " *rnkrnk/nnknnk=" << term; 
-	  if (phi<phi1)
+	  if (verbosity) cout << " *rnkrnk/nnknnk=" << term;
+
+	  //the derivative of cosh(munk(pi-|phi-phi1|)
+	  if (phi>phi1)
 	    {
-	      term *=  sinh(Munk[n][k]*pi*(phi1-phi));
+	      term *=  -sinh(Munk[n][k]*(pi-(phi-phi1)));
 	      //term *=  Munk[n][k]*sinh(Munk[n][k]*pi*(phi1-phi));
 	      //this originally has a factor of Munk in front, but that cancels with one in the denominator
 	    }
 	  else
 	    {
-	      term *=  -sinh(Munk[n][k]*pi*(phi-phi1));
+	      term *=  sinh(Munk[n][k]*(pi-(phi1-phi)));
 	      //term *=  -Munk[n][k]*sinh(Munk[n][k]*pi*(phi-phi1));
 	      //this originally has a factor of Munk in front, but that cancels with one in the denominator
 	    }

@@ -32,7 +32,7 @@ class Rossegger
   Rossegger(double a=30, double b=80, double L=80);
   virtual ~Rossegger() {}
 
-  void Verbosity(int v) {verbosity=v;}
+  void Verbosity(int v) {printf("verbosity set to %d.  was %d\n", v,verbosity);verbosity=v;  return;};
   double Rmn (int m, int n, double r);  //Rmn function from Rossegger
   double Rmn_for_zeroes (int m, double x);  //Rmn function from Rossegger, as used to find Betamn zeroes.
   double Rmn1(int m, int n, double r);  //Rmn1 function from Rossegger
@@ -62,6 +62,7 @@ class Rossegger
   double FindNextZero(double xstart, double epsilon, int order, double (Rossegger::*func)(int, double));  // Routine to find zeroes of func.
   void FindBetamn(double epsilon);  // Routine used to fill the Betamn array with resolution epsilon...
   void FindMunk(double epsilon);    // Routine used to fill the Munk array with resolution epsilon...
+  bool CheckZeroes(double epsilon);//confirm that the zeroes match to the desired precision.
 
   void LoadCsvToHist(TH2** hist, char* filename);
 

@@ -285,8 +285,7 @@ TVector3 AnnularFieldSim::calc_unit_field(TVector3 at, TVector3 from){
   }else{
     double Er=green->Er(at.Perp(),FilterPhiPos(at.Phi()),at.Z(),from.Perp(),FilterPhiPos(from.Phi()),from.Z());
     double Ez=green->Ez(at.Perp(),FilterPhiPos(at.Phi()),at.Z(),from.Perp(),FilterPhiPos(from.Phi()),from.Z());
-    double Ephi=0;//green->Ephi(at.Perp(),at.Phi(),at.Z(),from.Perp(),from.Phi(),from.Z());
-    //manually disable the phi component for now.
+    double Ephi=green->Ephi(at.Perp(),FilterPhiPos(at.Phi()),at.Z(),from.Perp(),FilterPhiPos(from.Phi()),from.Z());
     field.SetXYZ(Er,Ephi,Ez); //now this is correct if our test point is at y=0 (hence phi=0);
     field=field*(k_perm*4*3.14159);//scale field strength, since the greens functions as of Apr 1 2020 do not build-in this factor.
     field.RotateZ(at.Phi());//rotate to the coordinates of our 'at' point.

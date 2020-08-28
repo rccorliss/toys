@@ -2,8 +2,10 @@ AC_INIT(MYTREE,[2.0])
 AC_CONFIG_SRCDIR([configure.ac])
 
 AM_INIT_AUTOMAKE
-
+AC_PROG_F77(gfortran)
 AC_PROG_CXX(CC g++)
+AC_ENABLE_STATIC(no)
+
 LT_INIT([disable-static])
 
 dnl   no point in suppressing warnings people should 

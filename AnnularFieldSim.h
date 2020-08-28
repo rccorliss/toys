@@ -183,7 +183,7 @@ debug_printActionEveryN=0; return;};
   void loadBfield(const char *filename, const char *treename);
   void loadField(MultiArray<TVector3> **field, TTree *source, float *rptr, float *phiptr, float *zptr, float *frptr,  float *fphiptr,  float *fzptr);
   
-  void load_rossegger(){  green=new Rossegger(rmin,rmax,zmax); return;};
+  void load_rossegger(){green=new Rossegger(rmin,rmax,zmax); return;};
 
   TVector3 calc_unit_field(TVector3 at, TVector3 from);
   TVector3 analyticFieldIntegral(float zdest,TVector3 start){return analyticFieldIntegral( zdest, start, Efield);};

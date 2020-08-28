@@ -1,5 +1,3 @@
-//#include "FieldSim.h"
-
 /*
 digital_current_macro_alice started as code to model the alice-specific TPC properties, to match to work the ALICE group did.  
 it turned out to be a convenient point to compare sPHENIX performance, so it became ill-named.
@@ -55,20 +53,20 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   const float tpc_magField=1.4;//T -- 2019 nominal value
 
   //Each unit of '1 ion' is tpc_chargescale coulombs.
-  const double tpc_chargescale=-1.6e-19;//our hist. has charge in units of ions/cm^3, so we need to multiply by the electric charge of an electron to get out C/cm^3.  
+  const double tpc_chargescale=1.6e-19;//our hist. has charge in units of ions/cm^3, so we need to multiply by the electric charge of an electron to get out C/cm^3.  
 
   
    //step 2: specify the parameters of the field simulation.  Larger numbers of bins will rapidly increase the memory footprint and compute times.
   //there are some ways to mitigate this by setting a small region of interest, or a more parsimonious lookup strategy, specified when AnnularFieldSim() is actually constructed below.
-  int nr=7;//10;//24;//159;//159 nominal
+  int nr=5;//10;//24;//159;//159 nominal
   int nr_roi_min=0;
   int nr_roi=nr;//10;
   int nr_roi_max=nr_roi_min+nr_roi;
-  int nphi=7;//38;//360;//360 nominal
+  int nphi=5;//38;//360;//360 nominal
   int nphi_roi_min=0;
   int nphi_roi=nphi;//38;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
-  int nz=21;//62;//62 nominal
+  int nz=5;//62;//62 nominal
   int nz_roi_min=0;
   int nz_roi=nz;
   int nz_roi_max=nz_roi_min+nz_roi;
@@ -96,7 +94,7 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   char field_string[200];
   sprintf(field_string,"flat_B%2.1f_E%2.1f",tpc_magField,tpc_driftVolt/tpc_z);
 
-  if (1){
+  if (0){
     tpc->loadBfield("sPHENIX.2d.root","fieldmap");
     tpc->loadEfield("externalEfield.ttree.root","fTree");
     sprintf(field_string,"real_B%2.1f_E%2.1f",tpc_magField,tpc_driftVolt/tpc_z);
@@ -132,64 +130,53 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   start=now;
  
   
-  //load the spacecharge:
-
-  char sc_string[200];
-  char sc_filename[200];
-  sprintf(sc_string,"zero_spacecharge");
-
-  /*
-  
-  if (0){
-    TestChargeSign(tpc); //adds a test charge, looks at how electrons deflect, and draws some plots.
-    return;
-  }
-
-  if (1){ //load spacecharge from file
-    sprintf(sc_string,"%s",scmapfilebase);//temporary fudge!
-    sprintf(sc_filename,"%s",scmapfilebase);//temporary fudge!
-    printf("loading spacecharge from %s.root\n",scmapfilebase);
-    //tpc->load_spacecharge(tpc_average,0,tpc_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
-    tpc->load_spacecharge(Form("%s.root",scmapfilebase),scmaphistname,0,tpc_chargescale); //(TH3F charge histogram, float z_shift in cm, float multiplier to local units)
-  }
-  if (0){ //load spacecharge from analytic formula
-    sprintf(sc_string,"analytic_spacecharge");
-    //computed the correction to get the same spacecharge as in the tpc histogram:
-    //todo: make the analytic scale proportional to the tpc_chargescale.
-    double tpc_analytic_scale=1.237320E-06/9.526278E-11;
-    tpc->load_analytic_spacecharge(0);//tpc_analytic_scale);
-  }
-  */
-  
-  //set a point we will use to look at the field slices:
+   //set a point we will use to look at the field slices:
   TVector3 pos=0.5*(tpc->GetOuterEdge()+tpc->GetInnerEdge());;
   pos.SetPhi(3.14159);
 
   
   //filename should be:  spacecharge+fieldtype+greenlookuptype-and-dimensions
   char distortionFilebase[200];
-  const int nfiles=2;
+  const int nfiles=1;
+  const int nhistsper=1;
+  /* Evgeny's stuff:
+  char *scbasename[]={"evgeny/mapFile_bX734587_bias0","Smooth.50kHz","Single.50kHz"};
+  char *scfilename[]={"evgeny/mapFile_bX734587_bias0.root","Smooth.50kHz.root","BeamXingNBeams.root"};
+  char *schistname[]={"h_Charge_0_tot",
+		      "h_Charge_1_tot",
+		      "h_Charge_2_tot",
+		      "h_Charge_3_tot",
+		      "h_Charge_4_tot",
+		      "h_Charge_5_tot",
+		      "h_Charge_6_tot",
+		      "h_Charge_7_tot",
+		      "h_Charge_8_tot",
+		      "h_Charge_9_tot"};
+  */
   char *scbasename[]={"Smooth.50kHz","Single.50kHz"};
   char *scfilename[]={"Smooth.50kHz.root","BeamXingNBeams.root"};
   char *schistname[]={"sphenix_minbias_average","sphenix_minbias_charge"};
   const int nscales=2;
-  float scale[]={0,10,100,1000};
+  float scale[]={1,5,100,1000};
 
 
-  for (int i=0;i<1;i++){
-    tpc->load_spacecharge(scfilename[i],schistname[i],0,tpc_chargescale);
-    tpc->populate_fieldmap();
-    for (int j=0;j<3;j++){
-      printf("%s file has %s hist.  field=%s, lookup=%s. scaling to %2.2f\n",scbasename[i],schistname[i],field_string,lookup_string,scale[j]);	  
-      tpc->SetDistortionScaleRPZ(scale[j],scale[j],scale[j]);
-      printf("scaled.\n");
-      sprintf(distortionFilebase,"%s.scale%1.0f.%s.%s",scbasename[i],scale[j],field_string,lookup_string);
-      printf("filebase=%s\n",distortionFilebase);
-      tpc->GenerateDistortionMaps(distortionFilebase,2,2,2,1);
-      printf("distortions mapped.\n");
-      tpc->PlotFieldSlices(distortionFilebase,pos);
-      printf("field mapped.\n");
-      //save fieldslices too
+  for (int i=0;i<nfiles;i++){
+    for (int ihist=0;ihist<nhistsper;ihist++){
+      tpc->load_spacecharge(scfilename[i],schistname[ihist],0,tpc_chargescale, 0.01);
+      tpc->populate_fieldmap();
+      for (int j=0;j<nscales;j++){
+	printf("%s file has %s hist.  field=%s, lookup=%s. scaling to %2.2f\n",
+	       scbasename[i],schistname[i],field_string,lookup_string,scale[j]);
+	tpc->SetDistortionScaleRPZ(scale[j],scale[j],scale[j]);
+	printf("scaled.\n");
+	sprintf(distortionFilebase,"%s.hist%d.scale%1.0f.%s.%s",scbasename[i],ihist,scale[j],field_string,lookup_string);
+	printf("filebase=%s\n",distortionFilebase);
+	tpc->GenerateDistortionMaps(distortionFilebase,2,2,2,1);
+	printf("distortions mapped.\n");
+	tpc->PlotFieldSlices(distortionFilebase,pos);
+	printf("field mapped.\n");
+	//save fieldslices too
+      }
     }
   }
 

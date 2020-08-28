@@ -4,7 +4,7 @@ AC_CONFIG_SRCDIR([configure.ac])
 AM_INIT_AUTOMAKE
 AC_PROG_F77(gfortran)
 AC_PROG_CXX(CC g++)
-AC_ENABLE_STATIC(no)
+dnl AC_ENABLE_STATIC(no)
 
 LT_INIT([disable-static])
 

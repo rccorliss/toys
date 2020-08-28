@@ -9,9 +9,10 @@ This code loads an AnnularFieldSim model of the TPC, computing spacecharge disto
  */
 
 
-
 #include "AnnularFieldSim.h"
+
 R__LOAD_LIBRARY(.libs/libfieldsim)
+
 
 //place test charge  and plot how charges distort.
 void TestChargeSign(AnnularFieldSim *t);
@@ -91,15 +92,15 @@ void digital_current_macro_alice(int reduction=0, bool loadOutputFromFile=false,
   
   //define a region of interest, in units of the intrinsic scale of the tpc histogram:
   //we will reduce these when we call the macro, but keep the full scale here so the calculations for our test grid are not changed.
-  int nr=7;//10;//24;//159;//159 nominal
+  int nr=4;//10;//24;//159;//159 nominal
   int nr_roi_min=0;
   int nr_roi=nr;//10;
   int nr_roi_max=nr_roi_min+nr_roi;
-  int nphi=7;//38;//360;//360 nominal
+  int nphi=4;//38;//360;//360 nominal
   int nphi_roi_min=0;
   int nphi_roi=nphi;//38;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
-  int nz=21;//62;//62 nominal
+  int nz=4;//62;//62 nominal
   int nz_roi_min=0;
   int nz_roi=nz;
   int nz_roi_max=nz_roi_min+nz_roi;

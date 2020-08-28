@@ -1,7 +1,7 @@
 #ifdef __CINT__
-#pragma link off all globals;
-#pragma link off all classes;
-#pragma link off all functions;
+//#pragma link off all globals;
+//#pragma link off all classes;
+//#pragma link off all functions;
 
 // -! means no streamers which is root'ish for
 // we don't want to save this class on a file

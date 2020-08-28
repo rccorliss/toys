@@ -5,7 +5,7 @@
 #include "TH3F.h"
 #include "TH2F.h"
 #include "TFormula.h"
-#include "TTree.h"
+#include <TTree.h>
 #include "TFile.h"
 #include "AnalyticFieldModel.h"
 #include "Rossegger.h"
@@ -891,28 +891,28 @@ void AnnularFieldSim::loadField(MultiArray<TVector3> **field, TTree *source, flo
 }
 
 
-void AnnularFieldSim::load_spacecharge(const char *filename, const char *histname, float zoffset=0, float scalefactor=1){
+void AnnularFieldSim::load_spacecharge(const char *filename, const char *histname, float zoffset, float chargescale, float cmscale){
   TFile *f=TFile::Open(filename);
   
   TH3F* scmap=(TH3F*)f->Get(histname);
   printf("Loading spacecharge from '%s'.  Seeking histname '%s'\n",filename,histname);
-  load_spacecharge(scmap,zoffset,scalefactor);
+  load_spacecharge(scmap,zoffset,chargescale, cmscale);
   return;
 }
 
-void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefactor=1){
+void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float chargescale, float cmscale){
   //load spacecharge densities from a histogram, where scalefactor translates into local units of C/cm^3
   //noting that the histogram limits may differ from the simulation size, and have different granularity
   //hist is assumed/required to be x=phi, y=r, z=z
   //z offset 'drifts' the charge by that distance toward z=0.
 
   //Get dimensions of input
-  float hrmin=hist->GetYaxis()->GetXmin();
-  float hrmax=hist->GetYaxis()->GetXmax();
+  float hrmin=hist->GetYaxis()->GetXmin()/cmscale;
+  float hrmax=hist->GetYaxis()->GetXmax()/cmscale;
   float hphimin=hist->GetXaxis()->GetXmin();
   float hphimax=hist->GetXaxis()->GetXmax();
-  float hzmin=hist->GetZaxis()->GetXmin();
-  float hzmax=hist->GetZaxis()->GetXmax();
+  float hzmin=hist->GetZaxis()->GetXmin()/cmscale;
+  float hzmax=hist->GetZaxis()->GetXmax()/cmscale;
   
   //Get number of bins in each dimension
   int hrn=hist->GetNbinsY();
@@ -993,7 +993,7 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float scalefac
 	//volume is simplified from the basic formula:  float vol=hzstep*(hphistep*(hr+hrstep)*(hr+hrstep) - hphistep*hr*hr);
 	//should be lower radius and higher radius.  I'm off by a 0.5 on both of those.  Oops.
 	double vol=hzstep*hphistep*(hr+0.5*hrstep)*hrstep;
-	double qbin=scalefactor*vol*hist->GetBinContent(hist->GetBin(j+1,i+1,k+1))*C;//store locally as Coulombs per bin.
+	double qbin=chargescale*vol*hist->GetBinContent(hist->GetBin(j+1,i+1,k+1))*C;//store locally as Coulombs per bin.
 	//float qold=q->Get(localr,localphi,localz);
 	totalcharge+=qbin;
 	//if(debugFlag()) printf("%d: AnnularFieldSim::load_spacecharge adding Q=%f from hist(%d,%d,%d) into cell (%d,%d,%d)\n",__LINE__,qbin,i,j,k,localr,localphi,localz);
@@ -1531,6 +1531,7 @@ void  AnnularFieldSim::save_phislice_lookup(const char* destfile){
   printf("total elements = %llu\n",totalelements);
 
   TFile *output=TFile::Open(destfile,"RECREATE");
+  output->cd();
 
   TTree *tInfo=new TTree("info","Information about Lookup Table");
   tInfo->Branch("rmin",&rmin);
@@ -1545,6 +1546,7 @@ void  AnnularFieldSim::save_phislice_lookup(const char* destfile){
   tInfo->Branch("nphi",&nphi);
   tInfo->Branch("nz",&nz);
   tInfo->Fill();
+  printf("info tree built.\n");
 
    TTree *tLookup=new TTree("phislice","Phislice Lookup Table");
    int ior,ifr,iophi,ioz,ifz;
@@ -1556,6 +1558,7 @@ void  AnnularFieldSim::save_phislice_lookup(const char* destfile){
   tLookup->Branch("iz_source",&ioz);
   tLookup->Branch("iz_target",&ifz);
   tLookup->Branch("Evec",&unitf);
+  printf("lookup tree built.\n");
 
   int el=0;
   for (ifr=rmin_roi;ifr<rmax_roi;ifr++){
@@ -1581,6 +1584,7 @@ void  AnnularFieldSim::save_phislice_lookup(const char* destfile){
   output->cd();
   tInfo->Write();
   tLookup->Write();
+  //output->Write();
   output->Close();
   return;
 }

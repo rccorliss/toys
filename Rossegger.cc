@@ -5,6 +5,7 @@
 #include <math.h>
 #include "TMath.h"
 #include "TFile.h"
+#include "TTree.h"
 #include <string>
 #include <sstream>
 
@@ -52,10 +53,20 @@ Rossegger::Rossegger(double InnerRadius, double OuterRadius, double Rdo_Z)
   cout << pi << endl;
 
   PrecalcFreeConstants();
-  
-  FindMunk(0.0001);
-  FindBetamn(0.0001);
 
+ //load the greens functions:
+  char zeroesfilename[200];
+  sprintf(zeroesfilename,"rosseger_zeroes_a%2.2f_b%2.2f_L%2.2f.root",a,b,L);
+  TFile *fileptr=TFile::Open(zeroesfilename,"READ");
+  if (!fileptr){ //generate the lookuptable
+    FindMunk(0.0001);
+    FindBetamn(0.0001);
+    SaveZeroes(zeroesfilename);
+  } else{ //load it from a file
+    fileptr->Close();
+    LoadZeroes(zeroesfilename);
+  }
+  
   PrecalcDerivedConstants();
  
 
@@ -163,6 +174,8 @@ void Rossegger::FindMunk(double epsilon)
   // R_nk(mu_nk;a,b)=Limu(Beta_n*a)Kimu(Beta_n*b)-Kimu(Beta_n*a)Limu(Beta_n*b)=0
   // since a and b are fixed, R_nk is a function solely of mu_nk and n.
   // for each 'n' we wish to find the a set of k mu_n's that result in R_nk=0
+
+  //could add an option here to load the munks from file if the dimensions match.
 
   for (int n=0; n<NumberOfOrders; n++)//  !!!  Off by one from Rossegger convention  !!!
     {
@@ -512,7 +525,7 @@ double Rossegger::RPrime_(int m, int n, double ref, double r)
 
 
 
-double Rossegger::Rnk_for_zeroes_(int n, double mu){
+double Rossegger::Rnk_for_zeroes(int n, double mu){
   //unlike Rossegger, we count 'k' and 'n' from zero.
   if (verbosity>10) printf("Rnk_for_zeroes called with n=%d,mu=%f\n",n,mu);
   double betana=BetaN_a[n];
@@ -523,7 +536,7 @@ double Rossegger::Rnk_for_zeroes_(int n, double mu){
   return limu(mu,betana)*kimu(mu,betanb)- kimu(mu,betana)*limu(mu,betanb);
 }
 
-double Rossegger::Rnk_for_zeroes(int n, double mu){
+double Rossegger::Rnk_for_zeroes_(int n, double mu){
   //unlike Rossegger, we count 'k' and 'n' from zero.
   if (verbosity>10) printf("Rnk_for_zeroes called with n=%d,mu=%f\n",n,mu);
   double BetaN_=(n+1)*pi/L; //this is defined in the paragraph before 5.46
@@ -916,4 +929,94 @@ double Rossegger::Ephi_(double r, double phi, double z, double r1, double phi1, 
    verbosity=0;
 
   return G;
+}
+
+
+void  Rossegger::SaveZeroes(const char* destfile){
+  TFile *output=TFile::Open(destfile,"RECREATE");
+  output->cd();
+
+  TTree *tInfo=new TTree("info","Mu[n][k] values");
+  int ord=NumberOfOrders;
+  double epsilon=0.0001;
+  tInfo->Branch("order",&ord);
+  tInfo->Branch("epsilon",&epsilon);
+  tInfo->Fill();
+
+  int n,k,m;
+  double munk, betamn;
+  double n2nk,n2mn;
+  TTree *tmunk=new TTree("munk","Mu[n][k] values");
+  tmunk->Branch("n",&n);
+  tmunk->Branch("k",&k);
+  tmunk->Branch("munk",&munk);
+  tmunk->Branch("n2nk",&n2nk);
+  for (n=0;n<ord;n++){
+    for (k=0;k<ord;k++){
+      munk=Munk[n][k];
+      n2nk=N2nk[n][k];
+      tmunk->Fill();
+    }
+  }
+
+  TTree *tbetamn=new TTree("betamn","Beta[m][n] values");
+  tbetamn->Branch("m",&m);
+  tbetamn->Branch("n",&n);
+  tbetamn->Branch("betamn",&betamn);
+  tbetamn->Branch("n2mn",&n2mn);
+  for (m=0;m<ord;m++){
+    for (n=0;n<ord;n++){
+      betamn=Betamn[m][n];
+      n2mn=N2mn[m][n];
+      tbetamn->Fill();
+    }
+  }
+  
+  tInfo->Write();
+  tmunk->Write();
+  tbetamn->Write();
+  //output->Write();
+  output->Close();
+  return;
+}
+
+void  Rossegger::LoadZeroes(const char* destfile){
+  TFile *f=TFile::Open(destfile,"READ");
+  printf("reading rossegger zeroes from %s\n",destfile);
+  TTree *tInfo=(TTree*)(f->Get("info"));
+  int ord;
+  double epsilon;
+  tInfo->SetBranchAddress("order",&ord);
+  tInfo->SetBranchAddress("epsilon",&epsilon);
+  tInfo->GetEntry(0);
+  printf("order=%d,epsilon=%f\n",ord,epsilon);
+
+  int n,k,m;
+  double munk, betamn;
+  double n2nk,n2mn;
+  TTree *tmunk=(TTree *)(f->Get("munk"));
+  tmunk->SetBranchAddress("n",&n);
+  tmunk->SetBranchAddress("k",&k);
+  tmunk->SetBranchAddress("munk",&munk);
+  tmunk->SetBranchAddress("n2nk",&n2nk);
+  for (int i=0;i<tmunk->GetEntries();i++){
+    tmunk->GetEntry(i);
+    Munk[n][k]=munk;
+    N2nk[n][k]=n2nk;
+  }
+
+  TTree *tbetamn=(TTree *)(f->Get("betamn"));
+  tbetamn->SetBranchAddress("m",&m);
+  tbetamn->SetBranchAddress("n",&n);
+  tbetamn->SetBranchAddress("betamn",&betamn);
+  tbetamn->SetBranchAddress("n2mn",&n2mn);
+  for (int i=0;i<tbetamn->GetEntries();i++){
+    tbetamn->GetEntry(i);
+    Betamn[m][n]=betamn;
+    N2mn[m][n]=n2mn;
+  }
+  
+
+  f->Close();
+  return;
 }

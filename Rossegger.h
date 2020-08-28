@@ -79,7 +79,8 @@ class Rossegger
   void FindMunk(double epsilon);    // Routine used to fill the Munk array with resolution epsilon...
   bool CheckZeroes(double epsilon);//confirm that the zeroes match to the desired precision.
 
-  void LoadCsvToHist(TH2** hist, char* filename);
+  void  LoadZeroes(const char* destfile);
+  void  SaveZeroes(const char* destfile);
 
   double Betamn[NumberOfOrders][NumberOfOrders];  //  Betamn array from Rossegger
   double N2mn[NumberOfOrders][NumberOfOrders];    //  N2mn array from Rossegger

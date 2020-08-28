@@ -171,8 +171,8 @@ debug_printActionEveryN=0; return;};
   
  
   
-  void load_spacecharge(const char *filename, const char *histname, float zoffset, float scalefactor);
-  void load_spacecharge(TH3F *hist, float zoffset, float scalefactor);
+  void load_spacecharge(const char *filename, const char *histname, float zoffset=0, float chargescale=1, float cmscale=1);
+  void load_spacecharge(TH3F *hist, float zoffset, float chargescale, float cmscale);
   void load_analytic_spacecharge(float scalefactor);
   void add_testcharge(float r, float phi, float z, float coulombs);
   

@@ -2634,7 +2634,7 @@ TVector3 AnnularFieldSim::GetStepDistortion(float zdest,TVector3 start, bool int
 
   //these values should be with real, not nominal field?
   double mu=vdrift/Enominal;//vdrift in [cm/s], field in [V/cm] hence mu in [cm^2/(V*s)];
-  double omegatau=mu*Bnominal;
+  double omegatau=-mu*Bnominal;//minus sign is for electron charge.
   //or:  omegatau=-10*(10*B.Z()/Tesla)*(vdrift/(cm/us))/(fieldz/(V/cm)); //which is the same as my calculation up to a sign.
   //printf("omegatau=%f\n",omegatau);
 

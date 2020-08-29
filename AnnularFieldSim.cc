@@ -1922,9 +1922,9 @@ TVector3 AnnularFieldSim::sum_phislice_field_at(int r,int phi, int z){
  //sum the E field over all nr by ny by nz cells of sources, at the specific position r,phi,z.
   //note the specific position in Epartial is in relative coordinates.
   //printf("AnnularFieldSim::sum_field_at(r=%d,phi=%d, z=%d)\n",r,phi,z);
-  TVector3 pos=GetRoiCelLCenter(r-rmin_roi,phi-phimin_roi,z-zmin_roi);      //RCC manually disabled phi component of green   added this line
-  TVector3 slicepos=GetRoiCelLCenter(r-rmin_roi,0,z-zmin_roi);      //RCC manually disabled phi component of green   added this line
-  float rotphi=pos.Phi()-slicepos.Phi();
+  TVector3 pos=GetRoiCellCenter(r-rmin_roi,phi-phimin_roi,z-zmin_roi);      //RCC manually disabled phi component of green   added this line
+  TVector3 slicepos=GetRoiCellCenter(r-rmin_roi,0,z-zmin_roi);      //RCC manually disabled phi component of green   added this line
+  float rotphi=pos.Phi()-slicepos.Phi(); //probably this is phi*step.Phi();
 
   
   TVector3 sum(0,0,0);

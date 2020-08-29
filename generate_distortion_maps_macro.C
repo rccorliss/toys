@@ -58,15 +58,15 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   
    //step 2: specify the parameters of the field simulation.  Larger numbers of bins will rapidly increase the memory footprint and compute times.
   //there are some ways to mitigate this by setting a small region of interest, or a more parsimonious lookup strategy, specified when AnnularFieldSim() is actually constructed below.
-  int nr=16;//10;//24;//159;//159 nominal
+  int nr=9;//10;//24;//159;//159 nominal
   int nr_roi_min=0;
   int nr_roi=nr;//10;
   int nr_roi_max=nr_roi_min+nr_roi;
-  int nphi=24;//38;//360;//360 nominal
+  int nphi=9;//38;//360;//360 nominal
   int nphi_roi_min=0;
   int nphi_roi=nphi;//38;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
-  int nz=25;//62;//62 nominal
+  int nz=9;//62;//62 nominal
   int nz_roi_min=0;
   int nz_roi=nz;
   int nz_roi_max=nz_roi_min+nz_roi;
@@ -114,7 +114,7 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
 
   //load the greens functions:
   char lookup_string[200];
-  sprintf(lookup_string,"ross_phislice_lookup_r%dxp%dxz%d",nr,nphi,nz);
+  sprintf(lookup_string,"ross_phi0_phislice_lookup_r%dxp%dxz%d",nr,nphi,nz);
   char lookupFilename[200];
   sprintf(lookupFilename,"%s.root",lookup_string);
   TFile *fileptr=TFile::Open(lookupFilename,"READ");
@@ -180,7 +180,7 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
 	       scbasename[i],schistname[i],field_string,lookup_string,scale[j]);
 	tpc->SetDistortionScaleRPZ(scale[j],scale[j],scale[j]);
 	printf("scaled.\n");
-	sprintf(distortionFilebase,"%s.hist%d.scale%1.0f.%s.%s",scbasename[i],ihist,scale[j],field_string,lookup_string);
+	sprintf(distortionFilebase,"%s.phi0.scale%1.0f.%s.%s",scbasename[i],scale[j],field_string,lookup_string);
 	printf("filebase=%s\n",distortionFilebase);
 	tpc->GenerateDistortionMaps(distortionFilebase,2,2,2,1);
 	printf("distortions mapped.\n");

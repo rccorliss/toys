@@ -101,7 +101,7 @@ void sumRosseggerPhiLoops(){
   int squaresteps=15;
   int loopsteps=50;
   float rb[]={20,78};
-  float pb[]={0,6.28};
+  double pb[]={0,4*acos(0)};
   float zb[]={0,105.5};
 
   int phibin=0;
@@ -116,9 +116,11 @@ void sumRosseggerPhiLoops(){
     for (int j=0;j<squaresteps;j++){
       float z1=zb[0]+(zb[1]-zb[0])/squaresteps*(j+0.5);
       for (int k=0;k<loopsteps;k++){
-	float p1=pb[0]+(pb[1]-pb[0])/loopsteps*(k+0.5);
-	double opt=ro->Ephi(r,p,z,r1,p1,z1);
-	hLoopSum->Fill(r1,z1,opt/loopsteps);
+	if(1 || k!=phibin){
+	  float p1=pb[0]+(pb[1]-pb[0])/loopsteps*(k+0.5);
+	  double opt=ro->Ephi(r,p,z,r1,p1,z1);
+	  hLoopSum->Fill(r1,z1,opt/loopsteps);
+	}
       }
     }
     

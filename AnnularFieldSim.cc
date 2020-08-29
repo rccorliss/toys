@@ -283,11 +283,18 @@ TVector3 AnnularFieldSim::calc_unit_field(TVector3 at, TVector3 from){
     }
     //printf("calc_unit_field at (%2.2f,%2.2f,%2.2f) from  (%2.2f,%2.2f,%2.2f).  Mag=%2.4fe-9\n",at.x(),at.Y(),at.Z(),from.X(),from.Y(),from.Z(),field.Mag()*1e9);
   }else{
-    double Er=green->Er(at.Perp(),FilterPhiPos(at.Phi()),at.Z(),from.Perp(),FilterPhiPos(from.Phi()),from.Z());
-    //RCC manually disabled phi component of green
-    double Ephi=0;//green->Ephi(at.Perp(),FilterPhiPos(at.Phi()),at.Z(),from.Perp(),FilterPhiPos(from.Phi()),from.Z());
-    double Ez=green->Ez(at.Perp(),FilterPhiPos(at.Phi()),at.Z(),from.Perp(),FilterPhiPos(from.Phi()),from.Z());
-    field.SetXYZ(Er,Ephi,Ez); //now this is correct if our test point is at y=0 (hence phi=0);
+    double atphi=FilterPhiPos(at.Phi());
+    double fromphi=FilterPhiPos(from.Phi());
+    double delphi=abs(at.DeltaPhi(from));
+    
+    double Er=green->Er(at.Perp(),atphi,at.Z(),from.Perp(),fromphi,from.Z());
+    //RCC manually disabled phi component of green -- actually, a correction to disallow trying to compute phi terms when at the same phi:
+    double Ephi=0;
+    if(delphi>ALMOST_ZERO){
+      Ephi=green->Ephi(at.Perp(),atphi,at.Z(),from.Perp(),fromphi,from.Z());
+    }
+    double Ez=green->Ez(at.Perp(),atphi,at.Z(),from.Perp(),fromphi,from.Z());
+    field.SetXYZ(Er,Ephi,Ez); //now these are the correct components if our test point is at y=0 (hence phi=0);
     field=field*(k_perm*4*3.14159);//scale field strength, since the greens functions as of Apr 1 2020 do not build-in this factor.
     field.RotateZ(at.Phi());//rotate to the coordinates of our 'at' point.
   }

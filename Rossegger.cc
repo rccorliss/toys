@@ -232,9 +232,11 @@ bool Rossegger::CheckZeroes(double epsilon){
   for (int m=0; m<NumberOfOrders; m++){
     for (int n=0;n<NumberOfOrders;n++){//  !!!  Off by one from Rossegger convention  !!!
       result=Rmn_for_zeroes(m, Betamn[m][n]*b);
-      printf("(m=%d,n=%d) Jm(x)Ym(lx)-Jm(lx)Ym(x) = %f for x=b*%f\n",m,n,result,Betamn[m][n]);
-      if (abs(result)>epsilon) return false;
-    }
+      if (abs(result)>epsilon) {
+	      printf("(m=%d,n=%d) Jm(x)Ym(lx)-Jm(lx)Ym(x) = %f for x=b*%f\n",m,n,result,Betamn[m][n]);
+return false;
+      }
+      }
   }
 
 
@@ -242,9 +244,11 @@ bool Rossegger::CheckZeroes(double epsilon){
   for (int n=0; n<NumberOfOrders; n++){
     for (int k=0;k<NumberOfOrders;k++){//  !!!  Off by one from Rossegger convention  !!!
       result=Rnk_for_zeroes(n, Munk[n][k]);
-      printf("(n=%d,k=%d) limu(npi*a/L)kimu(npi*b/L)-kimu(npi*a/L)kimu(npi*b/L) = %f for mu=%f\n",
-			    n,k,result,Munk[n][k]);
-      if (abs(result)>epsilon) return false;
+      if (abs(result)>epsilon) {
+	printf("(n=%d,k=%d) limu(npi*a/L)kimu(npi*b/L)-kimu(npi*a/L)kimu(npi*b/L) = %f for mu=%f\n",
+	       n,k,result,Munk[n][k]);
+	return false;
+      }
     }
   }
 

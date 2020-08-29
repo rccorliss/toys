@@ -58,15 +58,15 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   
    //step 2: specify the parameters of the field simulation.  Larger numbers of bins will rapidly increase the memory footprint and compute times.
   //there are some ways to mitigate this by setting a small region of interest, or a more parsimonious lookup strategy, specified when AnnularFieldSim() is actually constructed below.
-  int nr=11;//10;//24;//159;//159 nominal
+  int nr=16;//10;//24;//159;//159 nominal
   int nr_roi_min=0;
   int nr_roi=nr;//10;
   int nr_roi_max=nr_roi_min+nr_roi;
-  int nphi=11;//38;//360;//360 nominal
+  int nphi=24;//38;//360;//360 nominal
   int nphi_roi_min=0;
   int nphi_roi=nphi;//38;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
-  int nz=11;//62;//62 nominal
+  int nz=25;//62;//62 nominal
   int nz_roi_min=0;
   int nz_roi=nz;
   int nz_roi_max=nz_roi_min+nz_roi;
@@ -167,7 +167,7 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   char *scbasename[]={"Smooth.50kHz","Single.50kHz"};
   char *scfilename[]={"Smooth.50kHz.root","BeamXingNBeams.root"};
   char *schistname[]={"sphenix_minbias_average","sphenix_minbias_charge"};
-  const int nscales=2;
+  const int nscales=1;
   float scale[]={1,5,100,1000};
 
 

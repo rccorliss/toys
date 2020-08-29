@@ -66,8 +66,15 @@ class AnnularFieldSim{
   double omegatau_nominal; //nominal omegatau value, derived from vdrift and field strengths.  
   //double vprime; //first derivative of drift velocity at specific E
   //double vprime2; //second derivative of drift velocity at specific E
+
+  //field constants:
+  char fieldstring[300],Bfieldname[100],Efieldname[100];
+  char chargestring[300], chargefilename[100];
   float Enominal;//magnitude of the nominal field on which drift speed is based, in V/cm.
   float Bnominal;//magnitude of the nominal magnetic field on which drift speed is based, in Tesla.
+
+  
+  //physical dimensions
   float phispan;//angular span of the area in the phi direction, since TVector3 is too smart.
   float rmin, rmax;//inner and outer radii of the annulus
   float zmin, zmax;//lower and upper edges of the coordinate system in z (not fully implemented yet)
@@ -152,7 +159,8 @@ debug_printActionEveryN=0; return;};
   //getters for internal states:
   const char* GetLookupString();
   const char* GetGasString();
-  //const char* GetFieldString();
+  const char* GetFieldString();
+  const char* GetChargeString(){return chargestring;};
   float GetNominalB(){return Bnominal;};
   float GetNominalE(){return Enominal;};
   float GetChargeAt(TVector3 pos);

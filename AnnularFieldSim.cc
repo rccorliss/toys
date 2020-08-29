@@ -284,8 +284,9 @@ TVector3 AnnularFieldSim::calc_unit_field(TVector3 at, TVector3 from){
     //printf("calc_unit_field at (%2.2f,%2.2f,%2.2f) from  (%2.2f,%2.2f,%2.2f).  Mag=%2.4fe-9\n",at.x(),at.Y(),at.Z(),from.X(),from.Y(),from.Z(),field.Mag()*1e9);
   }else{
     double Er=green->Er(at.Perp(),FilterPhiPos(at.Phi()),at.Z(),from.Perp(),FilterPhiPos(from.Phi()),from.Z());
+    //RCC manually disabled phi component of green
+    double Ephi=0;//green->Ephi(at.Perp(),FilterPhiPos(at.Phi()),at.Z(),from.Perp(),FilterPhiPos(from.Phi()),from.Z());
     double Ez=green->Ez(at.Perp(),FilterPhiPos(at.Phi()),at.Z(),from.Perp(),FilterPhiPos(from.Phi()),from.Z());
-    double Ephi=green->Ephi(at.Perp(),FilterPhiPos(at.Phi()),at.Z(),from.Perp(),FilterPhiPos(from.Phi()),from.Z());
     field.SetXYZ(Er,Ephi,Ez); //now this is correct if our test point is at y=0 (hence phi=0);
     field=field*(k_perm*4*3.14159);//scale field strength, since the greens functions as of Apr 1 2020 do not build-in this factor.
     field.RotateZ(at.Phi());//rotate to the coordinates of our 'at' point.
@@ -770,6 +771,7 @@ void AnnularFieldSim::loadEfield(const char *filename, const char *treename){
   //assumes file stores fields as V/cm.
   TFile fieldFile(filename,"READ");
   TTree *fTree=(TTree*)(fieldFile.Get(treename));
+  sprintf(Efieldname,"E:%s:%s",filename,treename);
   float r,z,phi; //coordinates
   float fr,fz,fphi; //field components at that coordinate
   fTree->SetBranchAddress("r",&r);
@@ -787,6 +789,7 @@ void AnnularFieldSim::loadBfield(const char *filename, const char *treename){
   //assumes file stores field as Tesla.
   TFile fieldFile(filename,"READ");
   TTree *fTree=(TTree*)(fieldFile.Get(treename));
+  sprintf(Bfieldname,"B:%s:%s",filename,treename);
   float r,z,phi; //coordinates
   float fr,fz,fphi; //field components at that coordinate
   fTree->SetBranchAddress("r",&r);
@@ -893,10 +896,11 @@ void AnnularFieldSim::loadField(MultiArray<TVector3> **field, TTree *source, flo
 
 void AnnularFieldSim::load_spacecharge(const char *filename, const char *histname, float zoffset, float chargescale, float cmscale){
   TFile *f=TFile::Open(filename);
-  
   TH3F* scmap=(TH3F*)f->Get(histname);
   printf("Loading spacecharge from '%s'.  Seeking histname '%s'\n",filename,histname);
+  sprintf(chargefilename,"%s:%s",filename,histname);
   load_spacecharge(scmap,zoffset,chargescale, cmscale);
+  f->Close();
   return;
 }
 
@@ -1004,7 +1008,8 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float chargesc
 
   printf("AnnularFieldSim::load_spacecharge:  Total charge Q=%E Coulombs\n",totalcharge/C);
 
-  
+  sprintf(chargestring,"SC from file: %s. Qtot=%E Coulombs.  native dims: (%d,%d,%d)(%2.1fcm,%2.1f,%2.1fcm)-(%2.1fcm,%2.1f,%2.1fcm)",
+	  chargefilename,totalcharge/C,hrn,hphin,hzn,hrmin,hrmax,hphimin,hphimax,hzmin,hzmax);
 
   if (lookupCase==HybridRes){
     //go through the q array and build q_lowres.  
@@ -1595,6 +1600,9 @@ void AnnularFieldSim::setFlatFields(float B, float E){
   //these only cover the roi, but since we address them flat, we don't need to know that here.
   printf("AnnularFieldSim::setFlatFields(B=%f Tesla,E=%f V/cm)\n",B,E);
   printf("lengths:  Eext=%d, Bfie=%d\n",Eexternal->Length(),Bfield->Length());
+  sprintf(Efieldname,"E:Flat:%f",E);
+  sprintf(Bfieldname,"B:Flat:%f",B);
+
   Enominal=E*(V/cm);
   Bnominal=B*Tesla;
   for (int i=0;i<Eexternal->Length();i++)
@@ -1914,6 +1922,11 @@ TVector3 AnnularFieldSim::sum_phislice_field_at(int r,int phi, int z){
  //sum the E field over all nr by ny by nz cells of sources, at the specific position r,phi,z.
   //note the specific position in Epartial is in relative coordinates.
   //printf("AnnularFieldSim::sum_field_at(r=%d,phi=%d, z=%d)\n",r,phi,z);
+  TVector3 pos=GetRoiCelLCenter(r-rmin_roi,phi-phimin_roi,z-zmin_roi);      //RCC manually disabled phi component of green   added this line
+  TVector3 slicepos=GetRoiCelLCenter(r-rmin_roi,0,z-zmin_roi);      //RCC manually disabled phi component of green   added this line
+  float rotphi=pos.Phi()-slicepos.Phi();
+
+  
   TVector3 sum(0,0,0);
   TVector3 unrotatedField(0,0,0);
   int phirel;
@@ -1924,7 +1937,7 @@ TVector3 AnnularFieldSim::sum_phislice_field_at(int r,int phi, int z){
 	if (r==ir && phi==iphi && z==iz) continue;//dont' compute self-to-self field.
 	phirel=FilterPhiIndex(iphi-phi);
 	unrotatedField=Epartial_phislice->Get(r-rmin_roi,0,z-zmin_roi,ir,phirel,iz)*q->Get(ir,iphi,iz);
-	unrotatedField.RotateZ(phi*step.Phi()); //annoying that I can't rename this to 'rotated field' here without unnecessary overhead.
+	unrotatedField.RotateZ(rotphi);   //RCC manually disabled phi component of green   added this line.  previously was rotate by the step.Phi()*phi.    //annoying that I can't rename this to 'rotated field' here without unnecessary overhead.
 	sum+=unrotatedField;
       }
     }
@@ -2482,15 +2495,20 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
   float texpos=0.9;float texshift=0.12;
   TLatex *tex=new TLatex(0.0,texpos,"Fill Me In");
   tex->SetTextSize(texshift*0.8);
-  tex->DrawLatex(0.1,texpos,Form("Drift Field = %2.2f V/cm",GetNominalE()));texpos-=texshift;
-  tex->DrawLatex(0.1,texpos,Form("Drifting grid of (rp)=(%d x %d) electrons with %d steps",nrh,nph,nSteps));texpos-=texshift;
-  tex->DrawLatex(0.1,texpos,GetLookupString());texpos-=texshift;
-  tex->DrawLatex(0.1,texpos,GetGasString());texpos-=texshift;
+  tex->DrawLatex(0.05,texpos,GetFieldString());texpos-=texshift;
+  tex->DrawLatex(0.05,texpos,GetChargeString());texpos-=texshift;
+ //tex->DrawLatex(0.05,texpos,Form("Drift Field = %2.2f V/cm",GetNominalE()));texpos-=texshift;
+  tex->DrawLatex(0.05,texpos,Form("Drifting grid of (rp)=(%d x %d) electrons with %d steps",nrh,nph,nSteps));texpos-=texshift;
+  tex->DrawLatex(0.05,texpos,GetLookupString());texpos-=texshift;
+  tex->DrawLatex(0.05,texpos,GetGasString());texpos-=texshift;
   if (debug_distortionScale.Mag()>0){
-    tex->DrawLatex(0.1,texpos,Form("Distortion scaled by (r,p,z)=(%2.2f,%2.2f,%2.2f)",
+    tex->DrawLatex(0.05,texpos,Form("Distortion scaled by (r,p,z)=(%2.2f,%2.2f,%2.2f)",
 				   debug_distortionScale.X(),debug_distortionScale.Y(),debug_distortionScale.Z()));
     texpos-=texshift;
   }
+  texpos=0.9;
+ 
+  
   printf("about to write map and summary to %s.\n",filebase);
   printf("map:%s.\n",distortionFilename.Data());
   printf("summary:%s.\n",summaryFilename.Data());
@@ -2715,6 +2733,9 @@ const char* AnnularFieldSim::GetGasString(){
   return Form("vdrift=%2.2fcm/us, Enom=%2.2fV/cm, Bnom=%2.2fT, omtau=%2.4E",vdrift/(cm/us),Enominal/(V/cm),Bnominal/Tesla,omegatau_nominal);
 }
 
+const char* AnnularFieldSim::GetFieldString(){
+  return Form("%s, %s",Efieldname,Bfieldname);
+}
 
 
 

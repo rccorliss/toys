@@ -29,7 +29,7 @@ class Rossegger
 {
  public:
   Rossegger(std::string filename);
-  Rossegger(double a=30, double b=80, double L=80);
+  Rossegger(double a=30, double b=80, double L=80, double epsilon=1E-4);
   virtual ~Rossegger() {}
 
   void Verbosity(int v) {printf("verbosity set to %d.  was %d\n", v,verbosity);verbosity=v;  return;};
@@ -69,6 +69,7 @@ class Rossegger
   double a,b,L;  //  InnerRadius, OuterRadius, Length of 1/2 the TPC.
   int verbosity;
   double pi;
+  double epsilon; //precision.
 
   bool tweak;
 

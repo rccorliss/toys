@@ -41,12 +41,14 @@ using namespace TMath;
   This is a modified/renamed copy of Carlos and Tom's "Spacecharge" class, modified to use boost instead of fortran routines, and with phi terms added.
  */
 
-
-Rossegger::Rossegger(double InnerRadius, double OuterRadius, double Rdo_Z)
+Rossegger::Rossegger(double InnerRadius, double OuterRadius, double Rdo_Z, double precision)
 {
   a = InnerRadius;
   b = OuterRadius;
   L = Rdo_Z;
+
+  epsilon=precision;
+
 
   verbosity =0;
   pi = 2.0 * asin(1.0);
@@ -56,11 +58,11 @@ Rossegger::Rossegger(double InnerRadius, double OuterRadius, double Rdo_Z)
 
  //load the greens functions:
   char zeroesfilename[200];
-  sprintf(zeroesfilename,"rosseger_zeroes_a%2.2f_b%2.2f_L%2.2f.root",a,b,L);
+  sprintf(zeroesfilename,"rosseger_zeroes_eps%1.0E_a%2.2f_b%2.2f_L%2.2f.root",epsilon,a,b,L);
   TFile *fileptr=TFile::Open(zeroesfilename,"READ");
   if (!fileptr){ //generate the lookuptable
-    FindMunk(0.0001);
-    FindBetamn(0.0001);
+    FindMunk(epsilon);
+    FindBetamn(epsilon);
     SaveZeroes(zeroesfilename);
   } else{ //load it from a file
     fileptr->Close();
@@ -942,7 +944,6 @@ void  Rossegger::SaveZeroes(const char* destfile){
 
   TTree *tInfo=new TTree("info","Mu[n][k] values");
   int ord=NumberOfOrders;
-  double epsilon=0.0001;
   tInfo->Branch("order",&ord);
   tInfo->Branch("epsilon",&epsilon);
   tInfo->Fill();
@@ -989,7 +990,6 @@ void  Rossegger::LoadZeroes(const char* destfile){
   printf("reading rossegger zeroes from %s\n",destfile);
   TTree *tInfo=(TTree*)(f->Get("info"));
   int ord;
-  double epsilon;
   tInfo->SetBranchAddress("order",&ord);
   tInfo->SetBranchAddress("epsilon",&epsilon);
   tInfo->GetEntry(0);

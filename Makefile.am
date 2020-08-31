@@ -6,7 +6,7 @@ AM_CPPFLAGS = -I$(includedir) -I$(OFFLINE_MAIN)/include -I/usr/local/Cellar/root
 
 lib_LTLIBRARIES = libfieldsim.la   
 
-AM_LDFLAGS = -L$(libdir) -L$(OFFLINE_MAIN)/lib
+AM_LDFLAGS = -L$(libdir) -L$(OFFLINE_MAIN)/lib -L/usr/local/Cellar/root/6.18.04_1/lib
 
 #libfieldsim_la_LIBADD = \
 #  -L$(ROOTSYS)/lib \

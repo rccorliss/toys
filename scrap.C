@@ -17,11 +17,15 @@ R__LOAD_LIBRARY(.libs/libfieldsim)
 
 void proveRosseggersAreEqual();
 void sumRosseggerPhiLoops();
+void showRosseggerDivergencePhi();
+void showRosseggerDivergenceR();
+
 
 void scrap(){
 
   // proveRosseggersAreEqual(); return;
-  sumRosseggerPhiLoops(); return;
+  //sumRosseggerPhiLoops(); return;
+  //showRosseggerDivergenceR(); return;
   
   const float tpc_rmin=20.0;
   const float tpc_rmax=78.0;
@@ -126,5 +130,188 @@ void sumRosseggerPhiLoops(){
     
   }
   hLoopSum->Draw("colz");
+  return;
+}
+
+
+void showRosseggerDivergencePhi(){
+  double r=35, r1g=45;
+  double z=45, z1g=55;
+  int squaresteps=20;
+  int loopsteps=1000;
+  float rb[]={20,78};
+  double pb[]={0,4*acos(0)};
+  float zb[]={0,105.5};
+
+  int phibin=loopsteps/2;
+  double p=pb[0]+(pb[1]-pb[0])/loopsteps*(phibin+0.5);
+  double r1,z1;//for the graph.
+
+  double ephi[loopsteps], phi1[loopsteps];
+  double er[loopsteps], ez[loopsteps];
+  //do a detailed loop over one point
+  Rossegger *ro=new Rossegger(20,78,105.5);
+  for (int k=0;k<loopsteps;k++){
+    phi1[k]=pb[0]+(pb[1]-pb[0])/loopsteps*(k+0.5);
+    ephi[k]=ro->Ephi(r,p,z,r1g,phi1[k],z1g);
+    ez[k]=ro->Er(r,p,z,r1g,phi1[k],z1g);
+    er[k]=ro->Ez(r,p,z,r1g,phi1[k],z1g);
+  }
+
+  //show the same-phi contribution at all points in a slice:
+  TH1F *hSame[3];
+  hSame[0]=new TH1F("hSamePhi",Form("Ephi component from same phi positions for all rphiz sources to rz=(%2.1f,%2.1f)",r,z),100,-0.1,0.1);
+  hSame[1]=new TH1F("hSameR",Form("Er component from same phi positions for all rphiz sources to rz=(%2.1f,%2.1f)",r,z),100,-0.1,0.1);
+  hSame[2]=new TH1F("hSameZ",Form("Ez component from same phi positions for all rphiz sources to rz=(%2.1f,%2.1f)",r,z),100,-0.1,0.1);
+  TH2F *hSameMap[3];
+  hSameMap[0]=new TH2F("hSameMapPhi",Form("Ephi component at (r%2.1f,%2.2f,%2.1f) for all source rz;r;z",r,p,z),
+		       squaresteps,rb[0],rb[1],squaresteps,zb[0],zb[1]);
+  hSameMap[1]=new TH2F("hSameMapR",Form("Er component at (r%2.1f,%2.2f,%2.1f) for all source rz;r;z",r,p,z),
+		       squaresteps,rb[0],rb[1],squaresteps,zb[0],zb[1]);
+  hSameMap[2]=new TH2F("hSameMapZ",Form("Ez component at (r%2.1f,%2.2f,%2.1f) for all source rz;r;z",r,p,z),
+		       squaresteps,rb[0],rb[1],squaresteps,zb[0],zb[1]);
+  for (int i=0;i<squaresteps;i++){
+    r1=rb[0]+(rb[1]-rb[0])/squaresteps*(i+0.5);
+    for (int j=0;j<squaresteps;j++){
+      z1=zb[0]+(zb[1]-zb[0])/squaresteps*(j+0.5);
+      for (int k=0;k<1;k++){//squaresteps;k++){
+	float p1=pb[0]+(pb[1]-pb[0])/squaresteps*(k+0.5);
+	float tempephi=ro->Ephi(r,p1,z,r1,p1,z1);
+	hSame[0]->Fill(tempephi);
+	hSameMap[1]->Fill(r1,z1,ro->Er(r,p1,z,r1,p1,z1));
+	hSameMap[2]->Fill(r1,z1,ro->Ez(r,p1,z,r1,p1,z1));
+	hSameMap[0]->Fill(r1,z1,tempephi);
+      }
+    }
+  }
+
+
+  TCanvas *c=new TCanvas("cshowRosseggerDivergence","showRosseggerDivergence",800,600);
+  c->Divide(3,2);
+  
+  c->cd(1);
+  TGraph *gPhiComp=new TGraph(loopsteps,phi1,ephi);
+  gPhiComp->SetTitle(Form("E_phi(phi1) at (r%2.1f,%2.2f,%2.1f) from %d-step loops in phi at rz (r%2.1f,phi,z%2.1f);source phi (field calc'd at %2.4f=phi);field value (arb)",r,p,z,loopsteps,r1g,z1g,p));
+  gPhiComp->Draw();
+  TGraph *gPhiPoint=new TGraph(1,&(phi1[phibin]),&(ephi[phibin]));
+  gPhiPoint->SetMarkerColor(kRed);
+  gPhiPoint->Draw("*");
+  c->cd(2);
+  TGraph *gRComp=new TGraph(loopsteps,phi1,er);
+  gRComp->SetTitle(Form("E_r(phi1) at (r%2.1f,%2.2f,%2.1f) from %d-step loops in phi at rz=(r%2.1f,phi,z%2.1f);source phi (field calc'd at %2.4f=phi);field value (arb)",r,p,z,loopsteps,r1g,z1g,p));
+  gRComp->Draw();
+  TGraph *gRPoint=new TGraph(1,&(phi1[phibin]),&(er[phibin]));
+  gRPoint->SetMarkerColor(kRed);
+  gRPoint->Draw("*");
+  c->cd(3);
+  TGraph *gZComp=new TGraph(loopsteps,phi1,ez);
+  gZComp->SetTitle(Form("E_z(phi1) at (r%2.1f,%2.2f,%2.1f) from %d-step loops in phi at r-z coordinates (r%2.1f,phi,z%2.1f);source phi (field calc'd at %2.4f=phi);field value (arb)",r,p,z,loopsteps,r1g,z1g,p));
+  gZComp->Draw();
+  TGraph *gZPoint=new TGraph(1,&(phi1[phibin]),&(ez[phibin]));
+  gZPoint->SetMarkerColor(kRed);
+  gZPoint->Draw("*");
+  c->cd(4);
+  hSameMap[0]->Draw("colz");
+ c->cd(5);
+  hSameMap[1]->Draw("colz");
+ c->cd(6);
+  hSameMap[2]->Draw("colz");
+
+
+  
+  return;
+}
+
+void showRosseggerDivergenceR(){
+ 
+  int histsteps=20;
+  int graphsteps=1000;
+  float rb[]={20,78};
+  double pb[]={0,4*acos(0)};
+  float zb[]={0,105.5};
+
+ double r=35, r1=45;
+  double z=45, z1=55;
+  int pbin=4;
+  double p=pb[0]+(pb[1]-pb[0])/histsteps*(pbin+0.5);
+ int p1bin=8;
+  double p1=pb[0]+(pb[1]-pb[0])/graphsteps*(p1bin+0.5);
+
+  
+  int xbin=graphsteps/2;
+  r=rb[0]+(rb[1]-rb[0])/graphsteps*(xbin+0.5);
+
+  double ephi[graphsteps], r1g[graphsteps];
+  double er[graphsteps], ez[graphsteps];
+  //do a detailed loop over one point
+  Rossegger *ro=new Rossegger(20,78,105.5);
+  for (int k=0;k<graphsteps;k++){
+    r1g[k]=rb[0]+(rb[1]-rb[0])/graphsteps*(k+0.5);
+    ephi[k]=ro->Ephi(r,p,z,r1g[k],p1,z1);
+    ez[k]=ro->Er(r,p,z,r1g[k],p1,z1);
+    er[k]=ro->Ez(r,p,z,r1g[k],p1,z1);
+  }
+
+  //show the same-phi contribution at all points in a slice:
+  TH1F *hSame[3];
+  hSame[0]=new TH1F("hSamePhi",Form("Ephi component from same r positions for all rphiz sources to pz=(%2.1f,%2.1f)",p,z),100,-0.1,0.1);
+  hSame[1]=new TH1F("hSameR",Form("Er component from same r positions for all rphiz sources to pz=(%2.1f,%2.1f)",p,z),100,-0.1,0.1);
+  hSame[2]=new TH1F("hSameZ",Form("Ez component from same r positions for all rphiz sources to pz=(%2.1f,%2.1f)",p,z),100,-0.1,0.1);
+  TH2F *hSameMap[3];
+  hSameMap[0]=new TH2F("hSameMapPhi",Form("Ephi component at (r%2.1f,%2.2f,%2.1f) for all source phiz;r;z",r,p,z),
+		       histsteps,pb[0],pb[1],histsteps,zb[0],zb[1]);
+  hSameMap[1]=new TH2F("hSameMapR",Form("Er component at (r%2.1f,%2.2f,%2.1f) for all source phiz;r;z",r,p,z),
+		       histsteps,pb[0],pb[1],histsteps,zb[0],zb[1]);
+  hSameMap[2]=new TH2F("hSameMapZ",Form("Ez component at (r%2.1f,%2.2f,%2.1f) for all source phiz;r;z",r,p,z),
+		       histsteps,pb[0],pb[1],histsteps,zb[0],zb[1]);
+  for (int i=0;i<1;i++){//histsteps;i++){
+    r1=rb[0]+(rb[1]-rb[0])/histsteps*(i+0.5);
+    for (int j=0;j<histsteps;j++){
+      z1=zb[0]+(zb[1]-zb[0])/histsteps*(j+0.5);
+      for (int k=0;k<histsteps;k++){
+	p1=pb[0]+(pb[1]-pb[0])/histsteps*(k+0.5);
+	float tempephi=ro->Ephi(r,p1,z,r1,p1,z1);
+	hSame[0]->Fill(tempephi);
+	hSameMap[1]->Fill(r1,z1,ro->Er(r1,p,z,r1,p1,z1));
+	hSameMap[2]->Fill(r1,z1,ro->Ez(r1,p,z,r1,p1,z1));
+	hSameMap[0]->Fill(r1,z1,tempephi);
+      }
+    }
+  }
+
+
+  TCanvas *c=new TCanvas("cshowRosseggerDivergence","showRosseggerDivergence",800,600);
+  c->Divide(3,2);
+  
+  c->cd(1);
+  TGraph *gPhiComp=new TGraph(graphsteps,r1g,ephi);
+  gPhiComp->SetTitle(Form("E_phi(r1) at (r%2.1f,%2.2f,%2.1f) from %d steps in r at phiz (p%2.1f,z%2.1f);source r (field calc'd at %2.4f=r);field value (arb)",r,p,z,graphsteps,p1,z1,r));
+  gPhiComp->Draw();
+  TGraph *gPhiPoint=new TGraph(1,&(r1g[xbin]),&(ephi[xbin]));
+  gPhiPoint->SetMarkerColor(kRed);
+  gPhiPoint->Draw("*");
+  c->cd(2);
+  TGraph *gRComp=new TGraph(graphsteps,r1g,er);
+  gRComp->SetTitle(Form("E_r(r1) at (r%2.1f,%2.2f,%2.1f) from %d steps in r at phiz (p%2.1f,z%2.1f);source r (field calc'd at %2.4f=r);field value (arb)",r,p,z,graphsteps,p1,z1,r));
+  gRComp->Draw();
+  TGraph *gRPoint=new TGraph(1,&(r1g[xbin]),&(er[xbin]));
+  gRPoint->SetMarkerColor(kRed);
+  gRPoint->Draw("*");
+  c->cd(3);
+  TGraph *gZComp=new TGraph(graphsteps,r1g,ez);
+  gZComp->SetTitle(Form("E_z(r1) at (r%2.1f,%2.2f,%2.1f) from %d steps in r at phiz (p%2.1f,z%2.1f);source r (field calc'd at %2.4f=r);field value (arb)",r,p,z,graphsteps,p1,z1,r));
+  gZComp->Draw();
+  TGraph *gZPoint=new TGraph(1,&(r1g[xbin]),&(ez[xbin]));
+  gZPoint->SetMarkerColor(kRed);
+  gZPoint->Draw("*");
+  c->cd(4);
+  hSameMap[0]->Draw("colz");
+ c->cd(5);
+  hSameMap[1]->Draw("colz");
+ c->cd(6);
+  hSameMap[2]->Draw("colz");
+
+
+  
   return;
 }

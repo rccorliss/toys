@@ -49,10 +49,6 @@ model_params SphenixModelParams(){
   //so c is the gain times the backflow percentage -- the number of ions per electron.
   //in the plot I am trying to match, we have gain = 2000 and IBF=0.3% --> c=2000*0.3/100=6, which is actually half of the listed value.
   
-  double a_ions=a/proton_charge;//ion number density per cm?
-
-
-  
   model_params m;
   sprintf(m.name,"sPHENIXrcc2020");
   m.z=z_rdo;
@@ -62,6 +58,39 @@ model_params SphenixModelParams(){
   m.b=b;
   m.c=c;
   m.d=2;
+  return m;
+}
+
+model_params SphenixModelParams(){
+    float z_rdo=105.5;
+  float rmin=20;
+  float rmax=78;
+
+  //these settings are for 50kHz Au+Au collisions?
+  float e0 = 8.854187817e-12; //[C]/[Vm]
+  float gas = 1.0/76628.0; //[Vs] -- something about the ionization per unit volume and the time it takes to clear the gas, in units I don't grok.
+ 
+  
+  double mult = 400.0; //950.0;
+  double rate = 5e+4; //[1/s]
+  double a=mult*rate*e0*gas; // C/m;
+  float b=1.0/z_rdo; //[1/cm]
+   float c=(2.0/3.0*/100.9)*2000.0;//gain of 2k, 0.67% IBF per unit gain.
+  a=a*1e15; //fC/m
+  a=a/100;//fC/cm
+  //rho= a/r^2*(1-bz+c)
+  //so c is the gain times the backflow percentage -- the number of ions per electron.
+  //in the plot I am trying to match, we have gain = 2000 and IBF=0.3% --> c=2000*0.3/100=6, which is actually half of the listed value.
+  model_params m;
+  sprintf(m.name,"sPHENIX2018");
+  m.z=z_rdo;
+  m.rmin=rmin;
+  m.rmax=rmax;
+  m.a=a;
+  m.b=b;
+  m.c=c;
+  m.d=2;
+  return m;
 }
 
 model_params AliceModelParams(){
@@ -74,7 +103,7 @@ model_params AliceModelParams(){
   double rate = 5e+4; //[1/s]
   double a=mult*rate*e0*gas; // C/m;
   float b=1.0/z_rdo; //[1/cm]
-   float c=(1/100)*2000.0;//gain of 2k, 1% IBF per unit gain.
+   float c=(1.0/100.0)*2000.0;//gain of 2k, 1% IBF per unit gain.
   a=a*1e15; //fC/m
   a=a/100;//fC/cm
   model_params m;
@@ -86,6 +115,7 @@ model_params AliceModelParams(){
   m.b=b;
   m.c=c;
   m.d=2;
+  return m;
 }
 
 
@@ -99,16 +129,16 @@ void HeuristicCharge(){
   int kNRadialSteps=159;
   int kNLongitudinalSteps=62*2;
 
-  model_params par=SphenixModelParams();
-  //model_params par=AliceModelParams();
+  //model_params par=SphenixModelParams();
+  model_params par=AliceModelParams();
   //sPHENIX settings:
 
 
-  TFile *outfile=TFile::Open(Form("HeuristicSc_%s.root",m.name),"RECREATE");
+  TFile *outfile=TFile::Open(Form("HeuristicSc_%s.root",par.name),"RECREATE");
 
   TH3D *hCharge=new TH3D("heuristic",Form("Heuristic SC per cm^3 (a=%2.2E, b=%2.2E,c=%2.2E, d=%2.1f);phi (rad);r (cm);z (cm)",par.a,par.b,par.c, par.d),kNAzimuthalSteps,0,6.28319,kNRadialSteps,par.rmin,par.rmax,kNLongitudinalSteps,0,par.z);
   
-  printf("a_ions = %f\n",par.a);
+  printf("a = %f\n",par.a);
   printf("b = %f\n",par.b);
   printf("c = %f\n",par.c);
   for(int r=0; r!=kNRadialSteps; ++r) {
@@ -117,7 +147,7 @@ void HeuristicCharge(){
       float dp = hCharge->GetXaxis()->GetBinCenter( p+1 );
       for(int z=0; z!=kNLongitudinalSteps; ++z) {
 	float dz = hCharge->GetZaxis()->GetBinCenter( z+1 ); //[cm]
-	float dRho = calcCharge(m,dr,dz); //ions/cm^3 
+	float dRho = CalcCharge(par,dr,dz); //ions/cm^3 
 	hCharge->SetBinContent(p+1,r+1,z+1,dRho);
 	//if(fDebug>2) printf("@{Ir,Ip,Iz}={%d (%f),%d (%f),%d (%f)}, rho %f\n",r,dr,p,dp,z,dz,dRho);
       }
@@ -125,5 +155,6 @@ void HeuristicCharge(){
   }
   hCharge->Write();
   outfile->Close();
+  printf("Wrote HeuristicSc_%s.root\n",par.name);
   return;
 }

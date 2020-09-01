@@ -27,10 +27,10 @@ class AnnularFieldSim{
   const float V=1;//volts 
 
   const float Tesla=V*s/m/m;//Tesla=Vs/m^2
-  const float kGauss=Tesla/10;;//kGauss
+  const float kGauss=Tesla/10;//kGauss
   
   const float eps0=8.854e-12*(C/V)/m;//Farads(=Coulombs/Volts) per meter
-  const float k_perm=1/(4*3.1416*eps0);  
+  const float k_perm=1/(4*3.1416*eps0);  //implied units of V*cm/C because we're doing unitful work here.
   
  public:
   enum BoundsCase {InBounds,OnHighEdge, OnLowEdge,OutOfBounds}; //note that 'OnLowEdge' is qualitatively different from 'OnHighEdge'.  Low means there is a non-zero distance between the point and the edge of the bin.  High applies even if that distance is exactly zero.
@@ -191,7 +191,7 @@ debug_printActionEveryN=0; return;};
   void loadBfield(const char *filename, const char *treename);
   void loadField(MultiArray<TVector3> **field, TTree *source, float *rptr, float *phiptr, float *zptr, float *frptr,  float *fphiptr,  float *fzptr);
   
-  void load_rossegger(){green=new Rossegger(rmin,rmax,zmax); return;};
+  void load_rossegger(double epsilon=1E-4){green=new Rossegger(rmin,rmax,zmax,epsilon); return;};
 
   TVector3 calc_unit_field(TVector3 at, TVector3 from);
   TVector3 analyticFieldIntegral(float zdest,TVector3 start){return analyticFieldIntegral( zdest, start, Efield);};

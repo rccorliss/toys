@@ -26,7 +26,7 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
 
   //step 1:  specify the physical parameters, scales, etc of the model, either ALICE or sPHENIXL
   
-  /*
+  
   //load the ALICE TPC space charge model
   const float tpc_rmin=83.5;
   const float tpc_rmax=254.5;
@@ -37,11 +37,17 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   const float tpc_magField=0.5;//T
   const double epsilonnaught=8.854e-12;// units of C/(V*m)
   const double eps_in_cm=epsilonnaught/100; //units of C/(V*cm)
-  const double tpc_chargescale=8.85e-14;//their hist. has charge in units of C/cm^3 /eps0.  This is eps0 in (V*cm)/C units so that I can multiple by the volume in cm^3 to get Q in C.
-  const char scmapfilename[]="InputSCDensityHistograms_8000events.root";
-  const char scmaphistname[]="inputSCDensity3D_8000_avg";
-  */
+  const char detgeoname[]="alice";
 
+  const char scmapfilename[]="HeuristicSc_ALICE.root"; //my ALICE heuristic model matching Carlos
+  const char scmaphistname[]="heuristic";
+  const double tpc_chargescale=1e-15;//the heuristic map has charge in fC/cm^3.  Multiply bin*tpc_chargescale*vol to get Q in C.
+  
+  //const char scmapfilename[]="InputSCDensityHistograms_8000events.root";
+  //const char scmaphistname[]="inputSCDensity3D_8000_avg";
+  //const double tpc_chargescale=8.85e-14;//their hist. has charge in units of C/cm^3 /eps0.  This is eps0 in (V*cm)/C units so that I can multiple by the volume in cm^3 to get Q in C.  /*
+
+  /*
   //load the sPHENIX space charge model parameters
   const float tpc_rmin=20.0;
   const float tpc_rmax=78.0;
@@ -52,18 +58,19 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   //const float tpc_driftVel=4.0*1e6;//cm per s  -- used in pedro's studies
   const float tpc_driftVel=8.0*1e6;//cm per s  -- 2019 nominal value
   const float tpc_magField=1.4;//T -- 2019 nominal value
+  const char detgeoname[]="sphenix";
 
   //Each unit of '1 ion' is tpc_chargescale coulombs.
   const double tpc_chargescale=1.6e-19;//our hist. has charge in units of ions/cm^3, so we need to multiply by the electric charge of an electron to get out C/cm^3.  
-
+  */
   
    //step 2: specify the parameters of the field simulation.  Larger numbers of bins will rapidly increase the memory footprint and compute times.
   //there are some ways to mitigate this by setting a small region of interest, or a more parsimonious lookup strategy, specified when AnnularFieldSim() is actually constructed below.
-  int nr=8;//10;//24;//159;//159 nominal
+  int nr=10;//10;//24;//159;//159 nominal
   int nr_roi_min=0;
   int nr_roi=nr;//10;
   int nr_roi_max=nr_roi_min+nr_roi;
-  int nphi=18;//38;//360;//360 nominal
+  int nphi=10;//38;//360;//360 nominal
   int nphi_roi_min=0;
   int nphi_roi=nphi;//38;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
@@ -115,7 +122,7 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
 
   //load the greens functions:
   char lookup_string[200];
-  sprintf(lookup_string,"ross_phi0_eps7_phislice_lookup_r%dxp%dxz%d",nr,nphi,nz);
+  sprintf(lookup_string,"ross_phi0_%s_phislice_lookup_r%dxp%dxz%d",detgeoname,nr,nphi,nz);
   char lookupFilename[200];
   sprintf(lookupFilename,"%s.root",lookup_string);
   TFile *fileptr=TFile::Open(lookupFilename,"READ");
@@ -164,10 +171,15 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
 		      "h_Charge_7_tot",
 		      "h_Charge_8_tot",
 		      "h_Charge_9_tot"};
-  */
+  
   char *scbasename[]={"Smooth.50kHz","Single.50kHz"};
   char *scfilename[]={"Smooth.50kHz.root","BeamXingNBeams.root"};
   char *schistname[]={"sphenix_minbias_average","sphenix_minbias_charge"};
+  */
+  //ALICE:
+  char *scbasename[]={"HeuristicSc_ALICE"};
+  char *scfilename[]={"HeuristicSc_ALICE.root"};
+  char *schistname[]={"heuristic"};
   const int nscales=1;
   float scale[]={1,5,100,1000};
 
@@ -181,7 +193,7 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
 	       scbasename[i],schistname[i],field_string,lookup_string,scale[j]);
 	tpc->SetDistortionScaleRPZ(scale[j],scale[j],scale[j]);
 	printf("scaled.\n");
-	sprintf(distortionFilebase,"%s.eps7.scale%1.0f.%s.%s",scbasename[i],scale[j],field_string,lookup_string);
+	sprintf(distortionFilebase,"%s.scale%1.0f.%s.%s",scbasename[i],scale[j],field_string,lookup_string);
 	printf("filebase=%s\n",distortionFilebase);
 	tpc->GenerateDistortionMaps(distortionFilebase,2,2,2,1);
 	printf("distortions mapped.\n");

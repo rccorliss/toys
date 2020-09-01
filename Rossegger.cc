@@ -246,8 +246,8 @@ return false;
   for (int n=0; n<NumberOfOrders; n++){
     for (int k=0;k<NumberOfOrders;k++){//  !!!  Off by one from Rossegger convention  !!!
       result=Rnk_for_zeroes(n, Munk[n][k]);
-      if (abs(result)>epsilon) {
-	printf("(n=%d,k=%d) limu(npi*a/L)kimu(npi*b/L)-kimu(npi*a/L)kimu(npi*b/L) = %f for mu=%f\n",
+      if (abs(result)>epsilon*100) {
+	printf("(n=%d,k=%d) limu(npi*a/L)kimu(npi*b/L)-kimu(npi*a/L)kimu(npi*b/L) = %f (>eps*100) for mu=%f\n",
 	       n,k,result,Munk[n][k]);
 	return false;
       }
@@ -621,19 +621,19 @@ double Rossegger::Ez(double r, double phi, double z, double r1, double phi1, dou
       for (int n=0; n<NumberOfOrders; n++)
 	{
 	  if (verbosity>10) cout << " " << n;
-	  double term = 1;
+	  double term = 1; //unitless
 	  if (verbosity>10) cout << " " << term; 
-	  term *= (2 - ((m==0)?1:0))*cos(m*(phi-phi1));
+	  term *= (2 - ((m==0)?1:0))*cos(m*(phi-phi1));//unitless
 	  if (verbosity>10) cout << " " << term; 
-	  term *= Rmn(m,n,r)*Rmn(m,n,r1)/N2mn[m][n];
+	  term *= Rmn(m,n,r)*Rmn(m,n,r1)/N2mn[m][n];//units of 1/[L]^2 
 	  if (verbosity>10) cout << " " << term; 
 	  if (z<z1)
 	    {
-	      term *=  cosh(Betamn[m][n]*z)*sinh(Betamn[m][n]*(L-z1))/sinh_Betamn_L[m][n];
+	      term *=  cosh(Betamn[m][n]*z)*sinh(Betamn[m][n]*(L-z1))/sinh_Betamn_L[m][n];//unitless
 	    }
 	  else
 	    {
-	      term *= -cosh(Betamn[m][n]*(L-z))*sinh(Betamn[m][n]*z1)/sinh_Betamn_L[m][n];
+	      term *= -cosh(Betamn[m][n]*(L-z))*sinh(Betamn[m][n]*z1)/sinh_Betamn_L[m][n];//unitless
 	    }
 	  if (verbosity>10) cout << " " << term; 
 	  G += term;
@@ -680,9 +680,9 @@ double Rossegger::Ez_(double r, double phi, double z, double r1, double phi1, do
 	  if (verbosity>10) cout << " " << n;
 	  double term = 1/(2.0*pi);
 	  if (verbosity>10) cout << " " << term; 
-	  term *= (2 - ((m==0)?1:0))*cos(m*(phi-phi1));
+	  term *= (2 - ((m==0)?1:0))*cos(m*(phi-phi1));//unitless
 	  if (verbosity>10) cout << " " << term; 
-	  term *= Rmn(m,n,r)*Rmn(m,n,r1)/N2mn[m][n];
+	  term *= Rmn(m,n,r)*Rmn(m,n,r1)/N2mn[m][n];//units of 1/[L]^2
 	  if (verbosity>10) cout << " " << term; 
 	  if (z<z1)
 	    {
@@ -737,24 +737,24 @@ double Rossegger::Er(double r, double phi, double z, double r1, double phi1, dou
   for (int m=0; m<NumberOfOrders; m++) {
     for (int n=0; n<NumberOfOrders; n++) {
       double term = 1;
-      part=(2 - ((m==0)?1:0))*cos(m*(phi-phi1));
+      part=(2 - ((m==0)?1:0))*cos(m*(phi-phi1));//unitless
       if (verbosity>10) printf("(2 - ((m==0)?1:0))*cos(m*(phi-phi1)); = %f\n",part);
       term *=part;
-      part= sin(BetaN[n]*z)*sin(BetaN[n]*z1);
+      part= sin(BetaN[n]*z)*sin(BetaN[n]*z1);//unitless
       if (verbosity>10) printf("sin(BetaN[n]*z)*sin(BetaN[n]*z1); = %f\n",part);
       term *=part;
 
       if (r<r1) {
-	term *= RPrime(m,n,a,r)*Rmn2(m,n,r1);
+	term *= RPrime(m,n,a,r)*Rmn2(m,n,r1);//units of 1/[L]
       } else {
-	term *= Rmn1(m,n,r1)*RPrime(m,n,b,r);
+	term *= Rmn1(m,n,r1)*RPrime(m,n,b,r);//units of 1/[L]
       }
-      term /= bessel_denominator[m][n];
+      term /= bessel_denominator[m][n];//unitless
       G += term;
     }
   }
 
-  G=G/(L*pi);
+  G=G/(L*pi);//units of 1/[L] -- net is 1/[L]^2
   if (verbosity) cout << "Er = " << G << endl;
 
   return G;
@@ -846,21 +846,21 @@ double Rossegger::Ephi(double r, double phi, double z, double r1, double phi1, d
   for (int k=0; k<NumberOfOrders; k++) {
     for (int n=0; n<NumberOfOrders; n++) {
       double term = 1;
-      term *= sin(BetaN[n]*z)*sin(BetaN[n]*z1);
-      term *= Rnk(n,k,r)*Rnk(n,k,r1)/N2nk[n][k];
+      term *= sin(BetaN[n]*z)*sin(BetaN[n]*z1);//unitless
+      term *= Rnk(n,k,r)*Rnk(n,k,r1)/N2nk[n][k];//unitless?
 
       //the derivative of cosh(munk(pi-|phi-phi1|)
       if (phi>phi1){
-	term *= -sinh(Munk[n][k]*(pi-(phi-phi1)));
+	term *= -sinh(Munk[n][k]*(pi-(phi-phi1)));//unitless
       }else{
-	term *= sinh(Munk[n][k]*(pi-(phi1-phi)));
+	term *= sinh(Munk[n][k]*(pi-(phi1-phi)));//unitless
       }
-      term *= 1/sinh_pi_Munk[n][k];
+      term *= 1/sinh_pi_Munk[n][k];//unitless
       G += term;
     }
   }
 
-  G=G/L;
+  G=G/(L*r);//units of 1/[L]^2.  r comes from the phi term in cylindrical gradient expression.
   if (verbosity) cout << "Ephi = " << G << endl;
  
   return G;
@@ -901,7 +901,7 @@ double Rossegger::Ephi_(double r, double phi, double z, double r1, double phi1, 
 	{
 	  if (verbosity) cout << " n=" << n;
 	  double BetaN_ = (n+1)*pi/L;	  
-	  double term = 1/L;
+	  double term = 1/(L*r);
 	  if (verbosity) cout << " 1/L=" << term; 
 	  term *= sin(BetaN_*z)*sin(BetaN_*z1);
 	  if (verbosity) cout << " *sinsin=" << term; 

@@ -28,15 +28,13 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   
   
   //load the ALICE TPC space charge model
-  const float tpc_rmin=83.5;
-  const float tpc_rmax=254.5;
+  const float tpc_rmin=83.5;//cm
+  const float tpc_rmax=254.5;//cm
   float tpc_deltar=tpc_rmax-tpc_rmin;
-  const float tpc_z=249.7;
+  const float tpc_z=249.7;//cm
   const float tpc_driftVolt=-99930; //V
   const float tpc_driftVel=2.58*1e6;//cm per s
   const float tpc_magField=0.5;//T
-  const double epsilonnaught=8.854e-12;// units of C/(V*m)
-  const double eps_in_cm=epsilonnaught/100; //units of C/(V*cm)
   const char detgeoname[]="alice";
 
   const char scmapfilename[]="HeuristicSc_ALICE.root"; //my ALICE heuristic model matching Carlos
@@ -66,15 +64,15 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   
    //step 2: specify the parameters of the field simulation.  Larger numbers of bins will rapidly increase the memory footprint and compute times.
   //there are some ways to mitigate this by setting a small region of interest, or a more parsimonious lookup strategy, specified when AnnularFieldSim() is actually constructed below.
-  int nr=10;//10;//24;//159;//159 nominal
+  int nr=5;//10;//24;//159;//159 nominal
   int nr_roi_min=0;
   int nr_roi=nr;//10;
   int nr_roi_max=nr_roi_min+nr_roi;
-  int nphi=10;//38;//360;//360 nominal
+  int nphi=16;//38;//360;//360 nominal
   int nphi_roi_min=0;
   int nphi_roi=nphi;//38;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
-  int nz=20;//62;//62 nominal
+  int nz=15;//62;//62 nominal
   int nz_roi_min=0;
   int nz_roi=nz;
   int nz_roi_max=nz_roi_min+nz_roi;
@@ -122,7 +120,7 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
 
   //load the greens functions:
   char lookup_string[200];
-  sprintf(lookup_string,"ross_phi0_%s_phislice_lookup_r%dxp%dxz%d",detgeoname,nr,nphi,nz);
+  sprintf(lookup_string,"ross_phi1_%s_phislice_lookup_r%dxp%dxz%d",detgeoname,nr,nphi,nz);
   char lookupFilename[200];
   sprintf(lookupFilename,"%s.root",lookup_string);
   TFile *fileptr=TFile::Open(lookupFilename,"READ");
@@ -181,12 +179,17 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   char *scfilename[]={"HeuristicSc_ALICE.root"};
   char *schistname[]={"heuristic"};
   const int nscales=1;
-  float scale[]={1,5,100,1000};
+  float scale[]={0,5,100,1000};
 
-
+  double totalQ=0;
   for (int i=0;i<nfiles;i++){
     for (int ihist=0;ihist<nhistsper;ihist++){
       tpc->load_spacecharge(scfilename[i],schistname[ihist],0,tpc_chargescale,1);
+      printf("Sanity check:  Q has %d elements and dim=%d\n",tpc->q->Length(), tpc->q->dim);
+      for (int k=0;k<tpc->q->Length();k++){
+	totalQ+=*(tpc->q->GetFlat(k));
+      }
+      printf("Sanity check:  Total Q in reported region is %E C\n",totalQ);
       tpc->populate_fieldmap();
       for (int j=0;j<nscales;j++){
 	printf("%s file has %s hist.  field=%s, lookup=%s. scaling to %2.2f\n",

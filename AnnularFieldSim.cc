@@ -295,8 +295,9 @@ TVector3 AnnularFieldSim::calc_unit_field(TVector3 at, TVector3 from){
     }
     double Ez=green->Ez(at.Perp(),atphi,at.Z(),from.Perp(),fromphi,from.Z());
     field.SetXYZ(Er,Ephi,Ez); //now these are the correct components if our test point is at y=0 (hence phi=0);
-    field=field*(k_perm*4*3.14159);//scale field strength, since the greens functions as of Apr 1 2020 do not build-in this factor.
-    field.RotateZ(at.Phi());//rotate to the coordinates of our 'at' point.
+    field=field*epsinv;//scale field strength, since the greens functions as of Apr 1 2020 do not build-in this factor.
+    field.RotateZ(at.Phi());//rotate to the coordinates of our 'at' point, which is a small rotation for the phislice case.
+    //but this does mean we need to be careful! If we are rotating so that this is pointing not in the R direction, then with azimuthally symmetric charge we will have some cancellation we don't want, maybe?  Make sure this matches how we rotate to sum_field!
   }
     return field;
 }
@@ -657,7 +658,7 @@ TVector3 AnnularFieldSim::interpolatedFieldIntegral(float zdest,TVector3 start, 
 
   // printf("interpolating fieldInt for %s at  r=%f,phi=%f\n",(field==Efield)?"Efield":"Bfield",r0,p0);
 
-  int dir=(start.Z()>zdest?-1:1);//+1 if going to larger z, -1 if going to smaller;  if they're the same, the sense doesn't matter.
+  int dir=(start.Z()<zdest?1:-1);//+1 if going to larger z, -1 if going to smaller;  if they're the same, the sense doesn't matter.
 
   int zi, zf;
   double startz,endz;
@@ -666,12 +667,12 @@ TVector3 AnnularFieldSim::interpolatedFieldIntegral(float zdest,TVector3 start, 
   //make sure 'zi' is always the smaller of the two numbers, for handling the partial-steps.
   if (dir>0){
     startBound=GetZindexAndCheckBounds(start.Z(),&zi); //highest cell with lower bound less than lower bound of integral
-    endBound=GetZindexAndCheckBounds(zdest,&zf); //highest cell with lower bound less than upper lower bound of integral
+    endBound=GetZindexAndCheckBounds(zdest,&zf); //highest cell with lower bound less than upper bound of integral
     startz=start.Z();
     endz=zdest;
   } else{
     endBound=GetZindexAndCheckBounds(start.Z(),&zf); //highest cell with lower bound less than lower bound of integral
-    startBound=GetZindexAndCheckBounds(zdest,&zi); //highest cell with lower bound less than upper lower bound of integral
+    startBound=GetZindexAndCheckBounds(zdest,&zi); //highest cell with lower bound less than upper bound of integral
     startz=zdest;
     endz=start.Z();
   }
@@ -693,7 +694,7 @@ TVector3 AnnularFieldSim::interpolatedFieldIntegral(float zdest,TVector3 start, 
   
 
 
-  TVector3 fieldInt, partialInt;//where we'll store integrals as we generate them.
+  TVector3 fieldInt(0,0,0), partialInt;//where we'll store integrals as we generate them.
   
   for (int i=0;i<4;i++){
     if (skip[i]) {
@@ -1114,7 +1115,7 @@ void AnnularFieldSim::populate_fieldmap(){
 	}
 	el++;
 
-	Efield->Set(ir-rmin_roi,iphi-phimin_roi,iz-zmin_roi,localF);
+	Efield->Set(ir-rmin_roi,iphi-phimin_roi,iz-zmin_roi,localF);//sets in roi coordinates.
 	//if (localF.Mag()>1e-9)
 	//if(debugFlag()) printf("%d: AnnularFieldSim::populate_fieldmap fieldmap@ (%d,%d,%d) mag=%f\n",__LINE__,ir,iphi,iz,localF.Mag());
       }
@@ -1441,7 +1442,7 @@ void  AnnularFieldSim::populate_phislice_lookup(){
 		}
 	      }
 
-	      Epartial_phislice->Set(ifr-rmin_roi,0,ifz-zmin_roi,ior,iophi,ioz,unitf);
+	      Epartial_phislice->Set(ifr-rmin_roi,0,ifz-zmin_roi,ior,iophi,ioz,unitf);//the origin phi is relative to zero anyway.
 	      }
 	    }
 	  }
@@ -1929,8 +1930,8 @@ TVector3 AnnularFieldSim::sum_phislice_field_at(int r,int phi, int z){
  //sum the E field over all nr by ny by nz cells of sources, at the specific position r,phi,z.
   //note the specific position in Epartial is in relative coordinates.
   //printf("AnnularFieldSim::sum_field_at(r=%d,phi=%d, z=%d)\n",r,phi,z);
-  TVector3 pos=GetRoiCellCenter(r-rmin_roi,phi-phimin_roi,z-zmin_roi);      //RCC manually disabled phi component of green   added this line
-  TVector3 slicepos=GetRoiCellCenter(r-rmin_roi,0,z-zmin_roi);      //RCC manually disabled phi component of green   added this line
+  TVector3 pos=GetRoiCellCenter(r-rmin_roi,phi-phimin_roi,z-zmin_roi);
+  TVector3 slicepos=GetRoiCellCenter(r-rmin_roi,0,z-zmin_roi);     
   float rotphi=pos.Phi()-slicepos.Phi(); //probably this is phi*step.Phi();
 
   
@@ -1944,7 +1945,7 @@ TVector3 AnnularFieldSim::sum_phislice_field_at(int r,int phi, int z){
 	if (r==ir && phi==iphi && z==iz) continue;//dont' compute self-to-self field.
 	phirel=FilterPhiIndex(iphi-phi);
 	unrotatedField=Epartial_phislice->Get(r-rmin_roi,0,z-zmin_roi,ir,phirel,iz)*q->Get(ir,iphi,iz);
-	unrotatedField.RotateZ(rotphi);   //RCC manually disabled phi component of green   added this line.  previously was rotate by the step.Phi()*phi.    //annoying that I can't rename this to 'rotated field' here without unnecessary overhead.
+	unrotatedField.RotateZ(rotphi);   //previously was rotate by the step.Phi()*phi.    //annoying that I can't rename this to 'rotated field' here without unnecessary overhead.
 	sum+=unrotatedField;
       }
     }

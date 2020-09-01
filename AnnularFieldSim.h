@@ -30,6 +30,7 @@ class AnnularFieldSim{
   const float kGauss=Tesla/10;//kGauss
   
   const float eps0=8.854e-12*(C/V)/m;//Farads(=Coulombs/Volts) per meter
+  const float epsinv=1/eps0;//Vcm/C
   const float k_perm=1/(4*3.1416*eps0);  //implied units of V*cm/C because we're doing unitful work here.
   
  public:
@@ -274,7 +275,7 @@ class MultiArray : public TObject{
    }
 
    void Add(int a, int b, int c, T in){
-     Set(a,b,c,0,0,0,in);
+     Add(a,b,c,0,0,0,in);
      return;
    };
    void Add(int a, int b, int c, int d, int e, int f, T in){

@@ -304,7 +304,7 @@ TVector3 AnnularFieldSim::calc_unit_field(TVector3 at, TVector3 from){
 
 double AnnularFieldSim::FilterPhiPos(double phi){
   double p=phi;
-  if (p>=phispan){//rcc here
+  if (p>=phispan){
     p-=2*TMath::Pi();
   }
   if (p<0){
@@ -914,17 +914,18 @@ void AnnularFieldSim::load_spacecharge(const char *filename, const char *histnam
 
 void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float chargescale, float cmscale){
   //load spacecharge densities from a histogram, where scalefactor translates into local units of C/cm^3
+  //and cmscale translate (hist coord) --> (hist position in cm)
   //noting that the histogram limits may differ from the simulation size, and have different granularity
   //hist is assumed/required to be x=phi, y=r, z=z
   //z offset 'drifts' the charge by that distance toward z=0.
 
   //Get dimensions of input
-  float hrmin=hist->GetYaxis()->GetXmin()/cmscale;
-  float hrmax=hist->GetYaxis()->GetXmax()/cmscale;
+  float hrmin=hist->GetYaxis()->GetXmin()*cmscale;
+  float hrmax=hist->GetYaxis()->GetXmax()*cmscale;
   float hphimin=hist->GetXaxis()->GetXmin();
   float hphimax=hist->GetXaxis()->GetXmax();
-  float hzmin=hist->GetZaxis()->GetXmin()/cmscale;
-  float hzmax=hist->GetZaxis()->GetXmax()/cmscale;
+  float hzmin=hist->GetZaxis()->GetXmin()*cmscale;
+  float hzmax=hist->GetZaxis()->GetXmax()*cmscale;
   
   //Get number of bins in each dimension
   int hrn=hist->GetNbinsY();
@@ -1017,7 +1018,7 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float chargesc
   printf("AnnularFieldSim::load_spacecharge:  Total charge Q=%E Coulombs\n",totalcharge/C);
 
   sprintf(chargestring,"SC from file: %s. Qtot=%E Coulombs.  native dims: (%d,%d,%d)(%2.1fcm,%2.1f,%2.1fcm)-(%2.1fcm,%2.1f,%2.1fcm)",
-	  chargefilename,totalcharge/C,hrn,hphin,hzn,hrmin,hrmax,hphimin,hphimax,hzmin,hzmax);
+	  chargefilename,totalcharge/C,hrn,hphin,hzn,hrmin,hphimin,hzmin,hrmax,hphimax,hzmax);
 
   if (lookupCase==HybridRes){
     //go through the q array and build q_lowres.  
@@ -2517,9 +2518,6 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
   texpos=0.9;
  
   
-  printf("about to write map and summary to %s.\n",filebase);
-  printf("map:%s.\n",distortionFilename.Data());
-  printf("summary:%s.\n",summaryFilename.Data());
   
   canvas->cd();
   c->Draw();
@@ -2527,22 +2525,19 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
   textpad->Draw();
   canvas->SaveAs(summaryFilename.Data());
 
-    printf("map:%s.\n",distortionFilename.Data());
+  //  printf("map:%s.\n",distortionFilename.Data());
 
   outf->cd();
-  printf("map:%s. cd'd\n",distortionFilename.Data());
 
   hDistortionR->Write();
   hDistortionP->Write();
   hDistortionZ->Write();
-  printf("map:%s. distort written\n",distortionFilename.Data());
   hIntDistortionR->Write();
   hIntDistortionP->Write();
   hIntDistortionZ->Write();
-  printf("map:%s. integrals written\n",distortionFilename.Data());
   dTree->Write();
   outf->Close();
-  printf("map:%s.closed\n",distortionFilename.Data());
+  //printf("map:%s.closed\n",distortionFilename.Data());
 
   /*
   //all histograms associated with this file should be deleted when we closed the file.
@@ -2565,7 +2560,10 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
     hRDist[i]->Delete();
   }
   */
-  printf("wrote map and summary to %s and %s.\n",distortionFilename.Data(),summaryFilename.Data());
+  printf("wrote map and summary to %s.\n",filebase);
+  printf("map:%s.\n",distortionFilename.Data());
+  printf("summary:%s.\n",summaryFilename.Data());
+  //printf("wrote map and summary to %s and %s.\n",distortionFilename.Data(),summaryFilename.Data());
   return;
 }
 
@@ -2627,9 +2625,9 @@ TVector3 AnnularFieldSim::GetStepDistortion(float zdest,TVector3 start, bool int
     printf("GetStepDistortion: fieldInt=(%E,%E,%E)\n",fieldInt.X(),fieldInt.Y(),fieldInt.Z());
     assert(1==2);
   }
-  
+  //rcc here
   //float fieldz=field_[in3(x,y,0,fx,fy,fz)].Z()+E.Z();// *field[x][y][zi].Z();
-  double EfieldZ=fieldInt.Z()/zdist;// average field over the path.
+  double EfieldZ=fieldInt.Z()/zdist;// average field over the path.  Negative if drifting from CM to 
   double BfieldZ=fieldIntB.Z()/zdist;
   //double fieldz=Enominal; // ideal field over path.
 

@@ -902,17 +902,17 @@ void AnnularFieldSim::loadField(MultiArray<TVector3> **field, TTree *source, flo
 }
 
 
-void AnnularFieldSim::load_spacecharge(const char *filename, const char *histname, float zoffset, float chargescale, float cmscale){
+void AnnularFieldSim::load_spacecharge(const char *filename, const char *histname, float zoffset, float chargescale, float cmscale, bool isChargeDensity){
   TFile *f=TFile::Open(filename);
   TH3F* scmap=(TH3F*)f->Get(histname);
   printf("Loading spacecharge from '%s'.  Seeking histname '%s'\n",filename,histname);
   sprintf(chargefilename,"%s:%s",filename,histname);
-  load_spacecharge(scmap,zoffset,chargescale, cmscale);
+  load_spacecharge(scmap,zoffset,chargescale, cmscale, isChargeDensity);
   f->Close();
   return;
 }
 
-void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float chargescale, float cmscale){
+void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float chargescale, float cmscale, bool isChargeDensity){
   //load spacecharge densities from a histogram, where scalefactor translates into local units of C/cm^3
   //and cmscale translate (hist coord) --> (hist position in cm)
   //noting that the histogram limits may differ from the simulation size, and have different granularity
@@ -1005,8 +1005,13 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float chargesc
 	}
 	//volume is simplified from the basic formula:  float vol=hzstep*(hphistep*(hr+hrstep)*(hr+hrstep) - hphistep*hr*hr);
 	//should be lower radius and higher radius.  I'm off by a 0.5 on both of those.  Oops.
-	double vol=hzstep*hphistep*(hr+0.5*hrstep)*hrstep;
-	double qbin=chargescale*vol*hist->GetBinContent(hist->GetBin(j+1,i+1,k+1))*C;//store locally as Coulombs per bin.
+	double qbin;
+	if (isChargeDensity){//hist is charge per unit volume
+	  double vol=hzstep*hphistep*(hr+0.5*hrstep)*hrstep;
+	  qbin=chargescale*vol*hist->GetBinContent(hist->GetBin(j+1,i+1,k+1))*C;//store locally as Coulombs per bin.
+	} else {//hist is total charge, not charge per unit volume
+       	  qbin=chargescale*hist->GetBinContent(hist->GetBin(j+1,i+1,k+1))*C;//store locally as Coulombs per bin.
+	}
 	//float qold=q->Get(localr,localphi,localz);
 	totalcharge+=qbin;
 	//if(debugFlag()) printf("%d: AnnularFieldSim::load_spacecharge adding Q=%f from hist(%d,%d,%d) into cell (%d,%d,%d)\n",__LINE__,qbin,i,j,k,localr,localphi,localz);
@@ -2148,14 +2153,14 @@ void AnnularFieldSim::PlotFieldSlices(const char *filebase,TVector3 pos){
   for (int ax=0;ax<3;ax++){
     //loop over which axis slice to take
     hCharge[ax]=new TH2F(Form("hCharge%c",axis[ax]),
-			 Form("Spacecharge Distribution in the %c%c plane at %c=%2.3f;%c;%c",
+			 Form("Spacecharge Distribution in the %c%c plane at %c=%2.3f (C/cm^3);%c;%c",
 			      axis[ax+1],axis[ax+2],axis[ax],axisval[ax],axis[ax+1],axis[ax+2]),
 			 axn[ax+1],axbot[ax+1],axtop[ax+1],
 			 axn[ax+2],axbot[ax+2],axtop[ax+2]);
     for (int i=0;i<3;i++){
       //loop over which axis of the field to read
       hEfield[ax][i]=new TH2F(Form("hEfield%c_%c%c",axis[i],axis[ax+1],axis[ax+2]),
-			      Form("%c component of E Field in the %c%c plane at %c=%2.3f;%c;%c",
+			      Form("%c component of E Field in the %c%c plane at %c=%2.3f (V/cm);%c;%c",
 				   axis[i],axis[ax+1],axis[ax+2],axis[ax],axisval[ax],axis[ax+1],axis[ax+2]),
 			      axn[ax+1],axbot[ax+1],axtop[ax+1],
 			      axn[ax+2],axbot[ax+2],axtop[ax+2]);

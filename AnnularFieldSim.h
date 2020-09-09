@@ -166,6 +166,7 @@ debug_printActionEveryN=0; return;};
   float GetNominalE(){return Enominal;};
   float GetChargeAt(TVector3 pos);
   TVector3 GetFieldAt(TVector3 pos);
+  TVector3 GetBFieldAt(TVector3 pos);
   TVector3 GetFieldStep(){return step;};
   int GetFieldStepsR(){return nr_roi;};
   int GetFieldStepsPhi(){return nphi_roi;};
@@ -175,7 +176,7 @@ debug_printActionEveryN=0; return;};
 
   //file-writing functions for complex mapping questions:
   void GenerateDistortionMaps(const char* filebase, int r_subsamples=1, int p_subsamples=1, int z_subsamples=1, int z_substeps=1);
-  void PlotFieldSlices(const char *filebase,TVector3 pos);
+  void PlotFieldSlices(const char *filebase,TVector3 pos, char which='E');
 
   
  
@@ -190,7 +191,7 @@ debug_printActionEveryN=0; return;};
   void setFlatFields(float B, float E);
   void loadEfield(const char *filename, const char *treename);
   void loadBfield(const char *filename, const char *treename);
-  void loadField(MultiArray<TVector3> **field, TTree *source, float *rptr, float *phiptr, float *zptr, float *frptr,  float *fphiptr,  float *fzptr);
+  void loadField(MultiArray<TVector3> **field, TTree *source, float *rptr, float *phiptr, float *zptr, float *frptr,  float *fphiptr,  float *fzptr, float fieldunit);
   
   void load_rossegger(double epsilon=1E-4){green=new Rossegger(rmin,rmax,zmax,epsilon); return;};
 
@@ -237,7 +238,7 @@ debug_printActionEveryN=0; return;};
   BoundsCase GetPhiIndexAndCheckBounds(float pos, int *phi);
   BoundsCase GetZindexAndCheckBounds(float pos, int *z);
 
-  void UpdateOmegaTau(){omegatau_nominal=-Bnominal*vdrift/Enominal;return;}; //various constants to match internal representation to the familiar formula.  Adding in these factors suggests I should switch to a unitful calculation throughout...
+  void UpdateOmegaTau(){omegatau_nominal=-Bnominal*vdrift/abs(Enominal);return;}; //various constants to match internal representation to the familiar formula.  Adding in these factors suggests I should switch to a unitful calculation throughout...
 
 
 };

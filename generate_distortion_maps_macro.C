@@ -55,7 +55,8 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   //const float tpc_magField=0.5;//T -- The old value used in carlos's studies.
   //const float tpc_driftVel=4.0*1e6;//cm per s  -- used in carlos's studies
   const float tpc_driftVel=8.0*1e6;//cm per s  -- 2019 nominal value
-  const float tpc_magField=1.4;//T -- 2019 nominal value
+  //const float tpc_magField=1.4;//T -- 2019 nominal value
+  const float tpc_magField=-1.5;//T -- 2019 nominal value in the fieldmap
   const char detgeoname[]="sphenix";
 
   //heuristic chargescale:
@@ -106,14 +107,16 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   
 
     //load the field maps, either flat or actual maps
-  tpc->setFlatFields(tpc_magField,-tpc_cmVolt/tpc_z);
+  //potential is V=(tpc_CM+400V/cm*z) thus grad=+400V/cm and field =-grad=-400V/cm
+  tpc->setFlatFields(tpc_magField,tpc_cmVolt/tpc_z);  
   char field_string[200];
   sprintf(field_string,"flat_B%2.1f_E%2.1f",tpc_magField,tpc_cmVolt/tpc_z);
 
-  if (0){
-    tpc->loadBfield("sPHENIX.2d.root","fieldmap");
+  if (1){
+    printf("loading external fieldmaps\n");
+    //tpc->loadBfield("sPHENIX.2d.root","fieldmap");//soon:, (1.4)/(-1.5));
     tpc->loadEfield("externalEfield.ttree.root","fTree");
-    sprintf(field_string,"real_B%2.1f_E%2.1f",tpc_magField,tpc_cmVolt/tpc_z);
+    sprintf(field_string,"realE_B%2.1f_E%2.1f",tpc_magField,tpc_cmVolt/tpc_z);
   }
     now=gSystem->Now();
   printf("set fields.  the dtime is %lu\n",(unsigned long)(now-start));
@@ -161,14 +164,14 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   // Evgeny's stuff:
   
  const int nfiles=1;
-  const int nhistsper=10;
+  const int nhistsper=1;
    const float spacecharge_cm_per_axis_unit=100;
    double tpc_chargescale=1.6e-19;//evgeny hists have charge in units of ions/bin, so we need to multiply by the electric charge of an electron to get out C.
    bool isChargeDensity=false; //and tell the load_ function not to multiply by volume.
 
-   char *scbasename[]={"cmflash/flash_002000_008000","evgeny/mapFile_bX734587_bias0","Smooth.50kHz","Single.50kHz"};
-  char *scfilename[]={"outputFile_15kHz_G4Hits_sHijing_0-12fm_002000_008000_bX734587_bias10.root", "evgeny/mapFile_bX734587_bias0.root","Smooth.50kHz.root","BeamXingNBeams.root"};
-  char *schistname[]={"h_Charge_0",
+   char *scbasename[]={"tempout","evgeny/mapFile_bX734587_bias0","Smooth.50kHz","Single.50kHz"};
+   char *scfilename[]={"evgeny_sept/Summary_bX1508071_0_10_events.root","outputFile_15kHz_G4Hits_sHijing_0-12fm_002000_008000_bX734587_bias10.root", "evgeny/mapFile_bX734587_bias0.root","Smooth.50kHz.root","BeamXingNBeams.root"};
+   char *schistname[]={"h_Charge_evt_0","h_Charge_0",
 		      "h_Charge_1",
 		      "h_Charge_2",
 		      "h_Charge_3",
@@ -184,19 +187,29 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   //char *scfilename[]={"Smooth.50kHz.root","BeamXingNBeams.root"};
   //char *schistname[]={"sphenix_minbias_average","sphenix_minbias_charge"};
   //
+  
   //Heuristics:
   /*
+  
    const int nfiles=1;
    const int nhistsper=1;
    const float spacecharge_cm_per_axis_unit=1;
    bool isChargeDensity=true;
-   tpc_chargescale=1e-15;//our plot is in fC, so multiply by 1e-15 to get coulombs
+   double tpc_chargescale=1e-15;//our plot is in fC, so multiply by 1e-15 to get coulombs
 
-  char *scbasename[]={"HeuristicSc_sPHENIX2020"};
-  char *scfilename[]={"HeuristicSc_sPHENIX2020.root"};
+  char *scbasename[]={"HeuristicSc_sPHENIX2018"};
+  char *scfilename[]={"HeuristicSc_sPHENIX2018.root"};
   char *schistname[]={"heuristic"};
-  //const int nscales=1;
-  //float scale[]={0,5,100,1000};
+  */
+
+  //Test charge in flat field, for sanity:
+  /*
+     const int nfiles=1;
+   const int nhistsper=1;
+   tpc->add_testcharge(65, -3.102, 50, 4e-12);
+
+  char *scbasename[]={"Testcharge"};
+  char *schistname[]={"1e12CoulumbAtMidpoint"};
   */
 
   double totalQ=0;
@@ -216,9 +229,10 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
 	//printf("scaled.\n");
 	sprintf(distortionFilebase,"%s.hist%d.%s.%s",scbasename[i],ihist,field_string,lookup_string);
 	printf("filebase=%s\n",distortionFilebase);
-	tpc->GenerateDistortionMaps(distortionFilebase,2,2,2,1);
+	tpc->GenerateDistortionMaps(distortionFilebase,1,1,1,1);
 	printf("distortions mapped.\n");
 	tpc->PlotFieldSlices(distortionFilebase,pos);
+	tpc->PlotFieldSlices(distortionFilebase,pos,'B');
 	printf("field mapped.\n");
 	//save fieldslices too
 	// }

@@ -294,7 +294,7 @@ TVector3 AnnularFieldSim::calc_unit_field(TVector3 at, TVector3 from){
       Ephi=green->Ephi(at.Perp(),atphi,at.Z(),from.Perp(),fromphi,from.Z());
     }
     double Ez=green->Ez(at.Perp(),atphi,at.Z(),from.Perp(),fromphi,from.Z());
-    field.SetXYZ(Er,Ephi,Ez); //now these are the correct components if our test point is at y=0 (hence phi=0);
+    field.SetXYZ(-Er,-Ephi,-Ez); //now these are the correct components if our test point is at y=0 (hence phi=0);
     field=field*epsinv;//scale field strength, since the greens functions as of Apr 1 2020 do not build-in this factor.
     field.RotateZ(at.Phi());//rotate to the coordinates of our 'at' point, which is a small rotation for the phislice case.
     //but this does mean we need to be careful! If we are rotating so that this is pointing not in the R direction, then with azimuthally symmetric charge we will have some cancellation we don't want, maybe?  Make sure this matches how we rotate to sum_field!
@@ -788,7 +788,7 @@ void AnnularFieldSim::loadEfield(const char *filename, const char *treename){
   fTree->SetBranchAddress("ez",&fz);
   //phi would go here if we had it.
   phi=fphi=0; //no phi components yet.
-  loadField(&Eexternal,fTree,&r,0,&z,&fr,&fphi,&fz);
+  loadField(&Eexternal,fTree,&r,0,&z,&fr,&fphi,&fz,V/cm);
   return;
   
 }
@@ -806,12 +806,12 @@ void AnnularFieldSim::loadBfield(const char *filename, const char *treename){
   fTree->SetBranchAddress("bz",&fz);
   //phi would go here if we had it.
   phi=fphi=0; //no phi components yet.
-  loadField(&Bfield,fTree,&r,0,&z,&fr,&fphi,&fz);
+  loadField(&Bfield,fTree,&r,0,&z,&fr,&fphi,&fz,Tesla);
   return;
   
 }
 
-void AnnularFieldSim::loadField(MultiArray<TVector3> **field, TTree *source, float *rptr, float *phiptr, float *zptr, float *frptr,  float *fphiptr,  float *fzptr){
+void AnnularFieldSim::loadField(MultiArray<TVector3> **field, TTree *source, float *rptr, float *phiptr, float *zptr, float *frptr,  float *fphiptr,  float *fzptr, float fieldunit){
   //we're loading a tree of unknown size and spacing -- and possibly uneven spacing -- into our local data.
   //formally, we might want to interpolate or otherwise weight, but for now, carve this into our usual bins, and average, similar to the way we load spacecharge.
 
@@ -834,23 +834,23 @@ void AnnularFieldSim::loadField(MultiArray<TVector3> **field, TTree *source, flo
     //if we aren't asking for phi symmetry, build just the one phi strip
     if (!phiSymmetry){
       htEntries->Fill(*phiptr,*rptr,*zptr);//for legacy reasons this histogram, like others, goes phi-r-z.
-      htSum[0]->Fill(*phiptr,*rptr,*zptr,*frptr);
-      htSum[1]->Fill(*phiptr,*rptr,*zptr,*fphiptr);
-      htSum[2]->Fill(*phiptr,*rptr,*zptr,*fzptr);
+      htSum[0]->Fill(*phiptr,*rptr,*zptr,*frptr*fieldunit);
+      htSum[1]->Fill(*phiptr,*rptr,*zptr,*fphiptr*fieldunit);
+      htSum[2]->Fill(*phiptr,*rptr,*zptr,*fzptr*fieldunit);
       htEntriesLow->Fill(*phiptr,*rptr,*zptr);//for legacy reasons this histogram, like others, goes phi-r-z.
-      htSumLow[0]->Fill(*phiptr,*rptr,*zptr,*frptr);
-      htSumLow[1]->Fill(*phiptr,*rptr,*zptr,*fphiptr);
-      htSumLow[2]->Fill(*phiptr,*rptr,*zptr,*fzptr);
+      htSumLow[0]->Fill(*phiptr,*rptr,*zptr,*frptr*fieldunit);
+      htSumLow[1]->Fill(*phiptr,*rptr,*zptr,*fphiptr*fieldunit);
+      htSumLow[2]->Fill(*phiptr,*rptr,*zptr,*fzptr*fieldunit);
     } else { //if we do have phi symmetry, build every phi strip using this one.
       for (int j=0;j<nphi;j++){
 	htEntries->Fill(j*step.Phi(),*rptr,*zptr);//for legacy reasons this histogram, like others, goes phi-r-z.
-	htSum[0]->Fill(j*step.Phi(),*rptr,*zptr,*frptr);
-	htSum[1]->Fill(j*step.Phi(),*rptr,*zptr,*fphiptr);
-	htSum[2]->Fill(j*step.Phi(),*rptr,*zptr,*fzptr);
+	htSum[0]->Fill(j*step.Phi(),*rptr,*zptr,*frptr*fieldunit);
+	htSum[1]->Fill(j*step.Phi(),*rptr,*zptr,*fphiptr*fieldunit);
+	htSum[2]->Fill(j*step.Phi(),*rptr,*zptr,*fzptr*fieldunit);
  	htEntriesLow->Fill(j*step.Phi(),*rptr,*zptr);//for legacy reasons this histogram, like others, goes phi-r-z.
-	htSumLow[0]->Fill(j*step.Phi(),*rptr,*zptr,*frptr);
-	htSumLow[1]->Fill(j*step.Phi(),*rptr,*zptr,*fphiptr);
-	htSumLow[2]->Fill(j*step.Phi(),*rptr,*zptr,*fzptr);
+	htSumLow[0]->Fill(j*step.Phi(),*rptr,*zptr,*frptr*fieldunit);
+	htSumLow[1]->Fill(j*step.Phi(),*rptr,*zptr,*fphiptr*fieldunit);
+	htSumLow[2]->Fill(j*step.Phi(),*rptr,*zptr,*fzptr*fieldunit);
       }
     }
   }
@@ -1528,7 +1528,8 @@ void  AnnularFieldSim::load_phislice_lookup(const char* sourcefile){
      el++;
      tLookup->GetEntry(i);
      //printf("loading i=%d\n",i);
-     Epartial_phislice->Set(ifr-rmin_roi,0,ifz-zmin_roi,ior,iophi,ioz,(*unitf)*(V/(cm*C)));//load assuming field has units V/(C*cm), which is how we save it.
+     Epartial_phislice->Set(ifr-rmin_roi,0,ifz-zmin_roi,ior,iophi,ioz,(*unitf)*(-1.0)*(V/(cm*C)));//load assuming field has units V/(C*cm), which is how we save it.
+     //note that we save the gradient terms, not the field, hence we need to multiply by (-1.0)
      if( !(el%percent)) {
        printf("load_phislice_lookup %d%%:  ",(int)(debug_npercent*el/percent));
        printf("field from (ir=%d,iphi=%d,iz=%d) to (or=%d,ophi=0,oz=%d) is (%E,%E,%E)\n",
@@ -1586,7 +1587,7 @@ void  AnnularFieldSim::save_phislice_lookup(const char* destfile){
 	for ( iophi=0;iophi<nphi;iophi++){
 	  for ( ioz=0;ioz<nz;ioz++){
 	    el++;
-	    unitf=Epartial_phislice->Get(ifr-rmin_roi,0,ifz-zmin_roi,ior,iophi,ioz)*(1/(V/(C*cm)));//save in units of V/(C*cm)
+	    unitf=Epartial_phislice->Get(ifr-rmin_roi,0,ifz-zmin_roi,ior,iophi,ioz)*(-1/(V/(C*cm)));//save in units of V/(C*cm) note that we introduce a -1 here for legcy reasons.
 	      if (1){
 		if(!(el%percent)) {printf("save_phislice_lookup %d%%:  ",(int)(debug_npercent*el/percent));
 				   printf("field from (ir=%d,iphi=%d,iz=%d) to (or=%d,ophi=0,oz=%d) is (%E,%E,%E)\n",
@@ -2120,12 +2121,23 @@ TVector3 AnnularFieldSim::GetTotalDistortion(float zdest,TVector3 start,int step
   return accumulated_distortion;
 }
 
-void AnnularFieldSim::PlotFieldSlices(const char *filebase,TVector3 pos){
+void AnnularFieldSim::PlotFieldSlices(const char *filebase,TVector3 pos, char which){
 
-  
-  printf("plotting field slices...\n");
+  bool mapEfield=true;
+  if (which=='B'){
+    mapEfield=false;
+  }
+  which=mapEfield?'E':'B';
+  char units[5];
+  if (mapEfield){
+    sprintf(units,"V/cm");
+  } else{
+    sprintf(units, "T");
+  }
+ 
+  printf("plotting field slices for %c field...\n", which);
   printf("file=%s\n",filebase);
-  TString plotfilename=TString::Format("%s.field_slices.pdf",filebase);
+  TString plotfilename=TString::Format("%s.%cfield_slices.pdf",filebase,which);
   TVector3 inner=GetInnerEdge();
   TVector3 outer=GetOuterEdge();
   TVector3 step=GetFieldStep();
@@ -2159,14 +2171,14 @@ void AnnularFieldSim::PlotFieldSlices(const char *filebase,TVector3 pos){
 			 axn[ax+2],axbot[ax+2],axtop[ax+2]);
     for (int i=0;i<3;i++){
       //loop over which axis of the field to read
-      hEfield[ax][i]=new TH2F(Form("hEfield%c_%c%c",axis[i],axis[ax+1],axis[ax+2]),
-			      Form("%c component of E Field in the %c%c plane at %c=%2.3f (V/cm);%c;%c",
-				   axis[i],axis[ax+1],axis[ax+2],axis[ax],axisval[ax],axis[ax+1],axis[ax+2]),
+      hEfield[ax][i]=new TH2F(Form("h%cfield%c_%c%c",which,axis[i],axis[ax+1],axis[ax+2]),
+			      Form("%c component of %c Field in the %c%c plane at %c=%2.3f (%s);%c;%c",
+				   axis[i],which,axis[ax+1],axis[ax+2],axis[ax],axisval[ax],units,axis[ax+1],axis[ax+2]),
 			      axn[ax+1],axbot[ax+1],axtop[ax+1],
 			      axn[ax+2],axbot[ax+2],axtop[ax+2]);
-      hEfieldComp[ax][i]=new TH1F(Form("hEfieldComp%c_%c%c",axis[i],axis[ax+1],axis[ax+2]),
-			      Form("Log Magnitude of %c component of E Field in the %c%c plane at %c=%2.3f;log10(mag)",
-				   axis[i],axis[ax+1],axis[ax+2],axis[ax],axisval[ax]),
+      hEfieldComp[ax][i]=new TH1F(Form("h%cfieldComp%c_%c%c",which,axis[i],axis[ax+1],axis[ax+2]),
+			      Form("Log Magnitude of %c component of %c Field in the %c%c plane at %c=%2.3f;log10(mag)",
+				   axis[i],which,axis[ax+1],axis[ax+2],axis[ax],axisval[ax]),
 				  200,-5,5);
     }
   }
@@ -2185,7 +2197,11 @@ void AnnularFieldSim::PlotFieldSlices(const char *filebase,TVector3 pos){
 		 rpz_coord[0],rpz_coord[1],rpz_coord[2],
 		 lpos.Perp(),lpos.Phi(),lpos.Z(),lpos.X(),lpos.Y(),lpos.Z());
 	}
-	field=GetFieldAt(lpos);
+	if (mapEfield) {
+	  field=GetFieldAt(lpos)*(1.0*cm/V);//get units so we're drawing in V/cm when we draw.
+	} else {
+	  field=GetBFieldAt(lpos)*(1.0/Tesla); //get units so we're drawing in Tesla when we draw.
+	}
 	field.RotateZ(-rpz_coord[1]);//rotate us so we can read the y component as the phi component
 	//if (field.Mag()>0) continue; //nothing has mag zero because of the drift field.
 	hEfield[ax][0]->Fill(rpz_coord[(ax+1)%3],rpz_coord[(ax+2)%3],field.X());
@@ -2276,6 +2292,8 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
   distortionFilename.Form("%s.distortion_map.hist.root",filebase);
   TString summaryFilename;
   summaryFilename.Form("%s.distortion_summary.pdf",filebase);
+  TString diffSummaryFilename;
+  diffSummaryFilename.Form("%s.differential_summary.pdf",filebase);
 
   TFile *outf=TFile::Open(distortionFilename.Data(),"RECREATE");
   outf->cd();
@@ -2314,10 +2332,17 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
   float axtop[]={rfh,pfh,zfh,rfh,pfh,zfh};
   TH2F* hIntDist[3][3];
   TH1F* hRDist[3];
+  TH2F* hDiffDist[3][3];
+  TH1F* hRDiffDist[3];
   for (int i=0;i<3;i++){
     //loop over which axis of the distortion to read
     for (int ax=0;ax<3;ax++){
       //loop over which plane to work in
+      hDiffDist[ax][i]=new TH2F(TString::Format("hDiffDist%c_%c%c",axname[i],axname[ax+1],axname[ax+2]),
+				TString::Format("%c component of diff. distortion in  %c%c plane at %c=%2.3f;%c;%c",
+						axname[i],axname[ax+1],axname[ax+2],axname[ax],axval[ax],axname[ax+1],axname[ax+2]),
+				axn[ax+1],axbot[ax+1],axtop[ax+1],
+				axn[ax+2],axbot[ax+2],axtop[ax+2]);
       hIntDist[ax][i]=new TH2F(TString::Format("hIntDist%c_%c%c",axname[i],axname[ax+1],axname[ax+2]),
 			       TString::Format("%c component of int. distortion in  %c%c plane at %c=%2.3f;%c;%c",
 					       axname[i],axname[ax+1],axname[ax+2],axname[ax],axval[ax],axname[ax+1],axname[ax+2]),
@@ -2326,6 +2351,10 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
     }
     hRDist[i]=new TH1F(TString::Format("hRDist%c",axname[i]),
 		       TString::Format("%c component of int. distortion vs r with %c=%2.3f and %c=%2.3f;r(cm);#delta (cm)",
+				       axname[i],axname[1],axval[1],axname[2],axval[2]),
+		       axn[0],axbot[0],axtop[0]);
+    hRDiffDist[i]=new TH1F(TString::Format("hRDist%c",axname[i]),
+		       TString::Format("%c component of diff. distortion vs r with %c=%2.3f and %c=%2.3f;r(cm);#delta (cm)",
 				       axname[i],axname[1],axval[1],axname[2],axval[2]),
 		       axn[0],axbot[0],axtop[0]);
   }
@@ -2341,6 +2370,7 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
   float partR,partP,partZ;
   int ir,ip,iz;
   float distortR,distortP,distortZ;
+  float diffdistR, diffdistP, diffdistZ;
   TTree *dTree=new TTree("dTree","Distortion per step z");
   dTree->Branch("r",&partR);
   dTree->Branch("p",&partP);
@@ -2402,12 +2432,12 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
 	//be careful with the math of a distortion.  The R distortion is NOT the perp() component of outpart-inpart -- that's the transverse magnitude of the distortion!
 	distort=GetTotalDistortion(inpart.Z()+deltaz,inpart,nSteps,true, &validToStep);
 	distort.RotateZ(-inpart.Phi());//rotate so that that is on the x axis
-	distortP=distort.Y();//the phi component is now the y component.
-	distortR=distort.X();//and the r component is the x component
-	distortZ=distort.Z();
-	hDistortionR->Fill(partP,partR,partZ,distortR);
-	hDistortionP->Fill(partP,partR,partZ,distortP);
-	hDistortionZ->Fill(partP,partR,partZ,distortZ);
+	diffdistP=distort.Y();//the phi component is now the y component.
+	diffdistR=distort.X();//and the r component is the x component
+	diffdistZ=distort.Z();
+	hDistortionR->Fill(partP,partR,partZ,diffdistR);
+	hDistortionP->Fill(partP,partR,partZ,diffdistP);
+	hDistortionZ->Fill(partP,partR,partZ,diffdistZ);
 	dTree->Fill();
 
 	//integral distortion:
@@ -2425,19 +2455,25 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
 	hIntDistortionP->Fill(partP,partR,partZ,distortP);
 	hIntDistortionZ->Fill(partP,partR,partZ,distortZ);
 
-	//now we fill particular slices for visualizations:
+	//now we fill particular slices for integral visualizations:
 	if(ir==xi[0]){//r slice
 	  //printf("ir=%d, r=%f (pz)=(%d,%d), distortR=%2.2f, distortP=%2.2f\n",ir,partR,ip,iz,distortR,distortP);
 	  hIntDist[0][0]->Fill(partP,partZ,distortR);
 	  hIntDist[0][1]->Fill(partP,partZ,distortP);
 	  hIntDist[0][2]->Fill(partP,partZ,distortZ);
+	  hDiffDist[0][0]->Fill(partP,partZ,diffdistR);
+	  hDiffDist[0][1]->Fill(partP,partZ,diffdistP);
+	  hDiffDist[0][2]->Fill(partP,partZ,diffdistZ);
 	}
 	if(ip==xi[1]){//phi slice
 	  //printf("ip=%d, p=%f (rz)=(%d,%d), distortR=%2.2f, distortP=%2.2f\n",ip,partP,ir,iz,distortR,distortP);
-
 	  hIntDist[1][0]->Fill(partZ,partR,distortR);
 	  hIntDist[1][1]->Fill(partZ,partR,distortP);
 	  hIntDist[1][2]->Fill(partZ,partR,distortZ);
+	  hDiffDist[1][0]->Fill(partZ,partR,diffdistR);
+	  hDiffDist[1][1]->Fill(partZ,partR,diffdistP);
+	  hDiffDist[1][2]->Fill(partZ,partR,diffdistZ);
+
 	}
 	if(iz==xi[2]){//z slice
 	  //printf("iz=%d, z=%f (rp)=(%d,%d), distortR=%2.2f, distortP=%2.2f\n",iz,partZ,ir,ip,distortR,distortP);
@@ -2445,11 +2481,18 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
 	  hIntDist[2][0]->Fill(partR,partP,distortR);
 	  hIntDist[2][1]->Fill(partR,partP,distortP);
 	  hIntDist[2][2]->Fill(partR,partP,distortZ);
+	  hDiffDist[2][0]->Fill(partR,partP,diffdistR);
+	  hDiffDist[2][1]->Fill(partR,partP,diffdistP);
+	  hDiffDist[2][2]->Fill(partR,partP,diffdistZ);
+
 
 	  if(ip==xi[1]){//phi slices of z slices = r line at mid phi, mid z:
 	    hRDist[0]->Fill(partR,distortR);	    
 	    hRDist[1]->Fill(partR,distortP);
 	    hRDist[2]->Fill(partR,distortZ);
+	    hRDiffDist[0]->Fill(partR,diffdistR);	    
+	    hRDiffDist[1]->Fill(partR,diffdistP);
+	    hRDiffDist[2]->Fill(partR,diffdistZ);
 	  }
 
 	}
@@ -2529,6 +2572,58 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
   canvas->cd();
   textpad->Draw();
   canvas->SaveAs(summaryFilename.Data());
+
+  
+  //canvas->cd();
+  //already done TPad *c=new TPad("cplots","distortion differential plots",0,0.2,1,1);
+  //canvas->cd();
+  //already done TPad *textpad=new TPad("ctext","distortion differential plots",0,0.0,1,0.2);
+  //already done c->Divide(4,3);
+  //gStyle->SetOptStat();
+  for (int i=0;i<3;i++){
+    //component
+    for (int ax=0;ax<3;ax++){
+      //plane
+      c->cd(i*4+ax+1);
+      gPad->SetRightMargin(0.15);
+      hDiffDist[ax][i]->SetStats(0);
+      hDiffDist[ax][i]->Draw("colz");
+    }
+    c->cd(i*4+4);
+    hRDiffDist[i]->SetStats(0);
+    hRDiffDist[i]->SetFillColor(kRed);
+    hRDiffDist[i]->Draw("hist");
+
+
+
+    
+  }
+  textpad->cd();
+  texpos=0.9;texshift=0.12;
+  tex->SetTextSize(texshift*0.8);
+  tex->DrawLatex(0.05,texpos,GetFieldString());texpos-=texshift;
+  tex->DrawLatex(0.05,texpos,GetChargeString());texpos-=texshift;
+ //tex->DrawLatex(0.05,texpos,Form("Drift Field = %2.2f V/cm",GetNominalE()));texpos-=texshift;
+  tex->DrawLatex(0.05,texpos,Form("Drifting grid of (rp)=(%d x %d) electrons with %d steps",nrh,nph,nSteps));texpos-=texshift;
+  tex->DrawLatex(0.05,texpos,GetLookupString());texpos-=texshift;
+  tex->DrawLatex(0.05,texpos,GetGasString());texpos-=texshift;
+  tex->DrawLatex(0.05,texpos,"Differential Plots");texpos-=texshift;
+  if (debug_distortionScale.Mag()>0){
+    tex->DrawLatex(0.05,texpos,Form("Distortion scaled by (r,p,z)=(%2.2f,%2.2f,%2.2f)",
+				   debug_distortionScale.X(),debug_distortionScale.Y(),debug_distortionScale.Z()));
+    texpos-=texshift;
+  }
+  texpos=0.9;
+ 
+  
+  
+  canvas->cd();
+  c->Draw();
+  canvas->cd();
+  textpad->Draw();
+  canvas->SaveAs(diffSummaryFilename.Data());
+
+  
 
   //  printf("map:%s.\n",distortionFilename.Data());
 
@@ -2637,8 +2732,9 @@ TVector3 AnnularFieldSim::GetStepDistortion(float zdest,TVector3 start, bool int
   //double fieldz=Enominal; // ideal field over path.
 
   //these values should be with real, not nominal field?
-  double mu=vdrift/Enominal;//vdrift in [cm/s], field in [V/cm] hence mu in [cm^2/(V*s)];
-  double omegatau=-mu*Bnominal;//minus sign is for electron charge.
+  //double mu=abs(vdrift/Enominal);//vdrift in [cm/s], field in [V/cm] hence mu in [cm^2/(V*s)];  should be a positive value.  drift velocity over field magnitude, not field direction.
+  //double omegatau=-mu*Bnominal;//minus sign is for electron charge.
+  double omegatau=omegatau_nominal;//don't compute this every time!
   //or:  omegatau=-10*(10*B.Z()/Tesla)*(vdrift/(cm/us))/(fieldz/(V/cm)); //which is the same as my calculation up to a sign.
   //printf("omegatau=%f\n",omegatau);
 
@@ -2760,6 +2856,18 @@ TVector3 AnnularFieldSim::GetFieldAt(TVector3 pos){
   if(  GetZindexAndCheckBounds(pos.Z(), &z)==BoundsCase::OutOfBounds) return zero_vector;
   return Efield->Get(r,p,z);
 }
+
+TVector3 AnnularFieldSim::GetBFieldAt(TVector3 pos){
+  //assume pos is in native units (see header)
+
+  int r,p,z;
+
+  if( GetRindexAndCheckBounds(pos.Perp(),  &r)==BoundsCase::OutOfBounds) return zero_vector;
+  if(  GetPhiIndexAndCheckBounds(pos.Phi(), &p)==BoundsCase::OutOfBounds) return zero_vector;
+  if(  GetZindexAndCheckBounds(pos.Z(), &z)==BoundsCase::OutOfBounds) return zero_vector;
+  return Bfield->Get(r,p,z);
+}
+
 float AnnularFieldSim::GetChargeAt(TVector3 pos){
   //assume pos is in native units (see header)
   int r,p,z;

@@ -8,15 +8,16 @@ void generate_average_th3(const char * inputpattern="./evgeny/*.root", const cha
   TFileCollection *filelist=new TFileCollection();
   filelist->Add(inputpattern);
   filelist->Print();
-  printf("found: %s\n",((TFileInfo*)(filelist->GetList()->At(0)))->GetCurrentUrl()->GetUrl());//Title());//Print();
+  printf("found: %s\n",((TFileInfo*)(filelist->GetList()->At(0)))->GetCurrentUrl()->GetFile());//Title());//Print();
 
+  return;
   TFile *infile;
   bool isFirstHist=true;
   int totalHists=0;
 
   for (int i=0;i<filelist->GetNFiles();i++){
    //for each file, find all histograms in that file.
-    infile=TFile::Open(((TFileInfo*)(filelist->GetList()->At(0)))->GetCurrentUrl()->GetUrl(),"READ");//gross.
+    infile=TFile::Open(((TFileInfo*)(filelist->GetList()->At(i)))->GetCurrentUrl()->GetUrl(),"READ");//gross.
     TList *keys=infile->GetListOfKeys();
     keys->Print();
     int nKeys=infile->GetNkeys();

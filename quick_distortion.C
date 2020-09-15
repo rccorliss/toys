@@ -11,9 +11,8 @@ R__LOAD_LIBRARY(.libs/libfieldsim)
 AnnularFieldSim *SetupDefaultSphenixTpc();
 
 
-void generate_distortion_and_fluctuation(const char * inputpattern="./15khz/*.root", const char *outputfilebase="./15khz_output/output"){
+void quick_distortion(int nr, int np,int nz, const char * chargefile="hist.root", const char *outdir="./quick/", ){
 
-  AnnularFieldSim *tpc=SetupDefaultSphenixTpc();//loads the lookup, fields, etc.
 
   //and some parameters of the files we're loading:
   bool usesChargeDensity=false; //true if source hists contain charge density per bin.  False if hists are charge per bin.
@@ -24,64 +23,70 @@ void generate_distortion_and_fluctuation(const char * inputpattern="./15khz/*.ro
  TVector3 pos=0.5*(tpc->GetOuterEdge()+tpc->GetInnerEdge());;
   pos.SetPhi(3.14159);
 
-
-  
-
-  //find all files that match the input string
-  TFileCollection *filelist=new TFileCollection();
-  filelist->Add(inputpattern);
-  filelist->Print();
-  printf("found: %s\n",((TFileInfo*)(filelist->GetList()->At(0)))->GetCurrentUrl()->GetUrl());//Title());//Print();
-
   TFile *infile;
- 
-  TString sourcefilename;
-  TString outputfilename;
 
+  TString sourcefilename=chargefile;
+  TString basename;
+  //get our basename by tokenizing:
+  TString tok;
+  Ssiz_t from = 0, lastslash=0;
+  while (sourcefilename.Tokenize(tok, from, "/")) {
+    basename=tok;
+    lastslash=from;
+  } 
+  TString outputfilebase=Form("%s/%s",outdir,basename);
+  outputfilebase.ReplaceAll(".hist.root","");
+  
   double totalQ=0;
 
-  for (int i=0;i<filelist->GetNFiles();i++){
-   //for each file, find all histograms in that file.
-    sourcefilename=((TFileInfo*)(filelist->GetList()->At(i)))->GetCurrentUrl()->GetFile();//gross
-    infile=TFile::Open(sourcefilename.Data(),"READ");
-    TList *keys=infile->GetListOfKeys();
-    keys->Print();
-    int nKeys=infile->GetNkeys();
+  infile=TFile::Open(sourcefilename.Data(),"READ");
+  TList *keys=infile->GetListOfKeys();
+  keys->Print();
+  int nKeys=infile->GetNkeys();
 
-    for (int j=0;j<nKeys;j+=2){
-      TObject *tobj=infile->Get(keys->At(j)->GetName());
+  int j;
+  bool isHist=false;
+  TObject *tobj;
+  for (j=0;j<nKeys;j++){
+       tobj=infile->Get(keys->At(j)->GetName());
       //if this isn't a 3d histogram, skip it:
-      bool isHist=tobj->InheritsFrom("TH3");
-      if (!isHist) continue;
-
-      //assume this histogram is a charge map.
-      tpc->load_spacecharge(sourcefilename.Data(),tobj->GetName(),0,tpc_chargescale,spacecharge_cm_per_axis_unit, usesChargeDensity);
-      printf("Sanity check:  Q has %d elements and dim=%d\n",tpc->q->Length(), tpc->q->dim);
-      totalQ=0;
-      for (int k=0;k<tpc->q->Length();k++){
-	totalQ+=*(tpc->q->GetFlat(k));
-      }
-      printf("Sanity check:  Total Q in reported region is %E C\n",totalQ);
-      tpc->populate_fieldmap();
-      outputfilename=Form("%s.%s.%s.%s",outputfilebase,tobj->GetName(),field_string,lookup_string);
-      printf("%s file has %s hist.  field=%s, lookup=%s. no scaling.\n",
-	     sourcefilename.Data(),tobj->GetName(),field_string,lookup_string);
-      tpc->GenerateDistortionMaps(outputfilename,2,2,2,1,true);
-      printf("distortions mapped.\n");
-      tpc->PlotFieldSlices(outputfilename,pos);
-      printf("fieldslices plotted.\n");     
-      printf("obj %d: getname: %s  inherits from TH3D:%d \n",j,tobj->GetName(),tobj->InheritsFrom("TH3"));
-    }
-      infile->Close();
+      isHist=tobj->InheritsFrom("TH3");
+      if (isHist) break;
   }
+  if (!isHist) assert(1=2);//no valid th3 in there!
 
+  //don't bother building a tpc until we know we have a chargemap to feed it
+
+  AnnularFieldSim *tpc=SetupDefaultSphenixTpc(nr,np,nz);//loads the lookup, fields, etc.
+  //assume this histogram is a charge map.
+  tpc->load_spacecharge(sourcefilename.Data(),tobj->GetName(),0,tpc_chargescale,spacecharge_cm_per_axis_unit, usesChargeDensity);
+  
+  printf("Sanity check:  Q has %d elements and dim=%d\n",tpc->q->Length(), tpc->q->dim);
+  totalQ=0;
+  for (int k=0;k<tpc->q->Length();k++){
+    totalQ+=*(tpc->q->GetFlat(k));
+  }
+  printf("Sanity check:  Total Q in reported region is %E C\n",totalQ);
+  
+  tpc->populate_fieldmap();
+  outputfilename=Form("%s.%s.%s.%s",outputfilebase.Data(),tobj->GetName(),field_string,lookup_string);
+  printf("%s file has %s hist.  field=%s, lookup=%s. no scaling.\n",
+	 sourcefilename.Data(),tobj->GetName(),field_string,lookup_string);
+  tpc->GenerateDistortionMaps(outputfilename,2,2,2,1,true);
+  printf("distortions mapped.\n");
+  tpc->PlotFieldSlices(outputfilename,pos);
+  tpc->PlotFieldSlices(outputfilename,pos,'B');
+  printf("fieldslices plotted.\n");     
+  printf("obj %d: getname: %s  inherits from TH3D:%d \n",j,tobj->GetName(),tobj->InheritsFrom("TH3"));
+
+  infile->Close();
   return;
   
 }
 
 
 
-AnnularFieldSim *SetupDefaultSphenixTpc(){
+AnnularFieldSim *SetupDefaultSphenixTpc(int nr,int np, int nz){
   //step1:  specify the sPHENIX space charge model parameters
   const float tpc_rmin=20.0;
   const float tpc_rmax=78.0;
@@ -91,20 +96,20 @@ AnnularFieldSim *SetupDefaultSphenixTpc(){
   //const float tpc_magField=0.5;//T -- The old value used in carlos's studies.
   //const float tpc_driftVel=4.0*1e6;//cm per s  -- used in carlos's studies
   const float tpc_driftVel=8.0*1e6;//cm per s  -- 2019 nominal value
-  const float tpc_magField=1.4;//T -- 2019 nominal value
+  const float tpc_magField=1.5;//T -- 2019 nominal value
   const char detgeoname[]="sphenix";
   
    //step 2: specify the parameters of the field simulation.  Larger numbers of bins will rapidly increase the memory footprint and compute times.
   //there are some ways to mitigate this by setting a small region of interest, or a more parsimonious lookup strategy, specified when AnnularFieldSim() is actually constructed below.
-  int nr=26;//10;//24;//159;//159 nominal
+  //nr=nr from the arguments
   int nr_roi_min=0;
   int nr_roi=nr;//10;
   int nr_roi_max=nr_roi_min+nr_roi;
-  int nphi=40;//38;//360;//360 nominal
+  int nphi=np;
   int nphi_roi_min=0;
-  int nphi_roi=nphi;//38;
+  int nphi_roi=nphi;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
-  int nz=40;//62;//62 nominal
+  //nz=nz from the arguments.
   int nz_roi_min=0;
   int nz_roi=nz;
   int nz_roi_max=nz_roi_min+nz_roi;
@@ -118,7 +123,7 @@ AnnularFieldSim *SetupDefaultSphenixTpc(){
 			 nphi,nphi_roi_min, nphi_roi_max,1,2,
 			 nz, nz_roi_min, nz_roi_max,1,2,
 			 tpc_driftVel, AnnularFieldSim::PhiSlice, AnnularFieldSim::FromFile);
-  tpc->UpdateEveryN(10);//show reports every 10%.
+  tpc->UpdateEveryN(25);//show reports every 10%.
 
     //load the field maps, either flat or actual maps
   tpc->setFlatFields(tpc_magField,-tpc_cmVolt/tpc_z);

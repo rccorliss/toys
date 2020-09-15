@@ -175,7 +175,7 @@ debug_printActionEveryN=0; return;};
   TVector3 GetOuterEdge(){return TVector3(rmax,0,zmax);};
 
   //file-writing functions for complex mapping questions:
-  void GenerateDistortionMaps(const char* filebase, int r_subsamples=1, int p_subsamples=1, int z_subsamples=1, int z_substeps=1);
+  void GenerateDistortionMaps(const char* filebase, int r_subsamples=1, int p_subsamples=1, int z_subsamples=1, int z_substeps=1, bool andCartesian=false);
   void PlotFieldSlices(const char *filebase,TVector3 pos, char which='E');
 
   

@@ -2247,7 +2247,7 @@ return;
 }
 
 
-void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamples, int p_subsamples, int z_subsamples, int z_substeps){
+void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamples, int p_subsamples, int z_subsamples, int z_substeps, bool andCartesian){
 //1) pick a map spacing ('s')
   TVector3 s(step.Perp()/r_subsamples, 0,step.Z()/z_subsamples);
   s.SetPhi(step.Phi()/p_subsamples);
@@ -2308,6 +2308,10 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
   TH3F* hIntDistortionR=new TH3F("hIntDistortionR","Integrated R Distortion from (r,phi,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
   TH3F* hIntDistortionP=new TH3F("hIntDistortionP","Integrated R Distortion from (r,phi,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
   TH3F* hIntDistortionZ=new TH3F("hIntDistortionZ","Integrated R Distortion from (r,phi,z) to z=0  (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+
+    TH3F* hIntDistortionX=new TH3F("hIntDistortionX","Integrated X Distortion from (r,phi,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+  TH3F* hIntDistortionY=new TH3F("hIntDistortionY","Integrated Y Distortion from (r,phi,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+
   /*
   TH3F* hNewIntDistortionR=new TH3F("hNewIntDistortionR","Recursively Integrated R Distortion from (r,phi,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
   TH3F* hNewIntDistortionP=new TH3F("hNewIntDistortionP","Recursively Integrated R Distortion from (r,phi,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
@@ -2370,6 +2374,7 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
   float partR,partP,partZ;
   int ir,ip,iz;
   float distortR,distortP,distortZ;
+  float distortX,distortY;
   float diffdistR, diffdistP, diffdistZ;
   TTree *dTree=new TTree("dTree","Distortion per step z");
   dTree->Branch("r",&partR);
@@ -2442,6 +2447,8 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
 
 	//integral distortion:
 	distort=GetTotalDistortion(z_readout,inpart,nSteps,true, &validToStep);
+	distortX=distort.X();
+	distortY=distort.Y();
 	distort.RotateZ(-inpart.Phi());//rotate so that that is on the x axis
 	distortP=distort.Y();//the phi component is now the y component.
 	distortR=distort.X();//and the r component is the x component
@@ -2454,6 +2461,11 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
 	hIntDistortionR->Fill(partP,partR,partZ,distortR);
 	hIntDistortionP->Fill(partP,partR,partZ,distortP);
 	hIntDistortionZ->Fill(partP,partR,partZ,distortZ);
+
+	if (andCartesian){
+	hIntDistortionX->Fill(partP,partR,partZ,distortX);
+	hIntDistortionY->Fill(partP,partR,partZ,distortY);
+	}
 
 	//now we fill particular slices for integral visualizations:
 	if(ir==xi[0]){//r slice
@@ -2635,6 +2647,10 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
   hIntDistortionR->Write();
   hIntDistortionP->Write();
   hIntDistortionZ->Write();
+  if (andCartesian){
+    hIntDistortionX->Write();
+    hIntDistortionY->Write();
+  }
   dTree->Write();
   outf->Close();
   //printf("map:%s.closed\n",distortionFilename.Data());

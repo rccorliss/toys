@@ -69,15 +69,15 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   
    //step 2: specify the parameters of the field simulation.  Larger numbers of bins will rapidly increase the memory footprint and compute times.
   //there are some ways to mitigate this by setting a small region of interest, or a more parsimonious lookup strategy, specified when AnnularFieldSim() is actually constructed below.
-  int nr=26;//10;//24;//159;//159 nominal
+  int nr=19-7;//26;//10;//24;//159;//159 nominal
   int nr_roi_min=0;
   int nr_roi=nr;//10;
   int nr_roi_max=nr_roi_min+nr_roi;
-  int nphi=40;//38;//360;//360 nominal
+  int nphi=19-7;//40;//38;//360;//360 nominal
   int nphi_roi_min=0;
   int nphi_roi=nphi;//38;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
-  int nz=40;//62;//62 nominal
+  int nz=31-7;//40;//62;//62 nominal
   int nz_roi_min=0;
   int nz_roi=nz;
   int nz_roi_max=nz_roi_min+nz_roi;
@@ -114,7 +114,7 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
 
   if (1){
     printf("loading external fieldmaps\n");
-    //tpc->loadBfield("sPHENIX.2d.root","fieldmap");//soon:, (1.4)/(-1.5));
+    tpc->loadBfield("sPHENIX.2d.root","fieldmap");//soon:, (1.4)/(-1.5));
     tpc->loadEfield("externalEfield.ttree.root","fTree");
     sprintf(field_string,"realE_B%2.1f_E%2.1f",tpc_magField,tpc_cmVolt/tpc_z);
   }
@@ -169,7 +169,7 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
    double tpc_chargescale=1.6e-19;//evgeny hists have charge in units of ions/bin, so we need to multiply by the electric charge of an electron to get out C.
    bool isChargeDensity=false; //and tell the load_ function not to multiply by volume.
 
-   char *scbasename[]={"tempout","evgeny/mapFile_bX734587_bias0","Smooth.50kHz","Single.50kHz"};
+   char *scbasename[]={"Cartesian","evgeny/mapFile_bX734587_bias0","Smooth.50kHz","Single.50kHz"};
    char *scfilename[]={"evgeny_sept/Summary_bX1508071_0_10_events.root","outputFile_15kHz_G4Hits_sHijing_0-12fm_002000_008000_bX734587_bias10.root", "evgeny/mapFile_bX734587_bias0.root","Smooth.50kHz.root","BeamXingNBeams.root"};
    char *schistname[]={"h_Charge_evt_0","h_Charge_0",
 		      "h_Charge_1",
@@ -229,7 +229,7 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
 	//printf("scaled.\n");
 	sprintf(distortionFilebase,"%s.hist%d.%s.%s",scbasename[i],ihist,field_string,lookup_string);
 	printf("filebase=%s\n",distortionFilebase);
-	tpc->GenerateDistortionMaps(distortionFilebase,1,1,1,1);
+	tpc->GenerateDistortionMaps(distortionFilebase,2,2,2,1,true);
 	printf("distortions mapped.\n");
 	tpc->PlotFieldSlices(distortionFilebase,pos);
 	tpc->PlotFieldSlices(distortionFilebase,pos,'B');

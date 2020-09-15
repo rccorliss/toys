@@ -9,5 +9,6 @@ for ((offset=0;offset<=14;offset=offset+1)); do
     np=$(($np0+$offset))
     nr=$(($nr0+$offset))
     nz=$(($nz0+$offset))
+    echo running:  root -b -q quick_distortion.C\\\($nr,$np,$nz,\\\"$chargemapname\\\",\\\"res_scan/\\\"\\\)
     root -b -q quick_distortion.C\($nr,$np,$nz,\"$chargemapname\",\"res_scan/\"\)
   done

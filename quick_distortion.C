@@ -8,10 +8,10 @@ R__LOAD_LIBRARY(.libs/libfieldsim)
   char field_string[200];
   char lookup_string[200];
 
-AnnularFieldSim *SetupDefaultSphenixTpc();
+AnnularFieldSim *SetupDefaultSphenixTpc(int nr,int np, int nz);
 
 
-void quick_distortion(int nr, int np,int nz, const char * chargefile="hist.root", const char *outdir="./quick/", ){
+void quick_distortion(int nr, int np,int nz, const char * chargefile="hist.root", const char *outdir="./quick/"){
 
 
   //and some parameters of the files we're loading:
@@ -19,9 +19,6 @@ void quick_distortion(int nr, int np,int nz, const char * chargefile="hist.root"
   float tpc_chargescale=1.6e-19;//Coulombs per bin unit.
   float spacecharge_cm_per_axis_unit=100;//cm per histogram axis unit.
   
-  //and the location to plot the fieldslices about:
- TVector3 pos=0.5*(tpc->GetOuterEdge()+tpc->GetInnerEdge());;
-  pos.SetPhi(3.14159);
 
   TFile *infile;
 
@@ -34,14 +31,14 @@ void quick_distortion(int nr, int np,int nz, const char * chargefile="hist.root"
     basename=tok;
     lastslash=from;
   } 
-  TString outputfilebase=Form("%s/%s",outdir,basename);
+  TString outputfilebase=Form("%s/%s",outdir,basename.Data());
   outputfilebase.ReplaceAll(".hist.root","");
   
   double totalQ=0;
 
   infile=TFile::Open(sourcefilename.Data(),"READ");
   TList *keys=infile->GetListOfKeys();
-  keys->Print();
+  //keys->Print();
   int nKeys=infile->GetNkeys();
 
   int j;
@@ -69,13 +66,19 @@ void quick_distortion(int nr, int np,int nz, const char * chargefile="hist.root"
   printf("Sanity check:  Total Q in reported region is %E C\n",totalQ);
   
   tpc->populate_fieldmap();
-  outputfilename=Form("%s.%s.%s.%s",outputfilebase.Data(),tobj->GetName(),field_string,lookup_string);
+  TString outputfilename=Form("%s.%s.%s.%s",outputfilebase.Data(),tobj->GetName(),field_string,lookup_string);
   printf("%s file has %s hist.  field=%s, lookup=%s. no scaling.\n",
 	 sourcefilename.Data(),tobj->GetName(),field_string,lookup_string);
-  tpc->GenerateDistortionMaps(outputfilename,2,2,2,1,true);
+  tpc->GenerateDistortionMaps(outputfilename.Data(),2,2,2,1,true);
   printf("distortions mapped.\n");
-  tpc->PlotFieldSlices(outputfilename,pos);
-  tpc->PlotFieldSlices(outputfilename,pos,'B');
+
+
+  //add the location to plot the fieldslices about:
+ TVector3 pos=0.5*(tpc->GetOuterEdge()+tpc->GetInnerEdge());;
+  pos.SetPhi(3.14159);
+  
+  tpc->PlotFieldSlices(outputfilename.Data(),pos);
+  tpc->PlotFieldSlices(outputfilename.Data(),pos,'B');
   printf("fieldslices plotted.\n");     
   printf("obj %d: getname: %s  inherits from TH3D:%d \n",j,tobj->GetName(),tobj->InheritsFrom("TH3"));
 

@@ -1,6 +1,6 @@
 
 
-void draw_distortion_slices(const char* filebase, float zpos=1e8){
+void draw_distortion_slices(const char* filebase, float zin=1e8){
   TString distortionFilename;
   distortionFilename=filebase;
   TString basename=filebase;
@@ -45,12 +45,12 @@ void draw_distortion_slices(const char* filebase, float zpos=1e8){
 
 
     //monitor plots, and the position that plot monitors at:
-
-  if (zpos>1e6) zpos=(nzh/2+0.5)*deltaz+zih
+  float zpos=zin;
+  if (zpos>1e6) zpos=(nzh/2+0.5)*deltaz+zih;
   TVector3 pos((nrh/2+0.5)*deltar+rih,0,zpos);
   pos.SetPhi((nph/2+0.5)*deltap+pih);
-  posphi=((nph/2+0.5)*deltap+pih);//make sure we don't have a wrapping issue.
-  int xi[3]={hFullDist[0]->GetYaxis()->FindBin(pos.Perp()),hFullDist[0]->GetXaxis()->FindBin(posphi),hFullDist[0]->GetXaxis()->FindBin(pos.Z())}
+  float posphi=((nph/2+0.5)*deltap+pih);//make sure we don't have a wrapping issue.
+  int xi[3]={hFullDist[0]->GetYaxis()->FindBin(pos.Perp()),hFullDist[0]->GetXaxis()->FindBin(posphi),hFullDist[0]->GetZaxis()->FindBin(pos.Z())};
 	     //used to be{nrh/2,nph/2,nzh/2};
   const char axname[]="rpzrpz";
   int axn[]={nrh,nph,nzh,nrh,nph,nzh};
@@ -80,7 +80,7 @@ void draw_distortion_slices(const char* filebase, float zpos=1e8){
 		       TString::Format("%c component of int. distortion vs r with %c=%2.3f and %c=%2.3f;r(cm);#delta (cm)",
 				       axname[i],axname[1],axval[1],axname[2],axval[2]),
 		       axn[0],axbot[0],axtop[0]);
-    hRDiffDist[i]=new TH1F(TString::Format("hRDist%c",axname[i]),
+    hRDiffDist[i]=new TH1F(TString::Format("hRDiffDist%c",axname[i]),
 		       TString::Format("%c component of diff. distortion vs r with %c=%2.3f and %c=%2.3f;r(cm);#delta (cm)",
 				       axname[i],axname[1],axval[1],axname[2],axval[2]),
 		       axn[0],axbot[0],axtop[0]);
@@ -97,6 +97,7 @@ void draw_distortion_slices(const char* filebase, float zpos=1e8){
   int ir,ip,iz;
   unsigned long el=0;
   float distortR,distortP,distortZ;
+  float diffDistortR,diffDistortP,diffDistortZ;
   float partR,partP,partZ;
   for (ir=0;ir<nrh;ir++){
     partR=(ir+0.5)*deltar+rih;
@@ -209,9 +210,9 @@ void draw_distortion_slices(const char* filebase, float zpos=1e8){
 canvas=new TCanvas("cdifferent","distortion differentials",1200,800);
   //take 10 of the bottom of this for data?
   canvas->cd();
-  TPad *c=new TPad("cplots2","distortion differential plots",0,0.2,1,1);
+  c=new TPad("cplots2","distortion differential plots",0,0.2,1,1);
   canvas->cd();
-  TPad *textpad=new TPad("ctext2","distortion differential plots",0,0.0,1,0.2);
+  textpad=new TPad("ctext2","distortion differential plots",0,0.0,1,0.2);
   c->Divide(4,3);
   gStyle->SetOptStat();
   for (int i=0;i<3;i++){
@@ -229,8 +230,6 @@ canvas=new TCanvas("cdifferent","distortion differentials",1200,800);
     hRDiffDist[i]->Draw("hist");
   }
   textpad->cd();
-  float texpos=0.9;float texshift=0.12;
-  TLatex *tex=new TLatex(0.0,texpos,"Fill Me In");
   tex->SetTextSize(texshift*0.8);
   tex->DrawLatex(0.05,texpos,"Post-hoc slices of differential distortion");texpos-=texshift;
   tex->DrawLatex(0.05,texpos,Form("Drifting grid of (rp)=(%d x %d) electrons with steps per file",nrh,nph));texpos-=texshift;

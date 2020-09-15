@@ -1,10 +1,12 @@
 
 void subtract_average_th3(const char * inputpattern="./evgeny/*.root", const char *outputdir="./output/", const char *averagefilename="average.out.root"){
 
-  const int nHists=6; //3 differential, 3 integral.
+  const int nHists=1; //3 differential, 3 integral.
   
   TFile *avefile=TFile::Open(averagefilename,"READ");
   //actually, I have a stack of histograms...  are they in order?
+  // int nAveKeys=infile->GetNkeys();
+
   TH3D *avehist[nHists];
   for (int i=0;i<nHists;i++){
     avehist[i]=(TH3D*)(avefile->Get(avefile->GetListOfKeys()->At(i)->GetName())); //get the ith hist from the average file.
@@ -43,8 +45,8 @@ void subtract_average_th3(const char * inputpattern="./evgeny/*.root", const cha
     TList *keys=infile->GetListOfKeys();
     //keys->Print();
     int nKeys=infile->GetNkeys();
-    if (nKeys<nHists) assert (1==2); //file doesn't have enough histograms in it.  Something's wrong.
-    for (int j=0;j<nHists;j++){
+    if (nKeys<nHists) continue;//assert (1==2); //file doesn't have enough histograms in it.  Something's wrong.
+    for (int j=0;j<nHists && j<nKeys;j++){
       TObject *tobj=infile->Get(keys->At(j)->GetName());
       printf("  obj %d: getname: %s  inherits from TH3D:%d , matching to %s\n",j,tobj->GetName(),tobj->InheritsFrom("TH3"),avehist[j]->GetName());
       outfile->cd();

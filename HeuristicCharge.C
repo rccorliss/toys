@@ -260,6 +260,35 @@ model_params AliceModelParams(){
   return m;
 }
 
+model_params AliceAltModelParams(){
+  float z_rdo=249.7;
+  float rmin=83.5;
+  float rmax=254.5;
+  float ion_velocity=z_rdo/0.156;//[cm/s]
+  float e0 = 8.854187817e-12; //[C]/[Vm]
+  float gas = 1.0/76628.0; //[Vs] -- something about the ionization per unit volume and the time it takes to clear the gas, in units I don't grok.  
+  double mult = 900.0; //950.0;
+  double rate = 5e+4; //[1/s]
+  double a=mult*rate*e0*gas; // C/m;
+  float b=1.0/z_rdo; //[1/cm]
+  float c=10;//per ALICE description of 'eps 10'.
+  a=a*1e15; //fC/m
+  a=a/100;//fC/cm
+
+  double aprime=a*ion_velocity*1e-6;//[nC/s=nA]
+  model_params m;
+    sprintf(m.name,"ALICEeps10");
+  m.z=z_rdo;
+  m.rmin=rmin;
+  m.rmax=rmax;
+  m.a=a;
+  m.aprime=aprime;
+  m.b=b;
+  m.c=c;
+  m.d=2;
+  return m;
+}
+
 
 double CalcCharge(model_params m,double r,double z){
   return m.a*(1-m.b*TMath::Abs(z)+m.c)/pow(r,m.d);

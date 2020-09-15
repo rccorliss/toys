@@ -53,7 +53,8 @@ void generate_distortion_and_fluctuation(const char * inputpattern="./15khz/*.ro
       //if this isn't a 3d histogram, skip it:
       bool isHist=tobj->InheritsFrom("TH3");
       if (!isHist) continue;
-
+      TString objname=tobj->GetName();
+      if (objname.Contains("IBF")) continue; //this is an IBF map we don't want.
       //assume this histogram is a charge map.
       tpc->load_spacecharge(sourcefilename.Data(),tobj->GetName(),0,tpc_chargescale,spacecharge_cm_per_axis_unit, usesChargeDensity);
       printf("Sanity check:  Q has %d elements and dim=%d\n",tpc->q->Length(), tpc->q->dim);
@@ -63,7 +64,7 @@ void generate_distortion_and_fluctuation(const char * inputpattern="./15khz/*.ro
       }
       printf("Sanity check:  Total Q in reported region is %E C\n",totalQ);
       tpc->populate_fieldmap();
-      outputfilename=Form("%s.%s.%s.%s",outputfilebase,tobj->GetName(),field_string,lookup_string);
+      outputfilename=Form("%s.file%d.%s.%s.%s",outputfilebase,i,tobj->GetName(),field_string,lookup_string);
       printf("%s file has %s hist.  field=%s, lookup=%s. no scaling.\n",
 	     sourcefilename.Data(),tobj->GetName(),field_string,lookup_string);
       tpc->GenerateDistortionMaps(outputfilename,2,2,2,1,true);

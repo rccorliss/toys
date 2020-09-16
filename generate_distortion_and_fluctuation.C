@@ -39,7 +39,8 @@ void generate_distortion_and_fluctuation(const char * inputpattern="./15khz/*.ro
   TString outputfilename;
 
   double totalQ=0;
-
+  int nMapsMade=0;
+  
   for (int i=0;i<filelist->GetNFiles();i++){
    //for each file, find all histograms in that file.
     sourcefilename=((TFileInfo*)(filelist->GetList()->At(i)))->GetCurrentUrl()->GetFile();//gross
@@ -72,6 +73,9 @@ void generate_distortion_and_fluctuation(const char * inputpattern="./15khz/*.ro
       tpc->PlotFieldSlices(outputfilename,pos);
       printf("fieldslices plotted.\n");     
       printf("obj %d: getname: %s  inherits from TH3D:%d \n",j,tobj->GetName(),tobj->InheritsFrom("TH3"));
+      nMapsMade++;
+      if (nMapsMade>0) break;
+
     }
       infile->Close();
   }
@@ -92,7 +96,7 @@ AnnularFieldSim *SetupDefaultSphenixTpc(){
   //const float tpc_magField=0.5;//T -- The old value used in carlos's studies.
   //const float tpc_driftVel=4.0*1e6;//cm per s  -- used in carlos's studies
   const float tpc_driftVel=8.0*1e6;//cm per s  -- 2019 nominal value
-  const float tpc_magField=1.4;//T -- 2019 nominal value
+  const float tpc_magField=-1.5;//T -- 2019 nominal value
   const char detgeoname[]="sphenix";
   
    //step 2: specify the parameters of the field simulation.  Larger numbers of bins will rapidly increase the memory footprint and compute times.
@@ -122,7 +126,7 @@ AnnularFieldSim *SetupDefaultSphenixTpc(){
   tpc->UpdateEveryN(10);//show reports every 10%.
 
     //load the field maps, either flat or actual maps
-  tpc->setFlatFields(tpc_magField,-tpc_cmVolt/tpc_z);
+  tpc->setFlatFields(tpc_magField,tpc_cmVolt/tpc_z);
   sprintf(field_string,"flat_B%2.1f_E%2.1f",tpc_magField,tpc_cmVolt/tpc_z);
 
   if (1){

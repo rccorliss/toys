@@ -54,6 +54,12 @@ class AnnularFieldSim{
   TVector3 debug_distortionScale;
   
   AnalyticFieldModel *aliceModel;
+
+
+
+  //the other half of the detector:
+  AnnularFieldSim *twin;
+  bool hasTwin;
   
   //constants of motion, dimensions, etc:
   //
@@ -82,6 +88,7 @@ class AnnularFieldSim{
   //float phimin, phimax;//not implemented at all yet.
   TVector3 dim;//dimensions of simulated region, in cm
   Rossegger *green;//stand-alone class to compute greens functions.
+  float green_shift;//how far to offset our position in z when querying our green's functions.
 
 
   //variables related to the whole-volume tiling:
@@ -189,11 +196,18 @@ debug_printActionEveryN=0; return;};
   void setNominalB(float x){Bnominal=x;  UpdateOmegaTau();return;};
   void setNominalE(float x){Enominal=x;  UpdateOmegaTau();return;};
   void setFlatFields(float B, float E);
-  void loadEfield(const char *filename, const char *treename);
+  void loadEfield(const char *filename, const char *treename, int zsign=1);
   void loadBfield(const char *filename, const char *treename);
-  void loadField(MultiArray<TVector3> **field, TTree *source, float *rptr, float *phiptr, float *zptr, float *frptr,  float *fphiptr,  float *fzptr, float fieldunit);
+  void load3dBfield(const char *filename, const char *treename, int zsign=1,float scale=1.0);
+
+  void loadField(MultiArray<TVector3> **field, TTree *source, float *rptr, float *phiptr, float *zptr, float *frptr,  float *fphiptr,  float *fzptr, float fieldunit, int zsign);
   
   void load_rossegger(double epsilon=1E-4){green=new Rossegger(rmin,rmax,zmax,epsilon); return;};
+  void borrow_rossegger(Rossegger *ross, float zshift){green=ross; green_shift=zshift; return;};//get an already-existing rossegger table instead of loading it ourselves.
+  void borrow_epartial_from(AnnularFieldSim *sim, float zshift){Epartial_phislice=sim->Epartial_phislice; green_shift=zshift; return;};//get an already-existing rossegger table instead of loading it ourselves.
+  void set_twin(AnnularFieldSim * sim){twin=sim; hasTwin=true; return;};//define a twin to handle the negative-z drifting.  If asked to drift something out of range in z, if the twin flag is set we will ask the twin to do the drifting.  Note that the twin does not get linked back in to this side.  It is only the follower.
+
+  
 
   TVector3 calc_unit_field(TVector3 at, TVector3 from);
   TVector3 analyticFieldIntegral(float zdest,TVector3 start){return analyticFieldIntegral( zdest, start, Efield);};

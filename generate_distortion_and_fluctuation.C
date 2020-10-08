@@ -8,12 +8,16 @@ R__LOAD_LIBRARY(.libs/libfieldsim)
   char field_string[200];
   char lookup_string[200];
 
-AnnularFieldSim *SetupDefaultSphenixTpc();
+AnnularFieldSim *SetupDefaultSphenixTpc(bool twinMe=false, bool useSpacecharge=true);
+void TestSpotDistortion(AnnularFieldSim *t);
 
 
-void generate_distortion_and_fluctuation(const char * inputpattern="./15khz/*.root", const char *outputfilebase="./15khz_output/output"){
+void generate_distortion_and_fluctuation(const char * inputpattern="./15khz/*.root", const char *outputfilebase="./15khz_output_B1.5/output"){
 
-  AnnularFieldSim *tpc=SetupDefaultSphenixTpc();//loads the lookup, fields, etc.
+  bool hasTwin=false;
+  bool hasSpacecharge=true;
+  
+  AnnularFieldSim *tpc=SetupDefaultSphenixTpc(hasTwin,hasSpacecharge);//loads the lookup, fields, etc.
 
   //and some parameters of the files we're loading:
   bool usesChargeDensity=false; //true if source hists contain charge density per bin.  False if hists are charge per bin.
@@ -39,7 +43,6 @@ void generate_distortion_and_fluctuation(const char * inputpattern="./15khz/*.ro
   TString outputfilename;
 
   double totalQ=0;
-  int nMapsMade=0;
   
   for (int i=0;i<filelist->GetNFiles();i++){
    //for each file, find all histograms in that file.
@@ -49,33 +52,41 @@ void generate_distortion_and_fluctuation(const char * inputpattern="./15khz/*.ro
     keys->Print();
     int nKeys=infile->GetNkeys();
 
-    for (int j=0;j<nKeys;j+=2){
+    for (int j=0;j<nKeys;j++){
       TObject *tobj=infile->Get(keys->At(j)->GetName());
       //if this isn't a 3d histogram, skip it:
       bool isHist=tobj->InheritsFrom("TH3");
       if (!isHist) continue;
       TString objname=tobj->GetName();
-      if (objname.Contains("IBF")) continue; //this is an IBF map we don't want.
+      //if (!objname.Contains("IBF")) continue; //this is an IBF map we don't want.
       //assume this histogram is a charge map.
-      tpc->load_spacecharge(sourcefilename.Data(),tobj->GetName(),0,tpc_chargescale,spacecharge_cm_per_axis_unit, usesChargeDensity);
-      printf("Sanity check:  Q has %d elements and dim=%d\n",tpc->q->Length(), tpc->q->dim);
-      totalQ=0;
-      for (int k=0;k<tpc->q->Length();k++){
-	totalQ+=*(tpc->q->GetFlat(k));
+      // tpc->load_spacecharge(sourcefilename.Data(),tobj->GetName(),0,tpc_chargescale,spacecharge_cm_per_axis_unit, usesChargeDensity);
+      //load just the averages:
+      if (hasSpacecharge){
+	tpc->load_spacecharge(sourcefilename.Data(),"h_Charge_0",0,tpc_chargescale,spacecharge_cm_per_axis_unit, usesChargeDensity);
+	//if (hasTwin) tpc->twin->load_spacecharge(sourcefilename.Data(),"h_negz",0,tpc_chargescale,spacecharge_cm_per_axis_unit, usesChargeDensity);
+	printf("Sanity check:  Q has %d elements and dim=%d\n",tpc->q->Length(), tpc->q->dim);
+	totalQ=0;
+	for (int k=0;k<tpc->q->Length();k++){
+	  totalQ+=*(tpc->q->GetFlat(k));
+	}
+	printf("Sanity check:  Total Q in reported region is %E C\n",totalQ);
       }
-      printf("Sanity check:  Total Q in reported region is %E C\n",totalQ);
       tpc->populate_fieldmap();
+      if (hasTwin)  tpc->twin->populate_fieldmap();
       outputfilename=Form("%s.file%d.%s.%s.%s",outputfilebase,i,tobj->GetName(),field_string,lookup_string);
       printf("%s file has %s hist.  field=%s, lookup=%s. no scaling.\n",
 	     sourcefilename.Data(),tobj->GetName(),field_string,lookup_string);
+
+      //TestSpotDistortion(tpc);
+ 
       tpc->GenerateDistortionMaps(outputfilename,2,2,2,1,true);
       printf("distortions mapped.\n");
       tpc->PlotFieldSlices(outputfilename,pos);
+      tpc->PlotFieldSlices(outputfilename,pos,'B');
       printf("fieldslices plotted.\n");     
       printf("obj %d: getname: %s  inherits from TH3D:%d \n",j,tobj->GetName(),tobj->InheritsFrom("TH3"));
-      nMapsMade++;
-      if (nMapsMade>0) break;
-
+      break; //rcc temp
     }
       infile->Close();
   }
@@ -84,9 +95,16 @@ void generate_distortion_and_fluctuation(const char * inputpattern="./15khz/*.ro
   
 }
 
+void TestSpotDistortion(AnnularFieldSim *t){
+       TVector3 dummy(20.9034,-2.3553,-103.4712);
+      float dummydest=-103.4752;
+      t->twin->GetStepDistortion(dummydest,dummy,true,false);
+      dummy.SetZ(dummy.Z()*-1);
+      t->GetStepDistortion(-dummydest,dummy,true,false);
+      return;
+}
 
-
-AnnularFieldSim *SetupDefaultSphenixTpc(){
+AnnularFieldSim *SetupDefaultSphenixTpc(bool twinMe, bool useSpacecharge){
   //step1:  specify the sPHENIX space charge model parameters
   const float tpc_rmin=20.0;
   const float tpc_rmax=78.0;
@@ -96,7 +114,7 @@ AnnularFieldSim *SetupDefaultSphenixTpc(){
   //const float tpc_magField=0.5;//T -- The old value used in carlos's studies.
   //const float tpc_driftVel=4.0*1e6;//cm per s  -- used in carlos's studies
   const float tpc_driftVel=8.0*1e6;//cm per s  -- 2019 nominal value
-  const float tpc_magField=-1.5;//T -- 2019 nominal value
+  const float tpc_magField=1.4;//T -- 2019 nominal value
   const char detgeoname[]="sphenix";
   
    //step 2: specify the parameters of the field simulation.  Larger numbers of bins will rapidly increase the memory footprint and compute times.
@@ -114,24 +132,42 @@ AnnularFieldSim *SetupDefaultSphenixTpc(){
   int nz_roi=nz;
   int nz_roi_max=nz_roi_min+nz_roi;
 
+  bool realB=true;
+  bool realE=true;
   
 
   //step 3:  create the fieldsim object.  different choices of the last few arguments will change how it builds the lookup table spatially, and how it loads the spacecharge.  The various start-up steps are exposed here so they can be timed in the macro.
-  AnnularFieldSim *tpc=
-    new  AnnularFieldSim(tpc_rmin,tpc_rmax,tpc_z,
+  AnnularFieldSim *tpc;
+  if (useSpacecharge){
+    tpc=    new  AnnularFieldSim(tpc_rmin,tpc_rmax,tpc_z,
 			 nr, nr_roi_min,nr_roi_max,1,2,
 			 nphi,nphi_roi_min, nphi_roi_max,1,2,
 			 nz, nz_roi_min, nz_roi_max,1,2,
-			 tpc_driftVel, AnnularFieldSim::PhiSlice, AnnularFieldSim::FromFile);
+				 tpc_driftVel, AnnularFieldSim::PhiSlice, AnnularFieldSim::FromFile);
+  }else{
+    tpc=    new  AnnularFieldSim(tpc_rmin,tpc_rmax,tpc_z,
+			 nr, nr_roi_min,nr_roi_max,1,2,
+			 nphi,nphi_roi_min, nphi_roi_max,1,2,
+			 nz, nz_roi_min, nz_roi_max,1,2,
+				 tpc_driftVel, AnnularFieldSim::PhiSlice, AnnularFieldSim::NoSpacecharge);
+  }
+    
   tpc->UpdateEveryN(10);//show reports every 10%.
 
     //load the field maps, either flat or actual maps
   tpc->setFlatFields(tpc_magField,tpc_cmVolt/tpc_z);
   sprintf(field_string,"flat_B%2.1f_E%2.1f",tpc_magField,tpc_cmVolt/tpc_z);
 
-  if (1){
-    tpc->loadBfield("sPHENIX.2d.root","fieldmap");
+  if (realE){
     tpc->loadEfield("externalEfield.ttree.root","fTree");
+    sprintf(field_string,"realE_B%2.1f_E%2.1f",tpc_magField,tpc_cmVolt/tpc_z);
+  }
+   if (realB){
+    tpc->load3dBfield("sphenix3dmaprhophiz.root","fieldmap",1,-1.4/1.5);
+        //tpc->loadBfield("sPHENIX.2d.root","fieldmap");
+    sprintf(field_string,"realB_B%2.1f_E%2.1f",tpc_magField,tpc_cmVolt/tpc_z);
+  } 
+  if (realE && realB){
     sprintf(field_string,"real_B%2.1f_E%2.1f",tpc_magField,tpc_cmVolt/tpc_z);
   }
   printf("set fields.\n");
@@ -146,7 +182,7 @@ AnnularFieldSim *SetupDefaultSphenixTpc(){
   TFile *fileptr=TFile::Open(lookupFilename,"READ");
 
   if (!fileptr){ //generate the lookuptable
-  //to use the full rossegger terms instead of trivial free-space greens functions, uncomment the line below:
+    //to use the full rossegger terms instead of trivial free-space greens functions, uncomment the line below:
     tpc->load_rossegger();
     printf("loaded rossegger greens functions.\n");
     tpc->populate_lookup();
@@ -156,7 +192,47 @@ AnnularFieldSim *SetupDefaultSphenixTpc(){
     tpc->load_phislice_lookup(lookupFilename);
   }
 
-    printf("populated lookup.\n");
+  printf("populated lookup.\n");
+
+
+
+
+
+
+    
+  //make our twin:
+  if(twinMe){
+    AnnularFieldSim *twin;
+      if (useSpacecharge){
+	twin=      new  AnnularFieldSim(tpc_rmin,tpc_rmax,-tpc_z,
+			   nr, nr_roi_min,nr_roi_max,1,2,
+			   nphi,nphi_roi_min, nphi_roi_max,1,2,
+			   nz, nz_roi_min, nz_roi_max,1,2,
+			   tpc_driftVel, AnnularFieldSim::PhiSlice, AnnularFieldSim::FromFile);
+      } else{
+	twin=      new  AnnularFieldSim(tpc_rmin,tpc_rmax,-tpc_z,
+			   nr, nr_roi_min,nr_roi_max,1,2,
+			   nphi,nphi_roi_min, nphi_roi_max,1,2,
+			   nz, nz_roi_min, nz_roi_max,1,2,
+			   tpc_driftVel, AnnularFieldSim::PhiSlice, AnnularFieldSim::NoSpacecharge);
+      }    twin->UpdateEveryN(10);//show reports every 10%.
+
+    //same magnetic field, opposite electric field
+    twin->setFlatFields(tpc_magField,-tpc_cmVolt/tpc_z);
+    //sprintf(field_string,"flat_B%2.1f_E%2.1f",tpc_magField,tpc_cmVolt/tpc_z);
+    //twin->loadBfield("sPHENIX.2d.root","fieldmap");
+    twin->load3dBfield("sphenix3dmaprhophiz.root","fieldmap",1,-1.4/1.5);
+    twin->loadEfield("externalEfield.ttree.root","fTree",-1);//final '-1' tells it to flip z and the field z coordinate. r coordinate doesn't change, and we assume phi won't either, though the latter is less true.
+
+
+
+
+    //borrow the greens functions:
+    twin->borrow_rossegger(tpc->green,tpc_z);//use the original's green's functions, shift our internal coordinates by tpc_z when querying those functions.
+    twin->borrow_epartial_from(tpc,tpc_z);//use the original's epartial.  Note that those values ought to be symmetric about z, and since our boundary conditions are translated along with our coordinates, they're completely unchanged.
+
+    tpc->set_twin(twin);
+  }
 
   return tpc;
 }

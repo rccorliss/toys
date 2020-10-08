@@ -25,7 +25,7 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
 
 
   //step 1:  specify the physical parameters, scales, etc of the model, either ALICE or sPHENIXL
-  
+  /*
  
   //load the ALICE TPC space charge model
   const float tpc_rmin=83.5;//cm
@@ -45,7 +45,7 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   //const char scmaphistname[]="inputSCDensity3D_8000_avg";
   //const double tpc_chargescale=8.85e-14;//their hist. has charge in units of C/cm^3 /eps0.  This is eps0 in (V*cm)/C units so that I can multiple by the volume in cm^3 to get Q in C.  
 
-  /*
+  */
   //load the sPHENIX space charge model parameters
   const float tpc_rmin=20.0;
   const float tpc_rmax=78.0;
@@ -65,19 +65,19 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   //Each unit of '1 ion' is tpc_chargescale coulombs.
   // double tpc_chargescale=1.6e-19/(100*100*100);//evgeny hists have charge in units of ions/bin, so we need to multiply by the electric charge of an electron to get out C/m^3 and then divde by 100^3 to get C/cm^3.  
   //const double tpc_chargescale=1.6e-19;//my older hists have ions/cm^3, so we need to multiply by the electric charge of an electron to get out C/cm^3.  
-  */
+  
   
    //step 2: specify the parameters of the field simulation.  Larger numbers of bins will rapidly increase the memory footprint and compute times.
   //there are some ways to mitigate this by setting a small region of interest, or a more parsimonious lookup strategy, specified when AnnularFieldSim() is actually constructed below.
-  int nr=20;//26;//10;//24;//159;//159 nominal
+  int nr=26;//10;//24;//159;//159 nominal
   int nr_roi_min=0;
   int nr_roi=nr;//10;
   int nr_roi_max=nr_roi_min+nr_roi;
-  int nphi=16;//40;//38;//360;//360 nominal
+  int nphi=40;//38;//360;//360 nominal
   int nphi_roi_min=0;
   int nphi_roi=nphi;//38;
   int nphi_roi_max=nphi_roi_min+nphi_roi;
-  int nz=20;//40;//62;//62 nominal
+  int nz=40;//62;//62 nominal
   int nz_roi_min=0;
   int nz_roi=nz;
   int nz_roi_max=nz_roi_min+nz_roi;
@@ -112,7 +112,7 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   char field_string[200];
   sprintf(field_string,"flat_B%2.1f_E%2.1f",tpc_magField,tpc_cmVolt/tpc_z);
 
-  if (0){
+  if (1){
     printf("loading external fieldmaps\n");
     tpc->loadBfield("sPHENIX.2d.root","fieldmap");//soon:, (1.4)/(-1.5));
     tpc->loadEfield("externalEfield.ttree.root","fTree");
@@ -162,16 +162,16 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   //filename should be:  spacecharge+fieldtype+greenlookuptype-and-dimensions
   char distortionFilebase[200];
   // Evgeny's stuff:
-  /*
+  
  const int nfiles=1;
   const int nhistsper=1;
    const float spacecharge_cm_per_axis_unit=100;
    double tpc_chargescale=1.6e-19;//evgeny hists have charge in units of ions/bin, so we need to multiply by the electric charge of an electron to get out C.
    bool isChargeDensity=false; //and tell the load_ function not to multiply by volume.
 
-   char *scbasename[]={"Cartesian","evgeny/mapFile_bX734587_bias0","Smooth.50kHz","Single.50kHz"};
-   char *scfilename[]={"evgeny_sept/Summary_bX1508071_0_10_events.root","outputFile_15kHz_G4Hits_sHijing_0-12fm_002000_008000_bX734587_bias10.root", "evgeny/mapFile_bX734587_bias0.root","Smooth.50kHz.root","BeamXingNBeams.root"};
-   char *schistname[]={"h_Charge_evt_0","h_Charge_0",
+   char *scbasename[]={"average.rev2","Cartesian","evgeny/mapFile_bX734587_bias0","Smooth.50kHz","Single.50kHz"};
+   char *scfilename[]={"average.rev2.hist.root","evgeny_sept/Summary_bX1508071_0_10_events.root","outputFile_15kHz_G4Hits_sHijing_0-12fm_002000_008000_bX734587_bias10.root", "evgeny/mapFile_bX734587_bias0.root","Smooth.50kHz.root","BeamXingNBeams.root"};
+   char *schistname[]={"h_Charge_0","h_Charge_evt_0","h_Charge_0",
 		      "h_Charge_1",
 		      "h_Charge_2",
 		      "h_Charge_3",
@@ -187,7 +187,7 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   //char *scfilename[]={"Smooth.50kHz.root","BeamXingNBeams.root"};
   //char *schistname[]={"sphenix_minbias_average","sphenix_minbias_charge"};
   //
-  */
+  /*
   //Heuristics:
   
   
@@ -200,7 +200,7 @@ void generate_distortion_maps_macro(int reduction=0, bool loadOutputFromFile=fal
   char *scbasename[]={"HeuristicSc_ALICE"};
   char *scfilename[]={"HeuristicSc_ALICE.root"};
   char *schistname[]={"heuristic"};
-  
+  */
 
   //Test charge in flat field, for sanity:
   /*

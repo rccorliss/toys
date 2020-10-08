@@ -99,7 +99,7 @@ AnnularFieldSim *SetupDefaultSphenixTpc(int nr,int np, int nz){
   //const float tpc_magField=0.5;//T -- The old value used in carlos's studies.
   //const float tpc_driftVel=4.0*1e6;//cm per s  -- used in carlos's studies
   const float tpc_driftVel=8.0*1e6;//cm per s  -- 2019 nominal value
-  const float tpc_magField=1.5;//T -- 2019 nominal value
+  const float tpc_magField=-1.5;//T -- 2019 nominal value
   const char detgeoname[]="sphenix";
   
    //step 2: specify the parameters of the field simulation.  Larger numbers of bins will rapidly increase the memory footprint and compute times.

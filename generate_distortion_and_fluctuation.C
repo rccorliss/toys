@@ -12,30 +12,36 @@ AnnularFieldSim *SetupDefaultSphenixTpc(bool twinMe=false, bool useSpacecharge=t
 void TestSpotDistortion(AnnularFieldSim *t);
 
 
-void generate_distortion_and_fluctuation(const char * inputpattern="./15khz/*.root", const char *outputfilebase="./15khz_output_B1.5/output"){
+void generate_distortion_and_fluctuation(const char * inputpattern="./oct20/*.root", const char *outputfilebase="./oct20_output/oct20_"){
 
+
+
+  
   bool hasTwin=false;
   bool hasSpacecharge=true;
-  
-  AnnularFieldSim *tpc=SetupDefaultSphenixTpc(hasTwin,hasSpacecharge);//loads the lookup, fields, etc.
 
   //and some parameters of the files we're loading:
   bool usesChargeDensity=false; //true if source hists contain charge density per bin.  False if hists are charge per bin.
   float tpc_chargescale=1.6e-19;//Coulombs per bin unit.
   float spacecharge_cm_per_axis_unit=100;//cm per histogram axis unit.
   
+
+
+  
+  //find all files that match the input string (we don't need this yet, but doing it before building the fieldsim saves time if there's an empty directory or something.
+  TFileCollection *filelist=new TFileCollection();
+  filelist->Add(inputpattern);
+  filelist->Print();
+  printf("Using pattern \"%s\", found %d files to read, eg : %s\n",inputpattern,filelist->GetList()->GetEntries(),((TFileInfo*)(filelist->GetList()->At(0)))->GetCurrentUrl()->GetUrl());//Title());//Print();
+
+  //now build the time-consuming part:
+  AnnularFieldSim *tpc=SetupDefaultSphenixTpc(hasTwin,hasSpacecharge);//loads the lookup, fields, etc.
   //and the location to plot the fieldslices about:
  TVector3 pos=0.5*(tpc->GetOuterEdge()+tpc->GetInnerEdge());;
   pos.SetPhi(3.14159);
 
 
   
-
-  //find all files that match the input string
-  TFileCollection *filelist=new TFileCollection();
-  filelist->Add(inputpattern);
-  filelist->Print();
-  printf("found: %s\n",((TFileInfo*)(filelist->GetList()->At(0)))->GetCurrentUrl()->GetUrl());//Title());//Print();
 
   TFile *infile;
  
@@ -60,11 +66,13 @@ void generate_distortion_and_fluctuation(const char * inputpattern="./15khz/*.ro
       TString objname=tobj->GetName();
       //if (!objname.Contains("IBF")) continue; //this is an IBF map we don't want.
       //assume this histogram is a charge map.
-      // tpc->load_spacecharge(sourcefilename.Data(),tobj->GetName(),0,tpc_chargescale,spacecharge_cm_per_axis_unit, usesChargeDensity);
       //load just the averages:
       if (hasSpacecharge){
-	tpc->load_spacecharge(sourcefilename.Data(),"h_Charge_0",0,tpc_chargescale,spacecharge_cm_per_axis_unit, usesChargeDensity);
-	//if (hasTwin) tpc->twin->load_spacecharge(sourcefilename.Data(),"h_negz",0,tpc_chargescale,spacecharge_cm_per_axis_unit, usesChargeDensity);
+	tpc->load_spacecharge(sourcefilename.Data(),tobj->GetName(),0,tpc_chargescale,spacecharge_cm_per_axis_unit, usesChargeDensity);
+	if (hasTwin) tpc->twin->load_spacecharge(sourcefilename.Data(),tobj->GetName(),0,tpc_chargescale,spacecharge_cm_per_axis_unit, usesChargeDensity);
+
+	//or load just the average:
+	//tpc->load_spacecharge(sourcefilename.Data(),"h_Charge_0",0,tpc_chargescale,spacecharge_cm_per_axis_unit, usesChargeDensity);
 	printf("Sanity check:  Q has %d elements and dim=%d\n",tpc->q->Length(), tpc->q->dim);
 	totalQ=0;
 	for (int k=0;k<tpc->q->Length();k++){

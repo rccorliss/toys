@@ -2387,15 +2387,15 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
   
   //actual output maps:
   
-  TH3F* hDistortionR=new TH3F("hDistortionR","Per-z-bin Distortion in the R direction as a function of (r,phi,z) (centered in r,phi, z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
-  TH3F* hDistortionP=new TH3F("hDistortionP","Per-z-bin Distortion in the RPhi direction as a function of (r,phi,z)  (centered in r,phi, z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
-  TH3F* hDistortionZ=new TH3F("hDistortionZ","Per-z-bin Distortion in the Z direction as a function of (r,phi,z)  (centered in r,phi, z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
-  TH3F* hIntDistortionR=new TH3F("hIntDistortionR","Integrated R Distortion from (r,phi,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
-  TH3F* hIntDistortionP=new TH3F("hIntDistortionP","Integrated R Distortion from (r,phi,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
-  TH3F* hIntDistortionZ=new TH3F("hIntDistortionZ","Integrated R Distortion from (r,phi,z) to z=0  (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+  TH3F* hDistortionR=new TH3F("hDistortionR","Per-z-bin Distortion in the R direction as a function of (phi,r,z) (centered in r,phi, z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+  TH3F* hDistortionP=new TH3F("hDistortionP","Per-z-bin Distortion in the RPhi direction as a function of (phi,r,z)  (centered in r,phi, z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+  TH3F* hDistortionZ=new TH3F("hDistortionZ","Per-z-bin Distortion in the Z direction as a function of (phi,r,z)  (centered in r,phi, z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+  TH3F* hIntDistortionR=new TH3F("hIntDistortionR","Integrated R Distortion from (phi,r,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+  TH3F* hIntDistortionP=new TH3F("hIntDistortionP","Integrated R Distortion from (phi,r,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+  TH3F* hIntDistortionZ=new TH3F("hIntDistortionZ","Integrated R Distortion from (phi,r,z) to z=0  (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
 
-    TH3F* hIntDistortionX=new TH3F("hIntDistortionX","Integrated X Distortion from (r,phi,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
-  TH3F* hIntDistortionY=new TH3F("hIntDistortionY","Integrated Y Distortion from (r,phi,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+    TH3F* hIntDistortionX=new TH3F("hIntDistortionX","Integrated X Distortion from (phi,r,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+  TH3F* hIntDistortionY=new TH3F("hIntDistortionY","Integrated Y Distortion from (phi,r,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
 
   /*
   TH3F* hNewIntDistortionR=new TH3F("hNewIntDistortionR","Recursively Integrated R Distortion from (r,phi,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);

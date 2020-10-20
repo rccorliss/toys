@@ -12,7 +12,7 @@ AnnularFieldSim *SetupDefaultSphenixTpc(bool twinMe=false, bool useSpacecharge=t
 void TestSpotDistortion(AnnularFieldSim *t);
 
 
-void generate_distortion_and_fluctuation(const char * inputpattern="./oct20/*.root", const char *outputfilebase="./oct20_output/oct20_"){
+void generate_distortion_and_fluctuation(const char * inputpattern="./oct20/*.root", const char *outputfilebase="./oct20_maps/oct20"){
 
 
 

@@ -12,13 +12,13 @@ AnnularFieldSim *SetupDefaultSphenixTpc(bool twinMe=false, bool useSpacecharge=t
 void TestSpotDistortion(AnnularFieldSim *t);
 
 
-void generate_distortion_and_fluctuation(const char * inputpattern="./oct20/*.root", const char *outputfilebase="./oct20_maps/oct20"){
+void generate_distortion_and_fluctuation(const char * inputpattern="./oct20/*.root", const char *outputfilebase="./oct20_maps/oct20", bool hasSpacecharge=true){
 
-
+  int maxmaps=2;
 
   
-  bool hasTwin=false;
-  bool hasSpacecharge=true;
+  bool hasTwin=true;
+  //bool hasSpacecharge=true;
 
   //and some parameters of the files we're loading:
   bool usesChargeDensity=false; //true if source hists contain charge density per bin.  False if hists are charge per bin.
@@ -94,7 +94,8 @@ void generate_distortion_and_fluctuation(const char * inputpattern="./oct20/*.ro
       tpc->PlotFieldSlices(outputfilename,pos,'B');
       printf("fieldslices plotted.\n");     
       printf("obj %d: getname: %s  inherits from TH3D:%d \n",j,tobj->GetName(),tobj->InheritsFrom("TH3"));
-      break; //rcc temp
+      //break; //rcc temp -- uncomment this to process one hist per file.
+      if (i>maxmaps) return;
     }
       infile->Close();
   }

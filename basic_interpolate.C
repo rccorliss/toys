@@ -23,6 +23,7 @@ float boundM[]={0.,0.,0.};
 float boundB[]={0.,0.,0.};
 
 TH3F* GetDistortionModel(int nr_cm,int np_cm, int nz_cm, int nr_ot,int np_ot, int nz_ot, TH3F *truth);
+void PlotClassicInterpolation();
 bool CoveredBySingleOT(float r, float phi, float z){
   if (phi<0)phi+=2*PI;
   float distlower=fmod(phi,OTspacing); //distance from first center it is larger than.
@@ -31,11 +32,14 @@ bool CoveredBySingleOT(float r, float phi, float z){
   if (distlower>OTphiHalfWidth && distlower<OTspacing-OTphiHalfWidth) return false;
 
   //otherwise check to see if we're in the z coverage range:
-  return (z>(boundM[0]*r+boundB[0])) &&(z<(boundM[1]*r+boundB[1]));
+  float minz=(boundM[0]*r+boundB[0]);
+  float maxz=(boundM[1]*r+boundB[1]);
+  //printf("checking for %2.2f< z(%2.2f)< %2.2f\n",minz,z,maxz);
+  return ((z>minz) && (z<maxz));
 }
 bool CoveredByDoubleOT(float r, float phi, float z){
   if (phi<0) phi+=2*PI;
-  static const float tile_phi_margin=(OTwidth*0.5)/OFCradius; //radians from center to edge of tile
+  //static const float tile_phi_margin=(OTwidth*0.5)/OFCradius; //radians from center to edge of tile
   if (phi>OTphiHalfWidth && phi<2*PI-OTphiHalfWidth) return false;
   return true;
 }
@@ -56,6 +60,130 @@ float GetPhiInterpolationFractionPhi(float phi){
 
 
 void basic_interpolate(){
+
+  // PlotClassicInterpolation(); return;
+
+  const float rmin=24.;
+  const float activermin=30.;//don't bother plotting averages below this range
+  const float rmax=78.;
+  float rspan=rmax-rmin;
+  int nrsteps=120;
+  float rstep=rspan/(1.0*nrsteps);
+  const float zmin=0;
+  const float zmax=105.5;
+  float zspan=zmax-zmin;
+  int nzsteps=120;
+  float zstep=zspan/(1.0*nzsteps);
+
+  float phimin=0.0;
+  float phimax=6.28;
+  float phispan=phimax-phimin;
+  int nphisteps=60;
+  float phistep=phispan/(1.0*nphisteps);
+
+
+  //float boundM[3];
+  //float boundB[3];
+  for (int i=0;i<3;i++){
+    boundM[i]=(OFCrange[i]-IFCrange[i])/(rmax-rmin);
+    boundB[i]=IFCrange[i]-rmin*boundM[i];
+    printf("bounds[%d]: m=%2.2f, b=%2.2f\n",i,boundM[i],boundB[i]);
+  }
+  //return;
+
+  
+  
+  //load the time-average histogram(s):
+  TFile *histfile;
+  //histfile=TFile::Open("elevatorpitch/fluct_average.rev3.1side.3d.file0.h_negz.real_B1.4_E-400.0.ross_phi1_sphenix_phislice_lookup_r26xp40xz40.distortion_map.hist.root","READ");
+  histfile=TFile::Open("elevatorpitch/average.rev3.1side.3d.file0.h_negz.real_B1.4_E-400.0.ross_phi1_sphenix_phislice_lookup_r26xp40xz40.distortion_map.hist.root","READ");
+  TH3F *hData[3];
+  hData[0]=(TH3F*)histfile->Get("hIntDistortionR");
+  hData[1]=(TH3F*)histfile->Get("hIntDistortionP");
+  hData[2]=(TH3F*)histfile->Get("hIntDistortionZ");
+
+  printf("data loaded.\n");
+
+
+  TH3F* hModel[3];
+  TH3F * hComparison[3];
+  TH1F * hComparisonDiff[3];
+  int i=0;
+  hData[i]->Scale(1e4);//shift from cm to um for all that follows.
+  hModel[i]=GetDistortionModel(20,12*3, 1, 10,10, 10, hData[i]);
+  hComparison[i]=(TH3F*)(hData[i]->Clone(Form("hComparison%d",i)));
+  hComparison[i]->Reset();
+  return;
+  hComparisonDiff[i]=new TH1F(Form("hComparisonDiff%d",i),"Difference between model and truth, r>30;diff (um)",200,-200,200);
+
+  //at every point in the true model plot the difference between truth and the model we've built:
+
+  int nr_tr=hData[0]->GetYaxis()->GetNbins();
+  float rmin_tr=hData[0]->GetYaxis()->GetXmin();
+  float rmax_tr=hData[0]->GetYaxis()->GetXmax();
+  float rstep_tr=(rmax_tr-rmin_tr)/(1.0*nr_tr);
+
+  int np_tr=hData[0]->GetXaxis()->GetNbins();
+  float pmin_tr=hData[0]->GetXaxis()->GetXmin();
+  float pmax_tr=hData[0]->GetXaxis()->GetXmax();
+  float pstep_tr=(pmax_tr-pmin_tr)/(1.0*np_tr);
+
+  int nz_tr=hData[0]->GetZaxis()->GetNbins();
+  float zmin_tr=hData[0]->GetZaxis()->GetXmin();
+  float zmax_tr=hData[0]->GetZaxis()->GetXmax();
+  float zstep_tr=(zmax_tr-zmin_tr)/(1.0*nz_tr);
+
+  for (int ir=0;ir<nr_tr;ir++){
+    float r=rmin_tr+(ir+0.5)*rstep_tr;// position of _center_ of the ir-th bin of the source, for histogram filling safety.
+    if (r<activermin) continue;
+    if (r>rmax) continue;
+    for (int ip=0;ip<np_tr;ip++){
+      float p=pmin_tr+(ip+0.5)*pstep_tr;// position of _center_ of the ip-th bin of the source, for histogram filling safety.
+      for (int iz=0;iz<nz_tr;iz++){
+	float z=zmin_tr+(iz+0.5)*zstep_tr;// position of _center_ of the iz-th bin of the source, for histogram filling safety.
+	if (z<zmin || z>zmax) continue;
+	float valData=hData[i]->GetBinContent(hData[i]->FindBin(p,r,z));
+	float valModel=hModel[i]->GetBinContent(hModel[i]->FindBin(p,r,z));
+	printf("prz=(%2.2f,%2.2f,%2.2f).  data=%2.2f\tmodel=%2.2f\tdiff=%2.2f\n",p,r,z,valData,valModel,valModel-valData);
+	hComparison[i]->Fill(p,r,z,valModel-valData);
+	hComparisonDiff[i]->Fill((valModel-valData));
+      }
+    }
+  }
+  
+  
+
+  
+ TCanvas *c=new TCanvas("c","c",1200,400);
+ c->Divide(4,1);
+ for (int j=0;j<1;j++){//direction
+   c->cd(1+j*6+0);
+   //hData[i]->GetXaxis()->SetRangeUser(1,1);//slice in phi
+   TH2F* hDataProj=(TH2F*)(hData[i]->Project3D("yz"));
+   hDataProj->SetTitle("True Distortion in phibin=1 (um);r (cm);z (cm)");
+   hDataProj->Draw("colz");//plot in z
+   hData[i]->GetXaxis()->SetRange(0,0);//reset the slice
+   c->cd(1+j*6+1); 
+   //hModel[i]->GetXaxis()->SetRange(1,1);//slice in phi
+   TH2F* hModelProj=(TH2F*)(hModel[i]->Project3D("yz"));
+   hModelProj->SetTitle("Reco Distortion in phibin=1 (um);r (cm);z (cm)");
+   hModelProj->Draw("colz");//plot in z   hModel[i]->Project3D("yz")->Draw("colz");//plot in z
+   hModel[i]->GetXaxis()->SetRange(0,0);//reset the slice
+    c->cd(1+j*6+2); 
+    //hComparison[i]->GetXaxis()->SetRange(1,1);//slice in phi
+    hComparison[i]->Project3D("yz")->Draw("colz");//plot in z
+   //hComparison[i]->GetXaxis()->SetRange(0,0);//reset the slice
+   c->cd(1+j*6+3); 
+   hComparisonDiff[i]->Draw();
+   c->cd(1+j*6+4); 
+   c->cd(1+j*6+5); 
+ }
+
+return;
+}
+
+
+void PlotClassicInterpolation(){
   const float rmin=24.;
   const float activermin=30.;//don't bother plotting averages below this range
   const float rmax=78.;
@@ -435,7 +563,6 @@ return;
 }
 
 
-
 TH3F* GetDistortionModel(int nr_cm,int np_cm, int nz_cm, int nr_ot,int np_ot, int nz_ot, TH3F *truth){
   static int nmod=0;
 
@@ -488,7 +615,6 @@ TH3F* GetDistortionModel(int nr_cm,int np_cm, int nz_cm, int nr_ot,int np_ot, in
     hHighEdgeCM[i]=new TH1F(Form("hHighEdgeCM%d",i),Form("CM values at highedge slice sector %d;r (cm);CMval",i),nrsteps,rmin,rmax);
     hHighEdgeCMsamples[i]=new TH1F(Form("hHighEdgeCMsamples%d",i),Form("CM samples at highedge slice sector %d;r (cm);CMval",i),nrsteps,rmin,rmax);
 
-
     
   }
   
@@ -520,35 +646,38 @@ TH3F* GetDistortionModel(int nr_cm,int np_cm, int nz_cm, int nr_ot,int np_ot, in
 
   for (int ir=0;ir<nr_tr;ir++){
     float r=rmin_tr+(ir+0.5)*rstep_tr;// position of _center_ of the ir-th bin of the source, for histogram filling safety.
-    if (r<rmin_tr || r>rmax_tr) continue;
     if (r<rmin || r>rmax) continue;
     for (int ip=0;ip<np_tr;ip++){
       float p=pmin_tr+(ip+0.5)*pstep_tr;// position of _center_ of the ip-th bin of the source, for histogram filling safety.
     //int psector=(p+PI/12.)/(PI/6);//position relative to lower edge of zero, in units of center-to-center spacing
     int psector=GetPhiRegion(p+OTphiHalfWidth);//which OT sector we _might_ be in 
     if (psector>=OTnDetectors) psector=0;
-      if (p<pmin_tr || p>pmax_tr) continue;
       if (p<pmin || p>pmax) continue;
       for (int iz=0;iz<nz_tr;iz++){
 	float z=zmin_tr+(iz+0.5)*zstep_tr;// position of _center_ of the iz-th bin of the source, for histogram filling safety.
-	if (z<zmin_tr || z>zmax_tr) continue;
 	if (z<zmin || z>zmax) continue;
+	//printf("in detector bulk region\n");
+
 	float val=truth->Interpolate(p,r,z);
 	
 	if (CoveredByDoubleOT(r,p,z)){ //fill the full-length sample set
+	  //printf("in DoubleOT det\n");
 	  hFullSlice->Fill(z,r,val);
 	  hFullSamples->Fill(z,r,1);
 	}
 	
 	if (iz==ArbitraryCMzBin){ //fill the CM
+	  printf("at CM\n");
 	  hCM->Fill(p,r,val);
 	  hCMSamples->Fill(p,r,1);
 	}
 
 	if (CoveredBySingleOT(r,p,z)){ //fill the low or high edges of individual tiles.
+	    printf("in singleOT det\n");
 	  if (!CoveredBySingleOT(r,p+pstep_tr,z)){//next step is not covered, so we're on a high edge:
 	    hHighEdgeSlice[psector]->Fill(z,r,val);
 	    hHighEdgeSamples[psector]->Fill(z,r,1.);
+	    printf("high edge fill\n");
 	    if (iz==ArbitraryCMzBin){
 	      hHighEdgeCM[psector]->Fill(r,val);
 	      hHighEdgeCMsamples[psector]->Fill(r,1);
@@ -765,7 +894,13 @@ TH3F* GetDistortionModel(int nr_cm,int np_cm, int nz_cm, int nr_ot,int np_ot, in
     }
   }
 
-
-
+  TCanvas *c=new TCanvas("cModelParts","cModelParts",1000,1000);
+  c->Divide(6,4);
+  for (int i=0;i<OTnDetectors;i++){
+    c->cd(2*i+1);
+    hLowEdgeSamples[i]->Draw("colz");
+   c->cd(2*i+2);
+    hHighEdgeSamples[i]->Draw("colz");
+  }
   return hDistModel;
 }

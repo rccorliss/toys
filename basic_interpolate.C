@@ -19,8 +19,8 @@ float OTphiWidth=OTwidth/OFCradius;//width in radians
 float OTphiHalfWidth=OTphiWidth/2.;//half-width in radians (=distance from center to edge)
 float OTseparation=OTspacing-OTphiWidth;//phi distance between end of one and start of the next.
 
-float boundM[]={0.,0.,0.};
-float boundB[]={0.,0.,0.};
+float boundM[]={0.,0.,0.,0.};
+float boundB[]={0.,0.,0.,0.};
 
 TH3F* GetDistortionModel(int nr_cm,int np_cm, int nz_cm, int nr_ot,int np_ot, int nz_ot, TH3F *truth);
 void PlotClassicInterpolation();
@@ -37,11 +37,37 @@ bool CoveredBySingleOT(float r, float phi, float z){
   //printf("checking for %2.2f< z(%2.2f)< %2.2f\n",minz,z,maxz);
   return ((z>minz) && (z<maxz));
 }
+
+bool CoveredBySingleOTphi(float phi){
+  if (phi<0)phi+=2*PI;
+  float distlower=fmod(phi,OTspacing); //distance from first center it is larger than.
+
+  //check to see if we are past the upper edge of the lower tile, and short of the lower edge of the upper:
+  if (distlower>OTphiHalfWidth && distlower<OTspacing-OTphiHalfWidth) return false;
+  return true;
+}
+bool Trackable(float r, float z){
+  float maxz=(boundM[3]*r+boundB[3]);
+  //printf("checking for %2.2f< z(%2.2f)< %2.2f\n",minz,z,maxz);
+  return ((z<maxz));
+}
+
+bool CoveredBySingleOTrz(float r,  float z){
+  //otherwise check to see if we're in the z coverage range:
+  float minz=(boundM[0]*r+boundB[0]);
+  float maxz=(boundM[1]*r+boundB[1]);
+  //printf("checking for %2.2f< z(%2.2f)< %2.2f\n",minz,z,maxz);
+  return ((z>minz) && (z<maxz));
+}
+
 bool CoveredByDoubleOT(float r, float phi, float z){
   if (phi<0) phi+=2*PI;
   //static const float tile_phi_margin=(OTwidth*0.5)/OFCradius; //radians from center to edge of tile
   if (phi>OTphiHalfWidth && phi<2*PI-OTphiHalfWidth) return false;
-  return true;
+    float minz=(boundM[0]*r+boundB[0]);
+  float maxz=(boundM[2]*r+boundB[2]);
+  //printf("checking for %2.2f< z(%2.2f)< %2.2f\n",minz,z,maxz);
+  return ((z>minz) && (z<maxz));
 }
 
 int GetPhiRegion(float phi){
@@ -89,14 +115,16 @@ void basic_interpolate(){
     boundB[i]=IFCrange[i]-rmin*boundM[i];
     printf("bounds[%d]: m=%2.2f, b=%2.2f\n",i,boundM[i],boundB[i]);
   }
+  boundM[3]=(zmax-zmin)/(rmax-rmin);
+  boundB[3]=IFCrange[2]-rmin*boundM[3];
   //return;
 
   
   
   //load the time-average histogram(s):
   TFile *histfile;
-  //histfile=TFile::Open("elevatorpitch/fluct_average.rev3.1side.3d.file0.h_negz.real_B1.4_E-400.0.ross_phi1_sphenix_phislice_lookup_r26xp40xz40.distortion_map.hist.root","READ");
-  histfile=TFile::Open("elevatorpitch/average.rev3.1side.3d.file0.h_negz.real_B1.4_E-400.0.ross_phi1_sphenix_phislice_lookup_r26xp40xz40.distortion_map.hist.root","READ");
+  histfile=TFile::Open("elevatorpitch/fluct_average.rev3.1side.3d.file0.h_negz.real_B1.4_E-400.0.ross_phi1_sphenix_phislice_lookup_r26xp40xz40.distortion_map.hist.root","READ");
+  //histfile=TFile::Open("elevatorpitch/average.rev3.1side.3d.file0.h_negz.real_B1.4_E-400.0.ross_phi1_sphenix_phislice_lookup_r26xp40xz40.distortion_map.hist.root","READ");
   TH3F *hData[3];
   hData[0]=(TH3F*)histfile->Get("hIntDistortionR");
   hData[1]=(TH3F*)histfile->Get("hIntDistortionP");
@@ -107,15 +135,24 @@ void basic_interpolate(){
 
   TH3F* hModel[3];
   TH3F * hComparison[3];
-  TH1F * hComparisonDiff[3];
+  TH1F * hComparisonDiff[3], *hTrackableDiff[3];
+  TH2F *hCompareRZ[3], *hCompareRZSamples[3], *hCompareXY[3], *hCompareXYSamples[3];
   int i=0;
   hData[i]->Scale(1e4);//shift from cm to um for all that follows.
-  hModel[i]=GetDistortionModel(20,12*3, 1, 10,10, 10, hData[i]);
+  hModel[i]=GetDistortionModel(14,12*4, 1, 40,48, 40, hData[i]);
   hComparison[i]=(TH3F*)(hData[i]->Clone(Form("hComparison%d",i)));
   hComparison[i]->Reset();
-  return;
-  hComparisonDiff[i]=new TH1F(Form("hComparisonDiff%d",i),"Difference between model and truth, r>30;diff (um)",200,-200,200);
-
+  //return;
+  hComparisonDiff[i]=new TH1F(Form("hComparisonDiff%d",i),"Difference between model and truth, r>30;diff (um)",200,-500,500);
+  hTrackableDiff[i]=new TH1F(Form("hTrackableDiff%d",i)," model minus truth, r>30+reasonable origin;diff (um)",200,-500,500);
+  hCompareRZ[i]=new TH2F(Form("hCompareRZ%d",i),"Difference between model and truth,phi averaged",
+			 hData[i]->GetZaxis()->GetNbins(),hData[i]->GetZaxis()->GetXmin(),hData[i]->GetZaxis()->GetXmax(),
+			 hData[i]->GetYaxis()->GetNbins(),hData[i]->GetYaxis()->GetXmin(),hData[i]->GetYaxis()->GetXmax());
+  hCompareRZSamples[i]=new TH2F(Form("hCompareRZSamples%d",i),"Samples in RZ between model and truth,phi averaged",
+			 hData[i]->GetZaxis()->GetNbins(),hData[i]->GetZaxis()->GetXmin(),hData[i]->GetZaxis()->GetXmax(),
+			 hData[i]->GetYaxis()->GetNbins(),hData[i]->GetYaxis()->GetXmin(),hData[i]->GetYaxis()->GetXmax());
+  hCompareXY[i]=new TH2F(Form("hCompareXY%d",i),"Difference between model and truth,z averaged; x (cm); y (cm)",40,-80,80,40,-80,80);
+  hCompareXYSamples[i]=new TH2F(Form("hCompareXYSamples%d",i),"Samples in RZ between model and truth,z averaged; x (cm); y (cm)",40,-80,80,40,-80,80);
   //at every point in the true model plot the difference between truth and the model we've built:
 
   int nr_tr=hData[0]->GetYaxis()->GetNbins();
@@ -136,17 +173,27 @@ void basic_interpolate(){
   for (int ir=0;ir<nr_tr;ir++){
     float r=rmin_tr+(ir+0.5)*rstep_tr;// position of _center_ of the ir-th bin of the source, for histogram filling safety.
     if (r<activermin) continue;
-    if (r>rmax) continue;
+    if (r>rmax || r>76.) continue;
     for (int ip=0;ip<np_tr;ip++){
       float p=pmin_tr+(ip+0.5)*pstep_tr;// position of _center_ of the ip-th bin of the source, for histogram filling safety.
       for (int iz=0;iz<nz_tr;iz++){
 	float z=zmin_tr+(iz+0.5)*zstep_tr;// position of _center_ of the iz-th bin of the source, for histogram filling safety.
 	if (z<zmin || z>zmax) continue;
 	float valData=hData[i]->GetBinContent(hData[i]->FindBin(p,r,z));
-	float valModel=hModel[i]->GetBinContent(hModel[i]->FindBin(p,r,z));
-	printf("prz=(%2.2f,%2.2f,%2.2f).  data=%2.2f\tmodel=%2.2f\tdiff=%2.2f\n",p,r,z,valData,valModel,valModel-valData);
+	//float valModel=hModel[i]->GetBinContent(hModel[i]->FindBin(p,r,z));
+	float valModel=hModel[i]->Interpolate(p,r,z);
+	//	printf("prz=(%2.2f,%2.2f,%2.2f).  data=%2.2f\tmodel=%2.2f\tdiff=%2.2f\n",p,r,z,valData,valModel,valModel-valData);
+
+	hCompareXY[i]->Fill(r*sin(p),r*cos(p),valModel-valData);
+	hCompareXYSamples[i]->Fill(r*sin(p),r*cos(p),1);
 	hComparison[i]->Fill(p,r,z,valModel-valData);
+	hCompareRZ[i]->Fill(z,r,valModel-valData);
+	hCompareRZSamples[i]->Fill(z,r,1);
 	hComparisonDiff[i]->Fill((valModel-valData));
+	if (Trackable(r,z) && r<74){
+	  hTrackableDiff[i]->Fill(valModel-valData);
+
+	}
       }
     }
   }
@@ -154,29 +201,45 @@ void basic_interpolate(){
   
 
   
- TCanvas *c=new TCanvas("c","c",1200,400);
- c->Divide(4,1);
+ TCanvas *c=new TCanvas("c","c",1200,800);
+ c->Divide(4,2);
  for (int j=0;j<1;j++){//direction
    c->cd(1+j*6+0);
-   //hData[i]->GetXaxis()->SetRangeUser(1,1);//slice in phi
+   hData[i]->GetXaxis()->SetRangeUser(-0.001,0.001);//slice in phi
    TH2F* hDataProj=(TH2F*)(hData[i]->Project3D("yz"));
-   hDataProj->SetTitle("True Distortion in phibin=1 (um);r (cm);z (cm)");
+   hDataProj->SetTitle("True Distortion in phibin=1 (um);z (cm);r (cm)");
    hDataProj->Draw("colz");//plot in z
    hData[i]->GetXaxis()->SetRange(0,0);//reset the slice
    c->cd(1+j*6+1); 
-   //hModel[i]->GetXaxis()->SetRange(1,1);//slice in phi
+   hModel[i]->GetXaxis()->SetRangeUser(-0.001,0.001);//slice in phi
    TH2F* hModelProj=(TH2F*)(hModel[i]->Project3D("yz"));
-   hModelProj->SetTitle("Reco Distortion in phibin=1 (um);r (cm);z (cm)");
+   hModelProj->SetTitle("Reco Distortion in phibin=1 (um);z (cm);r (cm)");
    hModelProj->Draw("colz");//plot in z   hModel[i]->Project3D("yz")->Draw("colz");//plot in z
    hModel[i]->GetXaxis()->SetRange(0,0);//reset the slice
     c->cd(1+j*6+2); 
-    //hComparison[i]->GetXaxis()->SetRange(1,1);//slice in phi
-    hComparison[i]->Project3D("yz")->Draw("colz");//plot in z
+   hComparison[i]->GetXaxis()->SetRangeUser(-0.001,0.001);//slice in phi
+    TH2F* hCompProj=(TH2F*)(hComparison[i]->Project3D("yz"));
+   hCompProj->SetTitle("Difference in phibin=1 (um);z (cm);r (cm)");
+   hCompProj->DrawCopy("colz");//plot in z
+   hComparison[i]->GetXaxis()->SetRange(0,0);//reset the slice    //hComparison[i]->GetXaxis()->SetRange(1,1);//slice in phi
+   //hComparison[i]->Project3D("yz")->Draw("colz");//plot in z
    //hComparison[i]->GetXaxis()->SetRange(0,0);//reset the slice
    c->cd(1+j*6+3); 
-   hComparisonDiff[i]->Draw();
-   c->cd(1+j*6+4); 
-   c->cd(1+j*6+5); 
+   hCompareRZ[i]->Divide(hCompareRZSamples[i]);
+   hCompareRZ[i]->Draw("colz");
+   c->cd(1+j*6+4);
+   hComparisonDiff[i]->Draw("hist");
+   c->cd(1+j*6+5);
+   hTrackableDiff[i]->Draw("hist");
+   c->cd(1+j*6+6); 
+   hCompareXY[i]->Divide(hCompareXYSamples[i]);
+   hCompareXY[i]->Draw("colz");
+   c->cd(1+j*6+7); 
+   hComparison[i]->GetZaxis()->SetRangeUser(50,50.001);//slice in phi
+   hCompProj=(TH2F*)(hComparison[i]->Project3D("yx"));
+   hCompProj->SetTitle("Difference in z=50cm (um);phi (rad);r (cm)");
+   hCompProj->DrawCopy("colz");//plot in z
+   hComparison[i]->GetZaxis()->SetRange(0,0);//reset the slice    //hComparison[i]->GetXaxis()->SetRange(1,1);//slice in phi
  }
 
 return;
@@ -577,7 +640,7 @@ TH3F* GetDistortionModel(int nr_cm,int np_cm, int nz_cm, int nr_ot,int np_ot, in
   int nzsteps=nz_ot;
   float zstep=zspan/(1.0*nzsteps);
   float pmin=0.0;
-  float pmax=6.28;
+  float pmax=2*PI;
   float pspan=pmax-pmin;
   int npsteps=np_ot;
   float pstep=pspan/(1.0*npsteps);
@@ -667,29 +730,31 @@ TH3F* GetDistortionModel(int nr_cm,int np_cm, int nz_cm, int nr_ot,int np_ot, in
 	}
 	
 	if (iz==ArbitraryCMzBin){ //fill the CM
-	  printf("at CM\n");
+	  //printf("at CM\n");
 	  hCM->Fill(p,r,val);
 	  hCMSamples->Fill(p,r,1);
-	}
-
-	if (CoveredBySingleOT(r,p,z)){ //fill the low or high edges of individual tiles.
-	    printf("in singleOT det\n");
-	  if (!CoveredBySingleOT(r,p+pstep_tr,z)){//next step is not covered, so we're on a high edge:
-	    hHighEdgeSlice[psector]->Fill(z,r,val);
-	    hHighEdgeSamples[psector]->Fill(z,r,1.);
-	    printf("high edge fill\n");
-	    if (iz==ArbitraryCMzBin){
+	  if (CoveredBySingleOTphi(p) && !CoveredBySingleOTphi(p+pstep_tr)){
+	    //next step isn't covered, so we're on a high edge
 	      hHighEdgeCM[psector]->Fill(r,val);
 	      hHighEdgeCMsamples[psector]->Fill(r,1);
 	    }
+	  if (CoveredBySingleOTphi(p) && !CoveredBySingleOTphi(p-pstep_tr)){
+	    //previous step wasn't covered, so we're on a low edge.
+	      hLowEdgeCM[psector]->Fill(r,val);
+	      hLowEdgeCMsamples[psector]->Fill(r,1);
+	    }	    
+	}
+
+	if (CoveredBySingleOT(r,p,z)){ //fill the low or high edges of individual tiles.
+	  //printf("in singleOT det\n");
+	  if (!CoveredBySingleOT(r,p+pstep_tr,z)){//next step is not covered, so we're on a high edge:
+	    hHighEdgeSlice[psector]->Fill(z,r,val);
+	    hHighEdgeSamples[psector]->Fill(z,r,1.);
+	    //printf("high edge fill\n");
 	  }
 	  if (!CoveredBySingleOT(r,p-pstep_tr,z)){//previous step is not covered, so we're on a low edge:
 	    hLowEdgeSlice[psector]->Fill(z,r,val);
 	    hLowEdgeSamples[psector]->Fill(z,r,1.);
-	    if (iz==ArbitraryCMzBin){
-	      hLowEdgeCM[psector]->Fill(r,val);
-	      hLowEdgeCMsamples[psector]->Fill(r,1);
-	    }
 	  }	    
 	}
 
@@ -705,7 +770,7 @@ TH3F* GetDistortionModel(int nr_cm,int np_cm, int nz_cm, int nr_ot,int np_ot, in
   //note that Divide() sets bins to zero if the denominator bin is zero.
   hFullSlice->Divide(hFullSamples);
   hCM->Divide(hCMSamples);
-  for (int i=0;i<12;i++){
+  for (int i=0;i<OTnDetectors;i++){
     hLowEdgeSlice[i]->Divide(hLowEdgeSamples[i]);
     hHighEdgeSlice[i]->Divide(hHighEdgeSamples[i]);
     hLowEdgeCM[i]->Divide(hLowEdgeCMsamples[i]);
@@ -714,12 +779,38 @@ TH3F* GetDistortionModel(int nr_cm,int np_cm, int nz_cm, int nr_ot,int np_ot, in
   hDistModel->Divide(hDistModelSamples);
 
 
-  
+  TCanvas *c;
+
+  if (0){
+    c=new TCanvas("cOriginalSlice","cOriginalSlice",1000,1000);
+    c->Divide(6,4);
+    for (int i=0;i<OTnDetectors;i++){
+      c->cd(2*i+1);
+      hLowEdgeSlice[i]->DrawCopy("colz");
+      c->cd(2*i+2);
+      hHighEdgeSlice[i]->DrawCopy("colz");
+    }
+  }
+
+  if (1){
+    c=new TCanvas("cOriginalSliceCM","cOriginalSliceCM",1000,1000);
+    c->Divide(6,4);
+    for (int i=0;i<OTnDetectors;i++){
+      c->cd(2*i+1);
+      hLowEdgeCM[i]->DrawCopy("hist");
+      c->cd(2*i+2);
+      hHighEdgeCM[i]->DrawCopy("hist");
+    }
+  }
+
+
+
   //now that we have defined our partial OT slices, we extend those using the full OT slice
   for (int i=0;i<OTnDetectors;i++){
     float plow=(i*OTphiWidth)-OTphiHalfWidth; //phi position of the low edge slice
     float phigh=(i*OTphiWidth)+OTphiHalfWidth; //phi position of the high edge slice
     if (plow<0) plow+=2*PI;
+    if (phigh>2*PI) phigh-=2*PI;
 
     float midZrescale[2];
     for (int ir=0;ir<nrsteps;ir++){
@@ -733,24 +824,44 @@ TH3F* GetDistortionModel(int nr_cm,int np_cm, int nz_cm, int nr_ot,int np_ot, in
 	  midZrescale[0]=hLowEdgeSlice[i]->GetBinContent(midzbin)/midzsource;
 	  midZrescale[1]=hHighEdgeSlice[i]->GetBinContent(midzbin)/midzsource;
 	}    
-  	if (!CoveredByDoubleOT(r,0,z)){//nothing to extrapolate with)
-	  continue;
-	}
 	//printf("rz=%d,%d\n",ir,iz);
-
-	int bin=hFullSlice->FindBin(z,r);
-	float dist=hFullSlice->GetBinContent(bin);
-	hLowEdgeSlice[i]->Fill(z,r,dist*midZrescale[0]);
-	hHighEdgeSlice[i]->Fill(z,r,dist*midZrescale[1]);
+	if (!CoveredBySingleOT(r,0,z) && CoveredByDoubleOT(r,0,z)){
+	  int bin=hFullSlice->FindBin(z,r);
+	  float dist=hFullSlice->GetBinContent(bin);
+	  //hLowEdgeSlice[i]->Fill(z,r,dist*midZrescale[0]);
+	  //hHighEdgeSlice[i]->Fill(z,r,dist*midZrescale[1]);
+	  hLowEdgeSlice[i]->SetBinContent(bin,dist*midZrescale[0]);//avoid bins that were previously partially-filled
+	  hHighEdgeSlice[i]->SetBinContent(bin,dist*midZrescale[1]);//avoid bins that were previously partially-filled
+	}
       }
     }
   }
 
+  if (0){
+    c=new TCanvas("cExtendedSlice","cExtendedSlice",1000,1000);
+    c->Divide(6,4);
+    for (int i=0;i<OTnDetectors;i++){
+      c->cd(2*i+1);
+      hLowEdgeSlice[i]->DrawCopy("colz");
+      c->cd(2*i+2);
+      hHighEdgeSlice[i]->DrawCopy("colz");
+    }
+  }
+ if (1){
+    c=new TCanvas("cOriginalMidDetSlices","cOriginalMidDetSlices",1000,1000);
+    c->Divide(4,3);
+    for (int i=0;i<OTnDetectors;i++){
+      c->cd(i+1);
+      hDistModel->GetXaxis()->SetRangeUser(OTspacing*i-0.001,OTspacing*i+0.001);//slice in phi
+      hDistModel->Project3D("yz")->DrawCopy("colz");
+      hDistModel->GetXaxis()->SetRange(0,0);
+    }
+  }
   //extrapolate all cells covered by single OT using the same scheme:
   for (int ip=0;ip<npsteps;ip++){
     float p=pstep*(ip+0.5)+pmin;
     
-    if (!CoveredBySingleOT(OFCradius,p,OFCrange[1]-OFCrange[0])) continue;//awkward way to check whether the phi range is okay by picking a known-good r-z combination
+    if (!CoveredBySingleOT(OFCradius,p,0.5*(OFCrange[1]+OFCrange[0]))) continue;//awkward way to check whether the phi range is okay by picking a known-good r-z combination
     float midZrescale;
     for (int ir=0;ir<nrsteps;ir++){
       float r=rstep*(ir+0.5)+rmin;
@@ -763,20 +874,27 @@ TH3F* GetDistortionModel(int nr_cm,int np_cm, int nz_cm, int nr_ot,int np_ot, in
 	  int midzbin=hDistModel->FindBin(p,r,z);
 	  midZrescale=hDistModel->GetBinContent(midzbin)/midzsource;
 	}    
-	if (!CoveredByDoubleOT(r,0,z)){//nothing to extrapolate with)
-	  continue;
-	}
 	//printf("rz=%d,%d\n",ir,iz);
-	if (CoveredByDoubleOT(r,0,z) && !CoveredBySingleOT(r,p,z)){//fill in the bins for regions covered by the full but not the partial
+	if (!CoveredBySingleOT(r,p,z) && CoveredByDoubleOT(r,0,z)){//fill in the bins for regions covered by the full but not the partial
 	  int binSlice=hFullSlice->FindBin(z,r);
 	  float dist=hFullSlice->GetBinContent(binSlice);
-	  hDistModel->Fill(p,r,z,dist*midZrescale);
+	  //hDistModel->Fill(p,r,z,dist*midZrescale);
+	  hDistModel->SetBinContent(hDistModel->FindBin(p,r,z),dist*midZrescale);
 	}
       }
     }
   }
 
-
+ if (1){
+    c=new TCanvas("cMidDetSlicesExt","cMidDetSlicesExt",1000,1000);
+    c->Divide(4,3);
+    for (int i=0;i<OTnDetectors;i++){
+      c->cd(i+1);
+      hDistModel->GetXaxis()->SetRangeUser(OTspacing*i-0.001,OTspacing*i+0.001);//slice in phi
+      hDistModel->Project3D("yz")->DrawCopy("colz");
+      hDistModel->GetXaxis()->SetRange(0,0);
+    }
+  }
   //now all regions covered by a single OT have been extended to the full OT range.
   
   //interpolate all !OT cells we can interpolate from the existing extended slices:
@@ -785,7 +903,7 @@ TH3F* GetDistortionModel(int nr_cm,int np_cm, int nz_cm, int nr_ot,int np_ot, in
     if (p>2*PI) p-=2*PI;
 
     //skip regions in phi that correspond to detectors
-    if (CoveredBySingleOT(OFCradius,p,OFCrange[1]-OFCrange[0])) continue;//awkward way to check whether the phi range is covered by picking a known-good r-z combination
+    if (CoveredBySingleOT(OFCradius,p,0.5*(OFCrange[1]+OFCrange[0]))) continue;//awkward way to check whether the phi range is covered by picking a known-good r-z combination
     int psector=GetPhiRegion(p);//gives us which sector we're above, hence which low and high slice to use.
     int phigh=(psector+1)%OTnDetectors;
     float pfraction=GetPhiInterpolationFractionPhi(p);//gives us the fraction of the distance from the high edge we're passed to the low edge we haven't reached yet.
@@ -793,23 +911,46 @@ TH3F* GetDistortionModel(int nr_cm,int np_cm, int nz_cm, int nr_ot,int np_ot, in
       float r=rstep*(ir+0.5)+rmin;
       
       //calculate the CM rescale at this phi-r position:
+      /* replace this with an interpolation:
       int cmBinEdge=hLowEdgeCM[0]->FindBin(r);
       float cmsource=hLowEdgeCM[phigh]->GetBinContent(cmBinEdge)*pfraction+hHighEdgeCM[psector]->GetBinContent(cmBinEdge)*(1-pfraction);
       int cmBin=hCM->FindBin(p,r);
       float cmRescale=hCM->GetBinContent(cmBin)/cmsource;
-            
+      */
+      float cmsource=hLowEdgeCM[phigh]->Interpolate(r)*pfraction+hHighEdgeCM[psector]->Interpolate(r)*(1-pfraction);
+      float cmRescale=hCM->Interpolate(p,r)/cmsource;
+      //if (abs(cmRescale)>2.0) cmRescale=1.0;
+      //printf("rp=%d,%d sources=(%f,%f)\trescale=%f\n",ir,ip,hLowEdgeCM[phigh]->GetBinContent(cmBinEdge),hHighEdgeCM[psector]->GetBinContent(cmBinEdge),cmRescale);
+
       for (int iz=0;iz<nzsteps;iz++){
 	float z=zstep*(iz+0.501)+zmin;
-	//printf("rz=%d,%d\n",ir,iz);
-	if (CoveredByDoubleOT(r,0,z)){//fill in the bins for regions covered by the full but not the partial
+	if (CoveredByDoubleOT(r,0,z)){//fill in the bins for regions covered by the extended edge slices
 	  int binSlice=hLowEdgeSlice[0]->FindBin(z,r);
 	  float dist=hLowEdgeSlice[phigh]->GetBinContent(binSlice)*pfraction+hHighEdgeSlice[psector]->GetBinContent(binSlice)*(1-pfraction);;
-	  hDistModel->Fill(p,r,z,dist*cmRescale);
+	  hDistModel->SetBinContent(hDistModel->FindBin(p,r,z),dist*cmRescale);
 	}
       }
     }
   }
-
+ if (1){
+    c=new TCanvas("cIntraDetSlicesExt","cIntraDetSlicesExt",1000,1000);
+    c->Divide(4,3);
+    for (int i=0;i<OTnDetectors;i++){
+      c->cd(i+1);
+      hDistModel->GetXaxis()->SetRangeUser(OTspacing*(i+0.5),OTspacing*(i+0.5));//slice in phi
+      hDistModel->Project3D("yz")->DrawCopy("colz");
+      hDistModel->GetXaxis()->SetRange(0,0);
+    }
+    c=new TCanvas("cIntraDetRPSlicesExt","cIntraDetRPSlicesExt",1000,1000);
+    c->Divide(4,3);
+    for (int i=0;i<OTnDetectors;i++){
+      c->cd(i+1);
+      hDistModel->GetZaxis()->SetRangeUser(105./(1.*OTnDetectors)*i-0.01,105./(1.*OTnDetectors)*i);//slice in phi
+      hDistModel->Project3D("yx")->DrawCopy("colz");
+      hDistModel->GetZaxis()->SetRange(0,0);
+    }
+    
+  }
 
 
 
@@ -845,7 +986,8 @@ TH3F* GetDistortionModel(int nr_cm,int np_cm, int nz_cm, int nr_ot,int np_ot, in
       float p=pstep*(ip+0.5)+pmin;
       if (p>2*PI) p-=2*PI;
 
-      float CMval=hCM->GetBinContent(hCM->FindBin(p,r));
+      //float CMval=hCM->GetBinContent(hCM->FindBin(p,r));
+      float CMval=hCM->Interpolate(p,r);
       float lowVal=hDistModel->GetBinContent(hDistModel->FindBin(p,r,zLow));
       float highVal=hDistModel->GetBinContent(hDistModel->FindBin(p,r,zHigh));
       float endVal=0;//no distortion at the endcap itself.
@@ -853,23 +995,43 @@ TH3F* GetDistortionModel(int nr_cm,int np_cm, int nz_cm, int nr_ot,int np_ot, in
       for (int iz=0;iz<nzsteps;iz++){
 	float z=zstep*(iz+0.501)+zmin;
 	//printf("rz=%d,%d\n",ir,iz);
-	if (iz>=zBinLow || iz<=zBinHigh) continue; //don't need the bins we've already filled.
+	if (CoveredByDoubleOT(r,0,z)) continue;
+	//if (iz>=zBinLow && iz<=zBinHigh) continue; //don't need the bins we've already filled.
 
+	float zfraction=0;
 	float dist=0;//interpolated distortion, no further rescaling since we're only interpolating in z.
 	if (iz<zBinLow){
-	  float zfraction=(1.0*iz)/(1.0*zBinLow);
+	  zfraction=(1.0*iz)/(1.0*zBinLow);
 	  dist=lowVal*zfraction+CMval*(1-zfraction);
 	}
 	if (iz>zBinHigh){
-	  float zfraction=(1.0*(iz-zBinHigh))/(1.0*(nzsteps-zBinHigh));
+	  zfraction=(1.0*(iz-zBinHigh))/(1.0*(nzsteps-zBinHigh));
 	  dist=endVal*zfraction+highVal*(1-zfraction);
 	}
-	hDistModel->Fill(p,r,z,dist);
+	hDistModel->SetBinContent(hDistModel->FindBin(p,r,z),dist);
       }
     }
   }
 
-
+ if (1){
+    c=new TCanvas("cAllSlices","cAllSlices",1000,1000);
+    c->Divide(6,4);
+    for (int i=0;i<OTnDetectors;i++){
+      c->cd(i+1);
+      hDistModel->GetXaxis()->SetRangeUser(OTspacing*0.5*(i+0.5),OTspacing*0.5*(i+0.5));//slice in phi
+      hDistModel->Project3D("yz")->DrawCopy("colz");
+      hDistModel->GetXaxis()->SetRange(0,0);
+    }
+    c=new TCanvas("cAllSlicesRP","cAllSlicesRP",1000,1000);
+    c->Divide(4,3);
+    for (int i=0;i<OTnDetectors;i++){
+      c->cd(i+1);
+      hDistModel->GetZaxis()->SetRangeUser(105./(1.*OTnDetectors)*i-0.01,105./(1.*OTnDetectors)*i);//slice in phi
+      hDistModel->Project3D("yx")->DrawCopy("colz");
+      hDistModel->GetZaxis()->SetRange(0,0);
+    }
+    
+  }
 
 
   
@@ -882,25 +1044,25 @@ TH3F* GetDistortionModel(int nr_cm,int np_cm, int nz_cm, int nr_ot,int np_ot, in
       for (int ip=0;ip<npsteps;ip++){
 	float p=pstep*(ip+0.5)+pmin;
 	//copy r values at neighbor r into the edge bins:
-	if (ir==0) hDistModel->Fill(p,r-rstep,z,hDistModel->GetBinContent(hDistModel->FindBin(p,r,z)));
-	if (ir==nrsteps-1) hDistModel->Fill(p,r+rstep,z,hDistModel->GetBinContent(hDistModel->FindBin(p,r,z)));
+	if (ir==0) hDistModel->SetBinContent(hDistModel->FindBin(p,r-rstep,z),hDistModel->GetBinContent(hDistModel->FindBin(p,r,z)));
+	if (ir==nrsteps-1) hDistModel->SetBinContent(hDistModel->FindBin(p,r+rstep,z),hDistModel->GetBinContent(hDistModel->FindBin(p,r,z)));
 	//wrap around phi values into the edge bins:
-	if (ip==0) hDistModel->Fill(p-pstep,r,z,hDistModel->GetBinContent(hDistModel->FindBin(p-pstep+2.*PI,r,z)));
-	if (ip==npsteps-1) hDistModel->Fill(p+pstep,r,z,hDistModel->GetBinContent(hDistModel->FindBin(p+pstep-2.*PI,r,z)));
+	if (ip==0) hDistModel->SetBinContent(hDistModel->FindBin(p-pstep,r,z),hDistModel->GetBinContent(hDistModel->FindBin(p-pstep+2.*PI,r,z)));
+	if (ip==npsteps-1) hDistModel->SetBinContent(hDistModel->FindBin(p+pstep,r,z),hDistModel->GetBinContent(hDistModel->FindBin(p+pstep-2.*PI,r,z)));
 	//copy z values at neighbor z into the edge bins.
-	if (iz==0) hDistModel->Fill(p,r,z-zstep,hDistModel->GetBinContent(hDistModel->FindBin(p,r,z)));
-	if (iz==nzsteps-1) hDistModel->Fill(p,r,z+zstep,hDistModel->GetBinContent(hDistModel->FindBin(p,r,z)));
+	if (iz==0) hDistModel->SetBinContent(hDistModel->FindBin(p,r,z-zstep),hDistModel->GetBinContent(hDistModel->FindBin(p,r,z)));
+	if (iz==nzsteps-1) hDistModel->SetBinContent(hDistModel->FindBin(p,r,z+zstep),hDistModel->GetBinContent(hDistModel->FindBin(p,r,z)));
       }
     }
   }
 
-  TCanvas *c=new TCanvas("cModelParts","cModelParts",1000,1000);
+  c=new TCanvas("cModelParts","cModelParts",1000,1000);
   c->Divide(6,4);
   for (int i=0;i<OTnDetectors;i++){
     c->cd(2*i+1);
-    hLowEdgeSamples[i]->Draw("colz");
+    hLowEdgeSlice[i]->Draw("colz");
    c->cd(2*i+2);
-    hHighEdgeSamples[i]->Draw("colz");
+    hHighEdgeSlice[i]->Draw("colz");
   }
   return hDistModel;
 }

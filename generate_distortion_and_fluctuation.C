@@ -9,10 +9,11 @@ R__LOAD_LIBRARY(.libs/libfieldsim)
   char lookup_string[200];
 
 AnnularFieldSim *SetupDefaultSphenixTpc(bool twinMe=false, bool useSpacecharge=true);
+AnnularFieldSim *SetupDigitalCurrentSphenixTpc(bool twinMe=false, bool useSpacecharge=true);
 void TestSpotDistortion(AnnularFieldSim *t);
 
 
-void generate_distortion_and_fluctuation(const char * inputpattern="./oct20/*.root", const char *outputfilebase="./oct20_maps/oct20", bool hasSpacecharge=true){
+void generate_distortion_and_fluctuation(const char * inputpattern="./oct20/*.root", const char *outputfilebase="./oct20_maps/oct20", bool hasSpacecharge=true, bool isDigitalCurrent=false){
 
   int maxmaps=2;
 
@@ -35,7 +36,20 @@ void generate_distortion_and_fluctuation(const char * inputpattern="./oct20/*.ro
   printf("Using pattern \"%s\", found %d files to read, eg : %s\n",inputpattern,filelist->GetList()->GetEntries(),((TFileInfo*)(filelist->GetList()->At(0)))->GetCurrentUrl()->GetUrl());//Title());//Print();
 
   //now build the time-consuming part:
-  AnnularFieldSim *tpc=SetupDefaultSphenixTpc(hasTwin,hasSpacecharge);//loads the lookup, fields, etc.
+  //AnnularFieldSim *tpc=SetupDefaultSphenixTpc(hasTwin,hasSpacecharge);//loads the lookup, fields, etc.
+  AnnularFieldSim *tpc;
+
+
+  //previously I flagged digital current and used a different rossegger lookup table.
+  //now I just resample the histogram in that event.  There is a ~hard problem there to get right:
+  //in each direction, if the source hist is binned more finely than the dest hist, I need to sum the total charge
+  //if the source hist is binned more coarsely, I need to interpolate the charge density and multiply by the dest cell volume
+  //but really, I need to differentiate between the source geometry and field point geometry.  task for another time...
+  // if (isDigitalCurrent){
+  //    tpc=SetupDigitalCurrentSphenixTpc(hasTwin,hasSpacecharge);//loads the lookup, fields, etc.
+  //  }else {
+    tpc=SetupDefaultSphenixTpc(hasTwin,hasSpacecharge);//loads the lookup, fields, etc.
+    //  }
   //and the location to plot the fieldslices about:
  TVector3 pos=0.5*(tpc->GetOuterEdge()+tpc->GetInnerEdge());;
   pos.SetPhi(3.14159);
@@ -68,6 +82,11 @@ void generate_distortion_and_fluctuation(const char * inputpattern="./oct20/*.ro
       //assume this histogram is a charge map.
       //load just the averages:
       if (hasSpacecharge){
+	if (isDigitalCurrent){
+	  tpc->load_and_resample_spacecharge(8,36,40,sourcefilename.Data(),tobj->GetName(),0,tpc_chargescale,spacecharge_cm_per_axis_unit, usesChargeDensity);
+	  if (hasTwin) tpc->twin->load_and_resample_spacecharge(8,36,40,sourcefilename.Data(),tobj->GetName(),0,tpc_chargescale,spacecharge_cm_per_axis_unit, usesChargeDensity);
+
+	}
 	tpc->load_spacecharge(sourcefilename.Data(),tobj->GetName(),0,tpc_chargescale,spacecharge_cm_per_axis_unit, usesChargeDensity);
 	if (hasTwin) tpc->twin->load_spacecharge(sourcefilename.Data(),tobj->GetName(),0,tpc_chargescale,spacecharge_cm_per_axis_unit, usesChargeDensity);
 
@@ -88,7 +107,8 @@ void generate_distortion_and_fluctuation(const char * inputpattern="./oct20/*.ro
 
       //TestSpotDistortion(tpc);
  
-      tpc->GenerateDistortionMaps(outputfilename,2,2,2,1,true);
+      //tpc->GenerateDistortionMaps(outputfilename,2,2,2,1,true);
+      tpc->GenerateSeparateDistortionMaps(outputfilename,2,2,2,1,true);
       printf("distortions mapped.\n");
       tpc->PlotFieldSlices(outputfilename,pos);
       tpc->PlotFieldSlices(outputfilename,pos,'B');
@@ -133,6 +153,140 @@ AnnularFieldSim *SetupDefaultSphenixTpc(bool twinMe, bool useSpacecharge){
   int nr_roi=nr;//10;
   int nr_roi_max=nr_roi_min+nr_roi;
   int nphi=40;//38;//360;//360 nominal
+  int nphi_roi_min=0;
+  int nphi_roi=nphi;//38;
+  int nphi_roi_max=nphi_roi_min+nphi_roi;
+  int nz=40;//62;//62 nominal
+  int nz_roi_min=0;
+  int nz_roi=nz;
+  int nz_roi_max=nz_roi_min+nz_roi;
+
+  bool realB=true;
+  bool realE=true;
+  
+
+  //step 3:  create the fieldsim object.  different choices of the last few arguments will change how it builds the lookup table spatially, and how it loads the spacecharge.  The various start-up steps are exposed here so they can be timed in the macro.
+  AnnularFieldSim *tpc;
+  if (useSpacecharge){
+    tpc=    new  AnnularFieldSim(tpc_rmin,tpc_rmax,tpc_z,
+			 nr, nr_roi_min,nr_roi_max,1,2,
+			 nphi,nphi_roi_min, nphi_roi_max,1,2,
+			 nz, nz_roi_min, nz_roi_max,1,2,
+				 tpc_driftVel, AnnularFieldSim::PhiSlice, AnnularFieldSim::FromFile);
+  }else{
+    tpc=    new  AnnularFieldSim(tpc_rmin,tpc_rmax,tpc_z,
+			 nr, nr_roi_min,nr_roi_max,1,2,
+			 nphi,nphi_roi_min, nphi_roi_max,1,2,
+			 nz, nz_roi_min, nz_roi_max,1,2,
+				 tpc_driftVel, AnnularFieldSim::PhiSlice, AnnularFieldSim::NoSpacecharge);
+  }
+    
+  tpc->UpdateEveryN(10);//show reports every 10%.
+
+    //load the field maps, either flat or actual maps
+  tpc->setFlatFields(tpc_magField,tpc_cmVolt/tpc_z);
+  sprintf(field_string,"flat_B%2.1f_E%2.1f",tpc_magField,tpc_cmVolt/tpc_z);
+
+  if (realE){
+    tpc->loadEfield("externalEfield.ttree.root","fTree");
+    sprintf(field_string,"realE_B%2.1f_E%2.1f",tpc_magField,tpc_cmVolt/tpc_z);
+  }
+   if (realB){
+    tpc->load3dBfield("sphenix3dmaprhophiz.root","fieldmap",1,-1.4/1.5);
+        //tpc->loadBfield("sPHENIX.2d.root","fieldmap");
+    sprintf(field_string,"realB_B%2.1f_E%2.1f",tpc_magField,tpc_cmVolt/tpc_z);
+  } 
+  if (realE && realB){
+    sprintf(field_string,"real_B%2.1f_E%2.1f",tpc_magField,tpc_cmVolt/tpc_z);
+  }
+  printf("set fields.\n");
+
+
+
+
+  //load the greens functions:
+  sprintf(lookup_string,"ross_phi1_%s_phislice_lookup_r%dxp%dxz%d",detgeoname,nr,nphi,nz);
+  char lookupFilename[200];
+  sprintf(lookupFilename,"%s.root",lookup_string);
+  TFile *fileptr=TFile::Open(lookupFilename,"READ");
+
+  if (!fileptr){ //generate the lookuptable
+    //to use the full rossegger terms instead of trivial free-space greens functions, uncomment the line below:
+    tpc->load_rossegger();
+    printf("loaded rossegger greens functions.\n");
+    tpc->populate_lookup();
+    tpc->save_phislice_lookup(lookupFilename);
+  } else{ //load it from a file
+    fileptr->Close();
+    tpc->load_phislice_lookup(lookupFilename);
+  }
+
+  printf("populated lookup.\n");
+
+
+
+
+
+
+    
+  //make our twin:
+  if(twinMe){
+    AnnularFieldSim *twin;
+      if (useSpacecharge){
+	twin=      new  AnnularFieldSim(tpc_rmin,tpc_rmax,-tpc_z,
+			   nr, nr_roi_min,nr_roi_max,1,2,
+			   nphi,nphi_roi_min, nphi_roi_max,1,2,
+			   nz, nz_roi_min, nz_roi_max,1,2,
+			   tpc_driftVel, AnnularFieldSim::PhiSlice, AnnularFieldSim::FromFile);
+      } else{
+	twin=      new  AnnularFieldSim(tpc_rmin,tpc_rmax,-tpc_z,
+			   nr, nr_roi_min,nr_roi_max,1,2,
+			   nphi,nphi_roi_min, nphi_roi_max,1,2,
+			   nz, nz_roi_min, nz_roi_max,1,2,
+			   tpc_driftVel, AnnularFieldSim::PhiSlice, AnnularFieldSim::NoSpacecharge);
+      }    twin->UpdateEveryN(10);//show reports every 10%.
+
+    //same magnetic field, opposite electric field
+    twin->setFlatFields(tpc_magField,-tpc_cmVolt/tpc_z);
+    //sprintf(field_string,"flat_B%2.1f_E%2.1f",tpc_magField,tpc_cmVolt/tpc_z);
+    //twin->loadBfield("sPHENIX.2d.root","fieldmap");
+    twin->load3dBfield("sphenix3dmaprhophiz.root","fieldmap",1,-1.4/1.5);
+    twin->loadEfield("externalEfield.ttree.root","fTree",-1);//final '-1' tells it to flip z and the field z coordinate. r coordinate doesn't change, and we assume phi won't either, though the latter is less true.
+
+
+
+
+    //borrow the greens functions:
+    twin->borrow_rossegger(tpc->green,tpc_z);//use the original's green's functions, shift our internal coordinates by tpc_z when querying those functions.
+    twin->borrow_epartial_from(tpc,tpc_z);//use the original's epartial.  Note that those values ought to be symmetric about z, and since our boundary conditions are translated along with our coordinates, they're completely unchanged.
+
+    tpc->set_twin(twin);
+  }
+
+  return tpc;
+}
+  
+
+AnnularFieldSim *SetupDigitalCurrentSphenixTpc(bool twinMe, bool useSpacecharge){
+  //step1:  specify the sPHENIX space charge model parameters
+  const float tpc_rmin=20.0;
+  const float tpc_rmax=78.0;
+  float tpc_deltar=tpc_rmax-tpc_rmin;
+  const float tpc_z=105.5;
+  const float tpc_cmVolt=-400*tpc_z; //V =V_CM-V_RDO -- volts per cm times the length of the drift volume.
+  //const float tpc_magField=0.5;//T -- The old value used in carlos's studies.
+  //const float tpc_driftVel=4.0*1e6;//cm per s  -- used in carlos's studies
+  const float tpc_driftVel=8.0*1e6;//cm per s  -- 2019 nominal value
+  const float tpc_magField=1.4;//T -- 2019 nominal value
+  const char detgeoname[]="sphenix";
+  
+   //step 2: specify the parameters of the field simulation.  Larger numbers of bins will rapidly increase the memory footprint and compute times.
+  //there are some ways to mitigate this by setting a small region of interest, or a more parsimonious lookup strategy, specified when AnnularFieldSim() is actually constructed below.
+  int nr=8;//10;//24;//159;//159 nominal
+  int nr_roi_min=0;
+  int nr_roi=nr;//10;
+  int nr_roi_max=nr_roi_min+nr_roi;
+  int nphi=3*12;//38;//360;//360 nominal
   int nphi_roi_min=0;
   int nphi_roi=nphi;//38;
   int nphi_roi_max=nphi_roi_min+nphi_roi;

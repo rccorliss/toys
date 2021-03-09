@@ -97,6 +97,7 @@ class AnnularFieldSim{
   TVector3 step; //size of an f-bin in each direction
   LookupCase lookupCase; //which lookup system to instantiate and use.
   ChargeCase chargeCase; //which charge model to use
+  int truncation_length; //distance in cells (full 3D metric in units of bins)
   
   //variables related to the region of interest:
   //
@@ -163,6 +164,7 @@ debug_printActionEveryN=0; return;};
       debug_printCounter=0;return true;
     } return false;};
   void SetDistortionScaleRPZ(float a, float b, float c){debug_distortionScale.SetXYZ(a,b,c); return;};
+  void SetTruncationDistance(int x){truncation_length=x; return;}
 
   //getters for internal states:
   const char* GetLookupString();
@@ -183,13 +185,19 @@ debug_printActionEveryN=0; return;};
 
   //file-writing functions for complex mapping questions:
   void GenerateDistortionMaps(const char* filebase, int r_subsamples=1, int p_subsamples=1, int z_subsamples=1, int z_substeps=1, bool andCartesian=false);
+  void GenerateSeparateDistortionMaps(const char* filebase, int r_subsamples=1, int p_subsamples=1, int z_subsamples=1, int z_substeps=1, bool andCartesian=false);
   void PlotFieldSlices(const char *filebase,TVector3 pos, char which='E');
 
   
  
   
   void load_spacecharge(const char *filename, const char *histname, float zoffset=0, float chargescale=1, float cmscale=1, bool isChargeDensity=true);
-  void load_spacecharge(TH3F *hist, float zoffset, float chargescale, float cmscale, bool isChargeDensity);
+   void load_spacecharge(TH3F *hist, float zoffset, float chargescale, float cmscale, bool isChargeDensity);
+ 
+  void load_and_resample_spacecharge(int new_nphi, int new_nr, int new_nz,const char *filename, const char *histname, float zoffset, float chargescale, float cmscale, bool isChargeDensity);
+  
+  void load_and_resample_spacecharge(int new_nphi, int new_nr, int new_nz, TH3F *hist, float zoffset, float chargescale, float cmscale, bool isChargeDensity);
+
   void load_analytic_spacecharge(float scalefactor);
   void add_testcharge(float r, float phi, float z, float coulombs);
   

@@ -84,6 +84,8 @@ AnnularFieldSim::AnnularFieldSim(float in_innerRadius, float in_outerRadius, flo
   //load parameters of the whole-volume tiling
   nr=r;nphi=phi;nz=z; //number of fundamental bins (f-bins) in each direction
   printf("AnnularFieldSim::AnnularFieldSim set variables nr=%d, nphi=%d, nz=%d\n",nr,nphi,nz);
+  //and set the default truncation distance:
+  truncation_length=-1;//anything <1 and it won't truncate.
 
   //calculate the size of an f-bin:
   //note that you have to set a non-zero value to start or perp won't update.
@@ -277,6 +279,9 @@ TVector3 AnnularFieldSim::calc_unit_field(TVector3 at, TVector3 from){
   //this could check roi bounds before returning, if things start acting funny.
 
   TVector3 field(0,0,0);
+
+  //if we're more than truncation_length away, don't bother? rcc food for thought.  right now _length is in bins, so tricky.
+  
   //if the green's function class is not present use free space:
   if (green==0){
     TVector3 delr=at-from;
@@ -950,6 +955,107 @@ void AnnularFieldSim::load_spacecharge(const char *filename, const char *histnam
   return;
 }
 
+void AnnularFieldSim::load_and_resample_spacecharge(int new_nphi, int new_nr, int new_nz,const char *filename, const char *histname, float zoffset, float chargescale, float cmscale, bool isChargeDensity){
+   TFile *f=TFile::Open(filename);
+  TH3F* scmap=(TH3F*)f->Get(histname);
+  printf("Resampling spacecharge from '%s'.  Seeking histname '%s'\n",filename,histname);
+  sprintf(chargefilename,"%s:%s",filename,histname);
+  load_and_resample_spacecharge(new_nphi,new_nr,new_nz,scmap,zoffset,chargescale, cmscale, isChargeDensity);
+  f->Close();
+  return;
+}
+
+void AnnularFieldSim::load_and_resample_spacecharge(int new_nphi, int new_nr, int new_nz, TH3F *hist, float zoffset, float chargescale, float cmscale, bool isChargeDensity){
+  //load spacecharge densities from a histogram, where scalefactor translates into local units of C/cm^3
+  //and cmscale translate (hist coord) --> (hist position in cm)
+  //noting that the histogram limits may differ from the simulation size, and have different granularity
+  //hist is assumed/required to be x=phi, y=r, z=z
+  //z offset 'drifts' the charge by that distance toward z=0.
+
+  //Get dimensions of input
+  float hrmin=hist->GetYaxis()->GetXmin();
+  float hrmax=hist->GetYaxis()->GetXmax();
+  float hphimin=hist->GetXaxis()->GetXmin();
+  float hphimax=hist->GetXaxis()->GetXmax();
+  float hzmin=hist->GetZaxis()->GetXmin();
+  float hzmax=hist->GetZaxis()->GetXmax();
+
+  
+  //Get number of bins in each dimension
+  int hrn=hist->GetNbinsY();
+  int hphin=hist->GetNbinsX();
+  int hzn=hist->GetNbinsZ();
+  printf("From histogram, native r dimensions: %f<r<%f, hrn (Y axis)=%d\n",hrmin,hrmax,hrn);
+  printf("From histogram, native phi dimensions: %f<phi<%f, hrn (X axis)=%d\n",hphimin,hphimax,hphin);
+  printf("From histogram, native z dimensions: %f<z<%f, hrn (Z axis)=%d\n",hzmin,hzmax,hzn);
+
+  //do some computation of steps:
+  float hrstep=(hrmax-hrmin)/hrn;
+  float hphistep=(hphimax-hphimin)/hphin;
+  float hzstep=(hzmax-hzmin)/hzn;
+  float halfrstep=hrstep*0.5;
+  float halfphistep=hphistep*0.5;
+  float halfzstep=hzstep*0.5;
+
+  //All we have to do here is resample it so it fits into our expected grid, then pass it to the loader.
+
+  //1) convert the existing histogram to density if it isn't already:
+  if (!isChargeDensity){
+    for (int i=0;i<hphin;i++){
+      float phi=hphimin+hphistep*i;
+      for (int j=0;j<hrn;j++){
+	float r=hrmin+hrstep*j;
+	for (int k=0;k<hzn;k++){
+	  float z=hzmin+hzstep*k;
+	  int bin=hist->FindBin(phi+halfphistep,r+halfrstep,z+halfzstep);
+	  double vol=hzstep*hphistep*(r+halfrstep)*hrstep;
+	  hist->SetBinContent(bin,hist->GetBinContent(bin)/vol);
+	}
+      }
+    }
+  }
+  //I ought to consider a subtler approach that better preserves the overall integral, rather than just skipping the interpolation of the outer edges:
+  TH3F *resampled=new TH3F("resampled","resampled charge",new_nphi,hphimin,hphimax,new_nr,hrmin,hrmax,new_nz,hzmin,hzmax);
+  float new_phistep=(hphimax-hphimin)/new_nphi;
+  float new_rstep=(hrmax-hrmin)/new_nr;
+  float new_zstep=(hzmax-hzmin)/new_nz;
+
+  //2 resample with interpolation on the interior, and with nearest-bin for the edge bins
+  for (int i=0;i<new_nphi;i++){
+    float phi=hphimin+ new_phistep*(i+0.5);//bin center of resampled
+    float hphi=(phi-hphimin)/hphistep; //coord  in source hist
+    bool phisafe=((hphi-0.75)>0)&&((hphi+0.75)<hphin);//we're past the halfway point of the lowest bin, and short of the halfway point of the highest bin.
+    for (int j=0;j<new_nr;j++){
+      float r=hrmin+ new_rstep*(j+0.5);//bin center of resampled
+      float hr=(r-hrmin)/hrstep; //coord in source hist
+      bool rsafe=((hr-0.5)>0)&&((hr+0.5)<hrn);//we're past the halfway point of the lowest bin, and short of the halfway point of the highest bin.
+      for (int k=0;k<new_nz;k++){
+	float z=hzmin+new_zstep*(k+0.5);//bin center of resampled
+	float hz=(z-hzmin)/hzstep; //coord in source hist
+	bool zsafe=((hz-0.5)>0)&&((hz+0.5)<hzn);//we're past the halfway point of the lowest bin, and short of the halfway point of the highest bin.
+	//check if we need to do a bin lookup:
+	if (phisafe && rsafe && zsafe){
+	  
+	  //printf("resampling (%d,%d,%d) from (%2.2f/%d,%2.2f/%d,%2.2f/%d) p:(%1.1f<%1.1f<%1.1f) r:(%1.1f<%1.1f<%1.1f) z:(%1.1f<%1.1f<%1.1f)\n",i,j,k,hphi,hphin,hr,hrn,hz,hzn,hphimin,phi,hphimax,hrmin,r,hrmax,hzmin,z,hzmax);
+	  resampled->Fill(phi,r,z,hist->Interpolate(phi,r,z));//leave as a density
+	} else{
+	  int bin=hist->FindBin(phi,r,z);
+	  resampled->Fill(phi,r,z,hist->GetBinContent(bin));
+	}
+      }//k (z loop)
+    }//j (r loop)
+  }//i (phi loop)
+    
+  load_spacecharge(resampled,zoffset,chargescale,cmscale,true);
+}
+ 
+  
+  
+
+  
+
+  
+
 void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float chargescale, float cmscale, bool isChargeDensity){
   //load spacecharge densities from a histogram, where scalefactor translates into local units of C/cm^3
   //and cmscale translate (hist coord) --> (hist position in cm)
@@ -982,7 +1088,7 @@ void AnnularFieldSim::load_spacecharge(TH3F *hist, float zoffset, float chargesc
   //calculate the useful bound in z:
   int hnzmin=(zmin-hzmin)/hzstep;//how many stepsin the hist does it take to reach our model region's lower bound?
   int hnzmax=((dim.Z()+zmin)-hzmin)/hzstep; 
-  printf("We are interested in z bins %d to %d,  %f<z<%f\n",hnzmin,hnzmax,hnzmin*hzstep,hnzmax*hzstep);
+  printf("We are interested in z bins %d to %d,  %f<z<%f\n",hnzmin,hnzmax,hnzmin*hzstep+hzmin,hnzmax*hzstep+hzmin);
 
 
   //clear the previous spacecharge dist:
@@ -1141,6 +1247,9 @@ void AnnularFieldSim::populate_fieldmap(){
   printf("in pop_fieldmap, n=(%d,%d,%d)\n",nr,nphi,nz);
 
   printf("populating fieldmap for (%dx%dx%d) grid with (%dx%dx%d) source \n",nr_roi,nphi_roi,nz_roi,nr,nphi,nz);
+  if (truncation_length>0) {
+    printf(" ==> truncating anything more than %d cells away\n",truncation_length);
+  }
   unsigned long long totalelements=nr_roi*nphi_roi*nz_roi;
   unsigned long long percent=totalelements/100*debug_npercent;
   printf("total elements = %llu\n",totalelements*nr*nphi*nz);
@@ -1706,9 +1815,25 @@ TVector3 AnnularFieldSim::sum_full3d_field_at(int r,int phi, int z){
   //note the specific position in Epartial is in relative coordinates.
   //printf("AnnularFieldSim::sum_field_at(r=%d,phi=%d, z=%d)\n",r,phi,z);
   TVector3 sum(0,0,0);
+  float rdist,phidist,zdist,remdist;
   for (int ir=0;ir<nr;ir++){
+    if (truncation_length>0){
+      rdist=abs(ir-r);
+      remdist=sqrt(truncation_length*truncation_length-rdist*rdist);
+      if (remdist<0) continue; //skip if we're too far away
+    }
     for (int iphi=0;iphi<nphi;iphi++){
+      if (truncation_length>0){
+	phidist=fmin(abs(iphi-phi),abs(abs(iphi-phi)-nphi)); //think about this in phi... rcc food for thought.
+      remdist=sqrt(truncation_length*truncation_length-phidist*phidist);
+      if (remdist<0) continue; //skip if we're too far away
+    }
       for (int iz=0;iz<nz;iz++){
+	if (truncation_length>0){
+	  zdist=abs(iz-z);
+	  remdist=sqrt(truncation_length*truncation_length-zdist*zdist);
+	  if (remdist<0) continue; //skip if we're too far away
+	}
 	//sum+=*partial[x][phi][z][ix][iphi][iz] * *q[ix][iphi][iz];
 	if (r==ir && phi==iphi && z==iz) continue;//dont' compute self-to-self field.
 	sum+=Epartial->Get(r-rmin_roi,phi-phimin_roi,z-zmin_roi,ir,iphi,iz)*q->Get(ir,iphi,iz);
@@ -2323,9 +2448,485 @@ void AnnularFieldSim::PlotFieldSlices(const char *filebase,TVector3 pos, char wh
 return;
 }
 
+void AnnularFieldSim::GenerateSeparateDistortionMaps(const char* filebase, int r_subsamples, int p_subsamples, int z_subsamples, int z_substeps, bool andCartesian){
+//1) pick a map spacing ('s')  
+  TVector3 s(step.Perp()/r_subsamples, 0,step.Z()/z_subsamples);
+  s.SetPhi(step.Phi()/p_subsamples);
+  float deltar=s.Perp();//(rf-ri)/nr;
+  float deltap=s.Phi();//(pf-pi)/np;
+  float deltaz=s.Z();//(zf-zi)/nz;
+  TVector3 stepzvec(0,0,deltaz);
+  int nSteps=500;//how many steps to take in the particle path.  hardcoded for now.  Think about this later.
+  
+  int nSides=1;
+  if (hasTwin) nSides=2;
+  //idea for a faster way to build a map:
+
+  //2) generate the distortions s.Z() away from the readout
+  //3) generate the distortion from (i)*s.Z() away to (i-1) away, then add the interpolated value from the (i-1) layer
+
+  
+  
+ 
+
+  //for interpolation, Henry needs one extra buffer bin on each side.
+
+  //so we define the histogram bounds (the 'h' suffix) to be the full range
+  //plus an additional step in each direction so interpolation can work at the edges
+  TVector3 lowerEdge=GetRoiCellCenter(rmin_roi, phimin_roi,zmin_roi);
+  TVector3 upperEdge=GetRoiCellCenter(rmax_roi-1, phimax_roi-1,zmax_roi-1);
+  int nph=nphi*p_subsamples+2; //nuber of phibins in the histogram
+  int nrh=nr*r_subsamples+2;//number of r bins in the histogram
+  int nzh=nz*z_subsamples+2;//number of z you get the idea.
+  
+  float rih=lowerEdge.Perp()-0.5*step.Perp()-s.Perp();//lower bound of roi, minus one
+  float rfh=upperEdge.Perp()+0.5*step.Perp()+s.Perp();//upper bound of roi, plus one
+  float pih=FilterPhiPos(lowerEdge.Phi())-0.5*step.Phi()-s.Phi();//can't automate this or we'll run afoul of phi looping.
+  float pfh=FilterPhiPos(upperEdge.Phi())+0.5*step.Phi()+s.Phi();//can't automate this or we'll run afoul of phi looping.
+  float zih=lowerEdge.Z()-0.5*step.Z()-s.Z();//lower bound of roi, minus one
+  float zfh=upperEdge.Z()+0.5*step.Z()+s.Z();//upper bound of roi, plus one
+  float z_readout=upperEdge.Z()+0.5*step.Z();//readout plane.  Note we assume this is positive.
+
+ printf("generating distortion map...\n");
+  printf("file=%s\n",filebase);
+  printf("Phi:  %d steps from %f to %f (field has %d steps)\n",nph,pih,pfh,GetFieldStepsPhi());
+  printf("R:  %d steps from %f to %f (field has %d steps)\n",nrh,rih,rfh,GetFieldStepsR());
+  printf("Z:  %d steps from %f to %f (field has %d steps)\n",nzh,zih,zfh,GetFieldStepsZ());
+  TString distortionFilename;
+  distortionFilename.Form("%s.distortion_map.hist.root",filebase);
+  TString summaryFilename;
+  summaryFilename.Form("%s.distortion_summary.pdf",filebase);
+  TString diffSummaryFilename;
+  diffSummaryFilename.Form("%s.differential_summary.pdf",filebase);
+
+  TFile *outf=TFile::Open(distortionFilename.Data(),"RECREATE");
+  outf->cd();
+
+
+  
+  //actual output maps:
+  
+    TH3F* hDistortionR=new TH3F("hDistortionR","Per-z-bin Distortion in the R direction as a function of (phi,r,z) (centered in r,phi, z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+    TH3F* hDistortionP=new TH3F("hDistortionP","Per-z-bin Distortion in the RPhi direction as a function of (phi,r,z)  (centered in r,phi, z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+    TH3F* hDistortionZ=new TH3F("hDistortionZ","Per-z-bin Distortion in the Z direction as a function of (phi,r,z)  (centered in r,phi, z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+    TH3F* hIntDistortionR=new TH3F("hIntDistortionR","Integrated R Distortion from (phi,r,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+    TH3F* hIntDistortionP=new TH3F("hIntDistortionP","Integrated R Distortion from (phi,r,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+  TH3F* hIntDistortionZ=new TH3F("hIntDistortionZ","Integrated R Distortion from (phi,r,z) to z=0  (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+
+    TH3F* hIntDistortionX=new TH3F("hIntDistortionX","Integrated X Distortion from (phi,r,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+  TH3F* hIntDistortionY=new TH3F("hIntDistortionY","Integrated Y Distortion from (phi,r,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+
+  TH3F *hSeparatedMapComponent[2][5];//side, then xyzrp
+  TString side[2];
+  side[0]="Solo";
+  if (hasTwin){
+    side[0]="Pos";
+    side[1]="Neg";
+    }
+    char sepAxis[]="XYZRP";
+    float zlower,zupper;
+    for (int i=0;i<nSides;i++){
+      if (i==0){//doing the positive side
+	zlower=fmin(zih,zfh);
+	zupper=fmax(zih,zfh);
+      }
+      else{
+	zlower=-1*fmax(zih,zfh);
+	zupper=-1*fmin(zih,zfh);
+      }
+      for (int j=0;j<5;j++){
+
+	hSeparatedMapComponent[i][j]=new TH3F(Form("hIntDistortion%s%c",side[i].Data(),sepAxis[j]),
+					      Form("Integrated %c Deflection drifting from (phi,r,z) to z=endcap);phi;r;z (%s side)",sepAxis[j],side[i].Data()),
+					      nph,pih,pfh,nrh,rih,rfh,nzh,zlower,zupper);
+      }
+    }
+
+
+
+
+  //monitor plots, and the position that that plot monitors at:
+  
+  //TVector3 pos((nrh/2+0.5)*s.Perp()+rih,0,(nzh/2+0.5)*s.Z()+zih);
+  TVector3 pos((nrh/2+0.5)*s.Perp()+rih,0,zmin+step.Z()*(floor(nz/2)+0.5));
+  float posphi=(nph/2+0.5)*s.Phi()+pih;
+  pos.SetPhi((nph/2+0.5)*s.Phi()+pih);
+  //int xi[3]={nrh/2,nph/2,nzh/2};
+  int xi[3]={(int)floor((pos.Perp()-rih)/s.Perp()),(int)floor((posphi-pih)/s.Phi()),(int)floor((pos.Z()-zih)/s.Z())};
+  if (!hasTwin) printf("rpz slice indices= (%d,%d,%d) (no twin)\n",xi[0],xi[1],xi[2]);
+  int twinz=(-pos.Z()-zih)/s.Z();
+  if (hasTwin) printf("rpz slice indices= (%d,%d,%d) twinz=%d\n",xi[0],xi[1],xi[2],twinz);
+
+  const char axname[]="rpzrpz";
+  int axn[]={nrh,nph,nzh,nrh,nph,nzh};
+  float axval[]={(float)pos.Perp(),(float)pos.Phi(),(float)pos.Z(),(float)pos.Perp(),(float)pos.Phi(),(float)pos.Z()};
+  float axbot[]={rih,pih,zih,rih,pih,zih};
+  float axtop[]={rfh,pfh,zfh,rfh,pfh,zfh};
+  TH2F* hIntDist[3][3];
+  TH1F* hRDist[2][3];//now with a paired friend for the negative side
+  TH2F* hDiffDist[3][3];
+  TH1F* hRDiffDist[2][3];
+  for (int i=0;i<3;i++){
+    //loop over which axis of the distortion to read
+    for (int ax=0;ax<3;ax++){
+      //loop over which plane to work in
+      hDiffDist[ax][i]=new TH2F(TString::Format("hDiffDist%c_%c%c",axname[i],axname[ax+1],axname[ax+2]),
+				TString::Format("%c component of diff. distortion in  %c%c plane at %c=%2.3f;%c;%c",
+						axname[i],axname[ax+1],axname[ax+2],axname[ax],axval[ax],axname[ax+1],axname[ax+2]),
+				axn[ax+1],axbot[ax+1],axtop[ax+1],
+				axn[ax+2],axbot[ax+2],axtop[ax+2]);
+      hIntDist[ax][i]=new TH2F(TString::Format("hIntDist%c_%c%c",axname[i],axname[ax+1],axname[ax+2]),
+			       TString::Format("%c component of int. distortion in  %c%c plane at %c=%2.3f;%c;%c",
+					       axname[i],axname[ax+1],axname[ax+2],axname[ax],axval[ax],axname[ax+1],axname[ax+2]),
+			       axn[ax+1],axbot[ax+1],axtop[ax+1],
+			       axn[ax+2],axbot[ax+2],axtop[ax+2]);
+    }
+    hRDist[0][i]=new TH1F(TString::Format("hRDist%c",axname[i]),
+		       TString::Format("%c component of int. distortion vs r with %c=%2.3f and %c=%2.3f;r(cm);#delta (cm)",
+				       axname[i],axname[1],axval[1],axname[2],axval[2]),
+		       axn[0],axbot[0],axtop[0]);
+    hRDist[1][i]=new TH1F(TString::Format("hRDist%cNeg",axname[i]),
+		       TString::Format("%c component of int. distortion vs r with %c=%2.3f and %c=-%2.3f;r(cm);#delta (cm)",
+				       axname[i],axname[1],axval[1],axname[2],axval[2]),
+		       axn[0],axbot[0],axtop[0]);
+    hRDiffDist[0][i]=new TH1F(TString::Format("hRDiffDist%c",axname[i]),
+		       TString::Format("%c component of diff. distortion vs r with %c=%2.3f and %c=%2.3f;r(cm);#delta (cm)",
+				       axname[i],axname[1],axval[1],axname[2],axval[2]),
+		       axn[0],axbot[0],axtop[0]);
+    hRDiffDist[1][i]=new TH1F(TString::Format("hRDiffDist%cNeg",axname[i]),
+		       TString::Format("%c component of diff. distortion vs r with %c=%2.3f and %c=-%2.3f;r(cm);#delta (cm)",
+				       axname[i],axname[1],axval[1],axname[2],axval[2]),
+		       axn[0],axbot[0],axtop[0]);  }
+
+
+  
+  TVector3 inpart,outpart;
+  TVector3 diffdistort,distort;
+  int validToStep;
+
+
+  //TTree version:
+  float partR,partP,partZ;
+  int ir,ip,iz;
+  float distortR,distortP,distortZ;
+  float distortX,distortY;
+  float diffdistR, diffdistP, diffdistZ;
+  TTree *dTree=new TTree("dTree","Distortion per step z");
+  dTree->Branch("r",&partR);
+  dTree->Branch("p",&partP);
+  dTree->Branch("z",&partZ);
+  dTree->Branch("ir",&ir);
+  dTree->Branch("ip",&ip);
+  dTree->Branch("iz",&iz);
+  dTree->Branch("dr",&distortR);
+  dTree->Branch("drp",&distortP);
+  dTree->Branch("dz",&distortZ);
+
+
+  printf("generating separated distortion map with (%dx%dx%d) grid \n",nrh,nph,nzh);
+  unsigned long long totalelements=nrh*nph*nzh;
+  unsigned long long percent=totalelements/100*debug_npercent;
+  printf("total elements = %llu\n",totalelements);
+
+
+  int el=0;
+
+
+
+  
+  //we want to loop over the entire region to be mapped, but we also need to include
+  //one additional bin at each edge, to allow the mc drift code to interpolate properly.
+  //hence we count from -1 to n+1, and manually adjust the position in those edge cases
+  //to avoid sampling nonphysical regions in r and z.  the phi case is free to wrap as
+  // normal.
+
+  //note that we apply the adjustment to the particle position (inpart) and not the plotted position (partR etc)
+  inpart.SetXYZ(1,0,0);
+  for (ir=0;ir<nrh;ir++){
+    partR=(ir+0.5)*deltar+rih;
+    if (ir==0){
+      inpart.SetPerp(partR+deltar);
+    } else if (ir==nrh-1){
+      inpart.SetPerp(partR-deltar);
+    } else {
+      inpart.SetPerp(partR);
+    }
+    for (ip=0;ip<nph;ip++){
+      partP=(ip+0.5)*deltap+pih;
+      inpart.SetPhi(partP);
+      //since phi loops, there's no need to adjust phis that are out of bounds.
+      for (iz=0;iz<nzh;iz++){
+	partZ=(iz)*deltaz+zih; //start us at the EDGE of the bin,
+	if (iz==0){
+	  inpart.SetZ(partZ+deltaz);
+	} else if (iz==nzh-1){
+	  inpart.SetZ(partZ-deltaz);
+	} else {
+	  inpart.SetZ(partZ);
+	}
+	partZ+=0.5*deltaz; //move to center of histogram bin.
+	for (int side=0;side<nSides;side++){
+	  if (side==0){
+	    diffdistort=GetTotalDistortion(inpart.Z()+deltaz,inpart,nSteps,true, &validToStep);
+	    distort=GetTotalDistortion(z_readout,inpart,nSteps,true, &validToStep);
+	  } else{
+	    //if we have more than one side,
+	    //flip z coords and do the twin instead:
+	    partZ*=-1;//position to place in histogram
+	    inpart.SetZ(-1*inpart.Z());//position to seek in sim
+	    diffdistort=twin->GetTotalDistortion(inpart.Z()-deltaz,inpart,nSteps,true, &validToStep);
+	    distort=twin->GetTotalDistortion(-z_readout,inpart,nSteps,true, &validToStep);
+	  }
+
+	  diffdistort.RotateZ(-inpart.Phi());//rotate so that distortion components are wrt the x axis
+	  diffdistP=diffdistort.Y();//the phi component is now the y component.
+	  diffdistR=diffdistort.X();//and the r component is the x component
+	  diffdistZ=diffdistort.Z();
+
+	  distortX=distort.X();
+	  distortY=distort.Y();
+	  distort.RotateZ(-inpart.Phi());//rotate so that distortion components are wrt the x axis
+	  distortP=distort.Y();//the phi component is now the y component.
+	  distortR=distort.X();//and the r component is the x component
+	  distortZ=distort.Z();
+
+	  float distComp[5];//by components
+	  distComp[0]=distortX;
+	  distComp[1]=distortY;
+	  distComp[2]=distortZ;
+	  distComp[3]=distortR;
+	  distComp[4]=distortP;
+
+	  for (int c=0;c<5;c++){
+	    hSeparatedMapComponent[side][c]->Fill(partP,partR,partZ,distComp[c]);
+	  }
+	
+
+	  //recursive integral distortion:
+	  //get others working first!
+
+	  //printf("part=(rpz)(%f,%f,%f),distortP=%f\n",partP,partR,partZ,distortP);
+	  hIntDistortionR->Fill(partP,partR,partZ,distortR);
+	  hIntDistortionP->Fill(partP,partR,partZ,distortP);
+	  hIntDistortionZ->Fill(partP,partR,partZ,distortZ);
+
+	if (andCartesian){
+	  hIntDistortionX->Fill(partP,partR,partZ,distortX);
+	  hIntDistortionY->Fill(partP,partR,partZ,distortY);
+	}
+
+	//now we fill particular slices for integral visualizations:
+	if(ir==xi[0]){//r slice
+	  //printf("ir=%d, r=%f (pz)=(%d,%d), distortR=%2.2f, distortP=%2.2f\n",ir,partR,ip,iz,distortR,distortP);
+	  hIntDist[0][0]->Fill(partP,partZ,distortR);
+	  hIntDist[0][1]->Fill(partP,partZ,distortP);
+	  hIntDist[0][2]->Fill(partP,partZ,distortZ);
+	  hDiffDist[0][0]->Fill(partP,partZ,diffdistR);
+	  hDiffDist[0][1]->Fill(partP,partZ,diffdistP);
+	  hDiffDist[0][2]->Fill(partP,partZ,diffdistZ);
+	}
+	if(ip==xi[1]){//phi slice
+	  //printf("ip=%d, p=%f (rz)=(%d,%d), distortR=%2.2f, distortP=%2.2f\n",ip,partP,ir,iz,distortR,distortP);
+	  hIntDist[1][0]->Fill(partZ,partR,distortR);
+	  hIntDist[1][1]->Fill(partZ,partR,distortP);
+	  hIntDist[1][2]->Fill(partZ,partR,distortZ);
+	  hDiffDist[1][0]->Fill(partZ,partR,diffdistR);
+	  hDiffDist[1][1]->Fill(partZ,partR,diffdistP);
+	  hDiffDist[1][2]->Fill(partZ,partR,diffdistZ);
+
+	  if(iz==xi[2]){//z slices of phi slices= r line at mid phi, mid z:
+	    hRDist[0][0]->Fill(partR,distortR);	    
+	    hRDist[0][1]->Fill(partR,distortP);
+	    hRDist[0][2]->Fill(partR,distortZ);
+	    hRDiffDist[0][0]->Fill(partR,diffdistR);	    
+	    hRDiffDist[0][1]->Fill(partR,diffdistP);
+	    hRDiffDist[0][2]->Fill(partR,diffdistZ);
+	  }
+	  if(hasTwin && iz==twinz){//z slices of phi slices= r line at mid phi, mid z:
+	    hRDist[1][0]->Fill(partR,distortR);	    
+	    hRDist[1][1]->Fill(partR,distortP);
+	    hRDist[1][2]->Fill(partR,distortZ);
+	    hRDiffDist[1][0]->Fill(partR,diffdistR);	    
+	    hRDiffDist[1][1]->Fill(partR,diffdistP);
+	    hRDiffDist[1][2]->Fill(partR,diffdistZ);
+	  }
+
+	}
+	if(iz==xi[2]){//z slice
+	  //printf("iz=%d, z=%f (rp)=(%d,%d), distortR=%2.2f, distortP=%2.2f\n",iz,partZ,ir,ip,distortR,distortP);
+		  
+	  hIntDist[2][0]->Fill(partR,partP,distortR);
+	  hIntDist[2][1]->Fill(partR,partP,distortP);
+	  hIntDist[2][2]->Fill(partR,partP,distortZ);
+	  hDiffDist[2][0]->Fill(partR,partP,diffdistR);
+	  hDiffDist[2][1]->Fill(partR,partP,diffdistP);
+	  hDiffDist[2][2]->Fill(partR,partP,diffdistZ);
+
+
+
+
+	}
+
+	if(!(el%percent)) {printf("generating distortions %d%%:  ",(int)(debug_npercent*(el/percent)));
+	  printf("distortion at (ir=%d,ip=%d,iz=%d) is (%E,%E,%E)\n",
+		 ir,ip,iz,distortR,distortP,distortZ);
+	}
+	el++;
+	
+	}
+      }
+    }
+  }
+
+  TCanvas *canvas=new TCanvas("cdistort","distortion integrals",1200,800);
+  //take 10 of the bottom of this for data?
+  canvas->cd();
+  TPad *c=new TPad("cplots","distortion integral plots",0,0.2,1,1);
+  canvas->cd();
+  TPad *textpad=new TPad("ctext","distortion integral plots",0,0.0,1,0.2);
+  c->Divide(4,3);
+  gStyle->SetOptStat();
+  for (int i=0;i<3;i++){
+    //component
+    for (int ax=0;ax<3;ax++){
+      //plane
+      c->cd(i*4+ax+1);
+      gPad->SetRightMargin(0.15);
+      hIntDist[ax][i]->SetStats(0);
+      hIntDist[ax][i]->Draw("colz");
+    }
+    c->cd(i*4+4);
+    hRDist[0][i]->SetStats(0);
+    hRDist[0][i]->SetFillColor(kRed);
+    hRDist[0][i]->Draw("hist");
+    if (hasTwin){
+      hRDist[1][i]->SetStats(0);
+      hRDist[1][i]->SetLineColor(kBlue);
+      hRDist[1][i]->Draw("hist,same");
+    }
+  
+
+
+    
+  }
+  textpad->cd();
+  float texpos=0.9;float texshift=0.12;
+  TLatex *tex=new TLatex(0.0,texpos,"Fill Me In");
+  tex->SetTextSize(texshift*0.8);
+  tex->DrawLatex(0.05,texpos,GetFieldString());texpos-=texshift;
+  tex->DrawLatex(0.05,texpos,GetChargeString());texpos-=texshift;
+ //tex->DrawLatex(0.05,texpos,Form("Drift Field = %2.2f V/cm",GetNominalE()));texpos-=texshift;
+  tex->DrawLatex(0.05,texpos,Form("Drifting grid of (rp)=(%d x %d) electrons with %d steps",nrh,nph,nSteps));texpos-=texshift;
+  tex->DrawLatex(0.05,texpos,GetLookupString());texpos-=texshift;
+  tex->DrawLatex(0.05,texpos,GetGasString());texpos-=texshift;
+  if (debug_distortionScale.Mag()>0){
+    tex->DrawLatex(0.05,texpos,Form("Distortion scaled by (r,p,z)=(%2.2f,%2.2f,%2.2f)",
+				   debug_distortionScale.X(),debug_distortionScale.Y(),debug_distortionScale.Z()));
+    texpos-=texshift;
+  }
+  texpos=0.9;
+ 
+  
+  
+  canvas->cd();
+  c->Draw();
+  canvas->cd();
+  textpad->Draw();
+  canvas->SaveAs(summaryFilename.Data());
+
+  
+  //canvas->cd();
+  //already done TPad *c=new TPad("cplots","distortion differential plots",0,0.2,1,1);
+  //canvas->cd();
+  //already done TPad *textpad=new TPad("ctext","distortion differential plots",0,0.0,1,0.2);
+  //already done c->Divide(4,3);
+  //gStyle->SetOptStat();
+  for (int i=0;i<3;i++){
+    //component
+    for (int ax=0;ax<3;ax++){
+      //plane
+      c->cd(i*4+ax+1);
+      gPad->SetRightMargin(0.15);
+      hDiffDist[ax][i]->SetStats(0);
+      hDiffDist[ax][i]->Draw("colz");
+    }
+    c->cd(i*4+4);
+    hRDiffDist[0][i]->SetStats(0);
+    hRDiffDist[0][i]->SetFillColor(kRed);
+    hRDiffDist[0][i]->Draw("hist");
+    if (hasTwin){
+      hRDiffDist[1][i]->SetStats(0);
+      hRDiffDist[1][i]->SetLineColor(kBlue);
+      hRDiffDist[1][i]->Draw("hist same");
+    }
+
+
+    
+  }
+  textpad->cd();
+  texpos=0.9;texshift=0.12;
+  tex->SetTextSize(texshift*0.8);
+  tex->DrawLatex(0.05,texpos,GetFieldString());texpos-=texshift;
+  tex->DrawLatex(0.05,texpos,GetChargeString());texpos-=texshift;
+ //tex->DrawLatex(0.05,texpos,Form("Drift Field = %2.2f V/cm",GetNominalE()));texpos-=texshift;
+  tex->DrawLatex(0.05,texpos,Form("Drifting grid of (rp)=(%d x %d) electrons with %d steps",nrh,nph,nSteps));texpos-=texshift;
+  tex->DrawLatex(0.05,texpos,GetLookupString());texpos-=texshift;
+  tex->DrawLatex(0.05,texpos,GetGasString());texpos-=texshift;
+  tex->DrawLatex(0.05,texpos,"Differential Plots");texpos-=texshift;
+  if (debug_distortionScale.Mag()>0){
+    tex->DrawLatex(0.05,texpos,Form("Distortion scaled by (r,p,z)=(%2.2f,%2.2f,%2.2f)",
+				   debug_distortionScale.X(),debug_distortionScale.Y(),debug_distortionScale.Z()));
+    texpos-=texshift;
+  }
+  texpos=0.9;
+ 
+  
+  
+  canvas->cd();
+  c->Draw();
+  canvas->cd();
+  textpad->Draw();
+  canvas->SaveAs(diffSummaryFilename.Data());
+
+  
+
+  //  printf("map:%s.\n",distortionFilename.Data());
+
+  outf->cd();
+  for (int i=0;i<nSides;i++){
+    for (int j=0;j<5;j++){
+      hSeparatedMapComponent[i][j]->Write();
+    }
+  }
+  hDistortionR->Write();
+  hDistortionP->Write();
+  hDistortionZ->Write();
+  hIntDistortionR->Write();
+  hIntDistortionP->Write();
+  hIntDistortionZ->Write();
+  if (andCartesian){
+    hIntDistortionX->Write();
+    hIntDistortionY->Write();
+  }
+  dTree->Write();
+  outf->Close();
+  //printf("map:%s.closed\n",distortionFilename.Data());
+
+  printf("wrote separated map and summary to %s.\n",filebase);
+  printf("map:%s.\n",distortionFilename.Data());
+  printf("summary:%s.\n",summaryFilename.Data());
+  //printf("wrote map and summary to %s and %s.\n",distortionFilename.Data(),summaryFilename.Data());
+  return;
+  }
+
+
+
 
 void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamples, int p_subsamples, int z_subsamples, int z_substeps, bool andCartesian){
 //1) pick a map spacing ('s')
+  bool makeUnifiedMap=true; //if true, generate a single map across the whole TPC.  if false, save two maps, one for each side.
+
+  
   TVector3 s(step.Perp()/r_subsamples, 0,step.Z()/z_subsamples);
   s.SetPhi(step.Phi()/p_subsamples);
   float deltar=s.Perp();//(rf-ri)/nr;
@@ -2353,8 +2954,8 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
   int nph=nphi*p_subsamples+2; //nuber of phibins in the histogram
   int nrh=nr*r_subsamples+2;//number of r bins in the histogram
   int nzh=nz*z_subsamples+2;//number of z you get the idea.
-
-  if (hasTwin){//double the z range if we have a twin.  r and phi are the same, unless we had a phi roi...
+ 
+  if (hasTwin && makeUnifiedMap){//double the z range if we have a twin.  r and phi are the same, unless we had a phi roi...
     lowerEdge.SetZ(-1*upperEdge.Z());
     nzh+=nz*z_subsamples;
   }
@@ -2387,15 +2988,16 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
   
   //actual output maps:
   
-  TH3F* hDistortionR=new TH3F("hDistortionR","Per-z-bin Distortion in the R direction as a function of (phi,r,z) (centered in r,phi, z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
-  TH3F* hDistortionP=new TH3F("hDistortionP","Per-z-bin Distortion in the RPhi direction as a function of (phi,r,z)  (centered in r,phi, z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
-  TH3F* hDistortionZ=new TH3F("hDistortionZ","Per-z-bin Distortion in the Z direction as a function of (phi,r,z)  (centered in r,phi, z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
-  TH3F* hIntDistortionR=new TH3F("hIntDistortionR","Integrated R Distortion from (phi,r,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
-  TH3F* hIntDistortionP=new TH3F("hIntDistortionP","Integrated R Distortion from (phi,r,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+    TH3F* hDistortionR=new TH3F("hDistortionR","Per-z-bin Distortion in the R direction as a function of (phi,r,z) (centered in r,phi, z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+    TH3F* hDistortionP=new TH3F("hDistortionP","Per-z-bin Distortion in the RPhi direction as a function of (phi,r,z)  (centered in r,phi, z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+    TH3F* hDistortionZ=new TH3F("hDistortionZ","Per-z-bin Distortion in the Z direction as a function of (phi,r,z)  (centered in r,phi, z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+    TH3F* hIntDistortionR=new TH3F("hIntDistortionR","Integrated R Distortion from (phi,r,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+    TH3F* hIntDistortionP=new TH3F("hIntDistortionP","Integrated R Distortion from (phi,r,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
   TH3F* hIntDistortionZ=new TH3F("hIntDistortionZ","Integrated R Distortion from (phi,r,z) to z=0  (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
 
     TH3F* hIntDistortionX=new TH3F("hIntDistortionX","Integrated X Distortion from (phi,r,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
   TH3F* hIntDistortionY=new TH3F("hIntDistortionY","Integrated Y Distortion from (phi,r,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
+
 
   /*
   TH3F* hNewIntDistortionR=new TH3F("hNewIntDistortionR","Recursively Integrated R Distortion from (r,phi,z) to z=0 (centered in r,phi, and z);phi;r;z",nph,pih,pfh,nrh,rih,rfh,nzh,zih,zfh);
@@ -2549,7 +3151,7 @@ void AnnularFieldSim::GenerateDistortionMaps(const char* filebase, int r_subsamp
 	dTree->Fill();
 
 	//integral distortion:
-	if (hasTwin && inpart.Z()<0){		  
+	if (hasTwin && makeUnifiedMap && inpart.Z()<0){		  
 	distort=twin->GetTotalDistortion(-z_readout,inpart+stepzvec,nSteps,true, &validToStep);
 	} else{
 	distort=GetTotalDistortion(z_readout,inpart,nSteps,true, &validToStep);

@@ -11,11 +11,13 @@ R__LOAD_LIBRARY(.libs/libfieldsim)
 AnnularFieldSim *SetupDefaultSphenixTpc(bool twinMe=false, bool useSpacecharge=true);
 AnnularFieldSim *SetupDigitalCurrentSphenixTpc(bool twinMe=false, bool useSpacecharge=true);
 void TestSpotDistortion(AnnularFieldSim *t);
+void   SurveyFiles(TFileCollection* filelist);
 
 
-void generate_distortion_and_fluctuation(const char * inputpattern="./oct20/*.root", const char *outputfilebase="./oct20_maps/oct20", bool hasSpacecharge=true, bool isDigitalCurrent=false){
+void generate_distortion_and_fluctuation(const char * inputpattern="./evgeny_apr/Smooth*.root", const char *outputfilebase="./apr07_maps/apr07", bool hasSpacecharge=true, bool isDigitalCurrent=false){
 
-  int maxmaps=2;
+  int maxmaps=10;
+  int maxmapsperfile=2;
 
   
   bool hasTwin=true;
@@ -26,7 +28,11 @@ void generate_distortion_and_fluctuation(const char * inputpattern="./oct20/*.ro
   float tpc_chargescale=1.6e-19;//Coulombs per bin unit.
   float spacecharge_cm_per_axis_unit=100;//cm per histogram axis unit.
   
-
+  //file names we'll be filling as we go:
+  TFile *infile;
+ 
+  TString sourcefilename;
+  TString outputfilename;
 
   
   //find all files that match the input string (we don't need this yet, but doing it before building the fieldsim saves time if there's an empty directory or something.
@@ -34,6 +40,9 @@ void generate_distortion_and_fluctuation(const char * inputpattern="./oct20/*.ro
   filelist->Add(inputpattern);
   filelist->Print();
   printf("Using pattern \"%s\", found %d files to read, eg : %s\n",inputpattern,filelist->GetList()->GetEntries(),((TFileInfo*)(filelist->GetList()->At(0)))->GetCurrentUrl()->GetUrl());//Title());//Print();
+
+
+  SurveyFiles( filelist);
 
   //now build the time-consuming part:
   //AnnularFieldSim *tpc=SetupDefaultSphenixTpc(hasTwin,hasSpacecharge);//loads the lookup, fields, etc.
@@ -57,10 +66,6 @@ void generate_distortion_and_fluctuation(const char * inputpattern="./oct20/*.ro
 
   
 
-  TFile *infile;
- 
-  TString sourcefilename;
-  TString outputfilename;
 
   double totalQ=0;
   
@@ -78,7 +83,7 @@ void generate_distortion_and_fluctuation(const char * inputpattern="./oct20/*.ro
       bool isHist=tobj->InheritsFrom("TH3");
       if (!isHist) continue;
       TString objname=tobj->GetName();
-      //if (!objname.Contains("IBF")) continue; //this is an IBF map we don't want.
+      if (objname.Contains("IBF")) continue; //this is an IBF map we don't want.
       //assume this histogram is a charge map.
       //load just the averages:
       if (hasSpacecharge){
@@ -101,7 +106,11 @@ void generate_distortion_and_fluctuation(const char * inputpattern="./oct20/*.ro
       }
       tpc->populate_fieldmap();
       if (hasTwin)  tpc->twin->populate_fieldmap();
-      outputfilename=Form("%s.file%d.%s.%s.%s",outputfilebase,i,tobj->GetName(),field_string,lookup_string);
+      if (sourcefilename.Contains("verage")){ //this is an IBF map we don't want.
+	outputfilename=Form("%s.average.%s.%s",outputfilebase,field_string,lookup_string);
+      } else {
+	outputfilename=Form("%s.file%d.%s.%s.%s",outputfilebase,i,tobj->GetName(),field_string,lookup_string);
+      }
       printf("%s file has %s hist.  field=%s, lookup=%s. no scaling.\n",
 	     sourcefilename.Data(),tobj->GetName(),field_string,lookup_string);
 
@@ -400,3 +409,45 @@ AnnularFieldSim *SetupDigitalCurrentSphenixTpc(bool twinMe, bool useSpacecharge)
   return tpc;
 }
   
+void  SurveyFiles(TFileCollection *filelist){
+   TFile *infile;
+ 
+  TString sourcefilename;
+  TString outputfilename;
+ //run a check of the files we'll be looking at:
+  float integral_sum=0;
+  int nhists=0;
+  for (int i=0;i<filelist->GetNFiles();i++){
+   //for each file, find all histograms in that file.
+    sourcefilename=((TFileInfo*)(filelist->GetList()->At(i)))->GetCurrentUrl()->GetFile();//gross
+    printf("file %d: %s\n", i, sourcefilename.Data());
+    infile=TFile::Open(sourcefilename.Data(),"READ");
+    TList *keys=infile->GetListOfKeys();
+    //keys->Print();
+    int nKeys=infile->GetNkeys();
+
+    for (int j=0;j<nKeys;j++){
+      TObject *tobj=infile->Get(keys->At(j)->GetName());
+      //if this isn't a 3d histogram, skip it:
+      bool isHist=tobj->InheritsFrom("TH3");
+      if (!isHist) continue;
+      TString objname=tobj->GetName();
+      printf(" hist %s ",objname.Data());
+      if (objname.Contains("IBF")) {
+	printf(" is IBF only.\n");
+	continue; //this is an IBF map we don't want.
+      }
+      float integral=((TH3D*)tobj)->Integral();
+      integral_sum+=integral;
+      nhists+=1;
+	printf(" will be used.  Total Q=%3.3E (ave=%3.3E)\n",integral,integral_sum/nhists);
+      //assume this histogram is a charge map.
+      //load just the averages:
+ 
+      //break; //rcc temp -- uncomment this to process one hist per file.
+      //if (i>maxmaps) return;
+    }
+      infile->Close();
+  }
+  return;
+}

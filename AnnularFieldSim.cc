@@ -2895,8 +2895,19 @@ void AnnularFieldSim::GenerateSeparateDistortionMaps(const char* filebase, int r
   outf->cd();
   for (int i=0;i<nSides;i++){
     for (int j=0;j<5;j++){
+      hSeparatedMapComponent[i][j]->GetSumw2()->Set(0);
       hSeparatedMapComponent[i][j]->Write();
     }
+  }
+  hDistortionR->GetSumw2()->Set(0);
+  hDistortionP->GetSumw2()->Set(0);
+  hDistortionZ->GetSumw2()->Set(0);
+  hIntDistortionR->GetSumw2()->Set(0);
+  hIntDistortionP->GetSumw2()->Set(0);
+  hIntDistortionZ->GetSumw2()->Set(0);
+  if (andCartesian){
+    hIntDistortionX->GetSumw2()->Set(0);
+    hIntDistortionY->GetSumw2()->Set(0);
   }
   hDistortionR->Write();
   hDistortionP->Write();

@@ -807,6 +807,7 @@ void AnnularFieldSim::loadEfield(const char *filename, const char *treename, int
   fTree->SetBranchAddress("ez",&fz);
   //phi would go here if we had it.
   phi=fphi=0; //no phi components yet.
+  phi+=1;phi=0;//satisfy picky racf compiler
   loadField(&Eexternal,fTree,&r,0,&z,&fr,&fphi,&fz,V/cm,zsign);
   fieldFile.Close();
   return;
@@ -826,6 +827,7 @@ void AnnularFieldSim::loadBfield(const char *filename, const char *treename){
   fTree->SetBranchAddress("bz",&fz);
   //phi would go here if we had it.
   phi=fphi=0; //no phi components yet.
+  phi+=1;phi=0;//satisfy picky racf compiler
   loadField(&Bfield,fTree,&r,0,&z,&fr,&fphi,&fz,Tesla,1);
     fieldFile.Close();
 
@@ -1672,7 +1674,7 @@ void  AnnularFieldSim::load_phislice_lookup(const char* sourcefile){
 
    int el=0;
    printf("%s has %lld entries\n",sourcefile,tLookup->GetEntries());
-   for (int i=0;i<totalelements;i++){
+   for (int i=0;i<(int)totalelements;i++){
      el++;
      tLookup->GetEntry(i);
      //printf("loading i=%d\n",i);

@@ -11,7 +11,7 @@ LT_INIT([disable-static])
 dnl   no point in suppressing warnings people should 
 dnl   at least see them, so here we go for g++: -Wall
 if test $ac_cv_prog_gxx = yes; then
-  CXXFLAGS="$CXXFLAGS -std=c++11 -Wall -Werror"
+  CXXFLAGS="$CXXFLAGS -std=c++1z -Wall -Werror"
 fi
 
 dnl assign root path for libs etc

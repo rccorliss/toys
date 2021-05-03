@@ -58,7 +58,7 @@ void subtract_average_th3(const char * inputpattern="./evgeny/*.root", const cha
       outhist=new TH3D(*(TH3D*)tobj);
       outhist->Add((TH3D*)tobj,avehist[j%nHists],1,-1);
       outhist->Write();
-     break;
+      //break;
     }
     outfile->Close();
     infile->Close();

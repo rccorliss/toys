@@ -14,12 +14,17 @@ if test $ac_cv_prog_gxx = yes; then
   CXXFLAGS="$CXXFLAGS -std=c++11 -Wall -Werror"
 fi
 
+dnl assign root path for libs etc
+ROOTBASE=`which root |sed 's/\(.*\)\/bin\/root/\1/'`
+dnl fyi, awk doesn't work in configure.ac the way it works in bash.  `which root | awk '{split($1,a,"/bin/root"); print a[1]}'`
+AC_SUBST(ROOTBASE)
+
 dnl test for root 6
-if test `root-config --version | gawk '{print $1>=6.?"1":"0"}'` = 1; then
+if test `root-config --version | awk '{print $1>=6.?"1":"0"}'` = 1; then
 CINTDEFS=" -noIncludePaths  -inlineInputHeader "
 AC_SUBST(CINTDEFS)
 fi
-AM_CONDITIONAL([MAKEROOT6],[test `root-config --version | gawk '{print $1>=6.?"1":"0"}'` = 1])
+AM_CONDITIONAL([MAKEROOT6],[test `root-config --version | awk '{print $1>=6.?"1":"0"}'` = 1])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

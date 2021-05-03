@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = foreign
 
-AM_CPPFLAGS = -I$(includedir) -I$(OFFLINE_MAIN)/include -I@ROOTBASE@/include/root/
+AM_CPPFLAGS = -I$(includedir) -I$(OFFLINE_MAIN)/include -I@ROOTBASE@/include/root/ -I@ROOTBASE@/include/
 #/usr/local/Cellar/root/6.18.04_1/include/root/
 
 

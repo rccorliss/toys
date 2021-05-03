@@ -1,4 +1,6 @@
-#pragma once
+//#pragma once
+#ifndef ANALYTICFIELDMODEL_H
+#define ANALYTICFIELDMODEL_H
 #include "TVector3.h"
 #include "TFormula.h"
 
@@ -34,3 +36,5 @@ public:
 			
 
 };
+
+#endif

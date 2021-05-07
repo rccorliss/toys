@@ -1,5 +1,29 @@
+bool AverageDirectionPositive(vector<double>pos,int i){
+  const int depth=6;
+  int start=(i-depth);
+  if (start<0) start=0;
+  double beforelen=i-start;
+  double before=0;
+  int end=i+depth;
+  if (end>pos.size()) end=pos.size();
+  double afterlen=end-i;
+  double after;
+
+  for (int j=start;j<i;j++){
+    before+=pos[j]/beforelen;
+  }
+  for (int j=i;j<end;j++){
+    after+=pos[j]/afterlen;
+  }
+
+  if (after>before) return true;
+  return false;
+}
+
+
 void ParseIoLabs(const char * title, int wheelNumber, int lightNumber, int surveyMode=0){
-  TString baseName="/Users/rcorliss/Documents/IOLab-WorkFiles/export/20210503-";
+  const int date=20210506;
+  TString baseName=Form("/Users/rcorliss/Documents/IOLab-WorkFiles/export/%d-",date);
   TString wheelFileName=baseName+wheelNumber+"_Wheel.csv";
   TString lightFileName=baseName+lightNumber+"_Light.csv";
   TTree *wheelTree=new TNtuple("wheelTree","wheelTree","index:frame:sample:time:rawX:calX:rawY:calY:rawZ:calZ");
@@ -85,8 +109,21 @@ void ParseIoLabs(const char * title, int wheelNumber, int lightNumber, int surve
     staticGaus->SetParLimits(1,-70.,-30.);//center must be on the left somewhere
     staticGaus->SetParLimits(2,0.,90.);//width isn't too wide
     staticGaus->SetParLimits(3,-0.1,0.1);//ambient light isn't too bright.
-    staticGaus->SetParLimits(4,0.85,1.15);//supergaussian isn't strong.
+    staticGaus->SetParLimits(4,0.75,1.25);//supergaussian isn't strong.
+  }
+
+  if (date==20210506) {
+    staticGaus->SetParLimits(0,0.,9);//no inverted gaussians
+    staticGaus->SetParLimits(1,-50.,100.);//center must be in the middle
+    staticGaus->SetParLimits(2,0.,800.);//width isn't too wide
+    staticGaus->SetParLimits(3,0,0.055);//ambient light isn't negative, nor too bright.
+    staticGaus->SetParLimits(4,0.45,3.5);//supergaussian can be strong.
+  if (wheelNumber==123507) {
+  }
+
   }  
+
+  
   //break this up into its different passes, based on whether it seems to be going up or down on average
   TCanvas *cp;
   if (surveyMode==1){
@@ -110,8 +147,10 @@ void ParseIoLabs(const char * title, int wheelNumber, int lightNumber, int surve
     
   
   goingUpBefore=false;//(posVec[1]-posVec[0])>0;
+  int goodSetNumber=0;
   for (int i=3;i<posVec.size()-2;i++){
-    goingUp=(posVec[i-3]+posVec[i-2]+posVec[i-1])<(posVec[i]+posVec[i+1]+posVec[i+2]);
+    goingUp=AverageDirectionPositive(posVec,i);
+    //    goingUp=(posVec[i-3]+posVec[i-2]+posVec[i-1])<(posVec[i]+posVec[i+1]+posVec[i+2]);
     //goingUp=(posVec[i]-posVec[i-1])>0;
     if (goingUp!=goingUpBefore){
       setLength.push_back(i-setStart.back());
@@ -120,16 +159,17 @@ void ParseIoLabs(const char * title, int wheelNumber, int lightNumber, int surve
       gt=new TGraph(setLength.back(),&(posVec[setStart.back()]),&(lightVec[setStart.back()]));
       gt->SetMarkerColor(1+setNumber%8);
       gt->SetLineColor(1+setNumber%8);
-      gt->SetTitle(Form("Pass %d (%s);position (mm);light intensity (arb)",setNumber,goingUpBefore?"leftward":"rightward"));
+      gt->SetTitle(Form("Pass %d (%s);position [mm];light intensity [arb]",setNumber,goingUpBefore?"leftward":"rightward"));
       setStart.push_back(i);
       goingUpBefore=goingUp;
 
       if(setLength.back()>100){//skip short sets)
       
 	if (surveyMode==1){
+	  goodSetNumber+=1;
 	  gt->Fit(staticGaus);
 	  
-	  cp->cd(setNumber+1);
+	  cp->cd(goodSetNumber);
 	  gt->SetLineColor(kBlack);
 	  gt->SetMarkerColor(kBlack);
 	  gt->Draw("A*L");
@@ -186,14 +226,44 @@ void ParseIoLabs(const char * title, int wheelNumber, int lightNumber, int surve
   }
 
   
-  TCanvas *c=new TCanvas("c","c",1400,500);
+  TCanvas *c=new TCanvas("c","c",1400,300);
   gStyle->SetOptStat(111111);
   gStyle->SetStatW(0.4);
   gStyle->SetStatH(0.25);
    c->Divide(1+nParams,1);
   c->cd(1);
-  mgt->SetTitle(Form("%s (%lu good passes);position [cm];light [arb]",title,fitParams[0].size()));
+  mgt->SetTitle(Form("%s (%lu good passes);position [mm];light [arb]",title,fitParams[0].size()));
   mgt->Draw("A*L");
+
+  if (0){
+  float DiffuseBounds=200;
+  float cardDist=327;
+  int nPhotons=1e6;
+  float background=hFitPar[3]->GetMean();
+  float center=hFitPar[1]->GetMean();
+  float area=sqrt(2*3.14)*hFitPar[0]->GetMean()*hFitPar[2]->GetMean(); //not quite right for supergaussians.
+  
+ TF1* fEdAngleDeg = new TF1("fEdAngle", "([0]+[1]*exp(-(x-[2])**2/(2*[3]**2)))", -DiffuseBounds, DiffuseBounds);
+  fEdAngleDeg->SetParameters(0, 0.9483733002234809, 0, 16.1331011690544950);//test of gaussian fit to image of 40 deg
+
+  TH1F *hEd=new TH1F("hEd","Expected distribution from edmonton fit;pos(mm)",100,-DiffuseBounds,DiffuseBounds);
+  for (int i=0;i<nPhotons;i++){
+    float angle=fEdAngleDeg->GetRandom();
+    float position=center+TMath::Tan(angle*TMath::Pi()/180.)*cardDist;
+    hEd->Fill(position,1./(1.*nPhotons));
+  }
+  //scale it:
+  float edArea=hEd->Integral();
+  hEd->Scale(area/edArea);
+  for (int i=0;i<100;i++){
+    hEd->Fill(hEd->GetXaxis()->GetBinCenter(i+1),background);
+  }
+  hEd->SetLineColor(kBlue);
+  hEd->Draw("same,hist");
+  }
+  
+
+  
   TLegend *leg=c->cd(1)->BuildLegend(0.4,0.6,0.4,0.6);
   //leg->SetMargin(0.05);
   //leg->SetNColumns(2);

@@ -109,7 +109,7 @@ void generate_distortion_and_fluctuation(const char * inputpattern="./evgeny_apr
       if (sourcefilename.Contains("verage")){ //this is an IBF map we don't want.
 	outputfilename=Form("%s.average.%s.%s",outputfilebase,field_string,lookup_string);
       } else {
-	outputfilename=Form("%s.file%d.%s.%s.%s",outputfilebase,i,tobj->GetName(),field_string,lookup_string);
+	outputfilename=Form("%s.file%d.%s.%s.%s",outputfilebase,fileIndex,tobj->GetName(),field_string,lookup_string);
       }
       printf("%s file has %s hist.  field=%s, lookup=%s. no scaling.\n",
 	     sourcefilename.Data(),tobj->GetName(),field_string,lookup_string);

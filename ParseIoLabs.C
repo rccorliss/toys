@@ -22,12 +22,12 @@ bool AverageDirectionPositive(vector<double>pos,int i){
 
 
 void ParseIoLabs(const char * title, int wheelNumber, int lightNumber, int surveyMode=0){
-  const int date=20210506;
+  const int date=20210508;
   TString baseName=Form("/Users/rcorliss/Documents/IOLab-WorkFiles/export/%d-",date);
   TString wheelFileName=baseName+wheelNumber+"_Wheel.csv";
   TString lightFileName=baseName+lightNumber+"_Light.csv";
   TTree *wheelTree=new TNtuple("wheelTree","wheelTree","index:frame:sample:time:rawX:calX:rawY:calY:rawZ:calZ");
-  TTree *lightTree=new TNtuple("wheelTree","wheelTree","indexL:frameL:sampleL:timeL:rawL:calL");
+  TTree *lightTree=new TNtuple("lightTree","lightTree","indexL:frameL:sampleL:timeL:rawL:calL");
   /*
   char wheelname[100]="/Users/rcorliss/Documents/IOLab-WorkFiles/export/20210503-110942_Wheel.csv";
     std::ifstream in;
@@ -58,10 +58,12 @@ void ParseIoLabs(const char * title, int wheelNumber, int lightNumber, int surve
   std::vector<double>lightVec;
   for (int i=0;i<nEntries;i++){
     posVec.push_back(1000.*wheelTree->GetVal(1)[i]);
+    //if (i<100) printf("calL=%f\n",wheelTree->GetVal(0)[i]);
     lightVec.push_back(wheelTree->GetVal(0)[i]);
   }
   std::vector<int>setStart={0};
   std::vector<int>setLength;
+  //return;
 
   //TF1 *staticGaus=new TF1("sgaus","gaus(0)+[3]",-50,100);
   TF1 *staticGaus=new TF1("sgaus","[0]*exp(-0.5*(((x-[1])/[2])**2)**[4])+[3]",-50,100);
@@ -70,7 +72,7 @@ void ParseIoLabs(const char * title, int wheelNumber, int lightNumber, int surve
   double fitMin[nParams];
   double fitMax[nParams];
 
-  staticGaus->SetParameters(0.05,0,50,0);
+  staticGaus->SetParameters(0.05,0.04,50,0);
   staticGaus->SetParLimits(0,0.,8.);//no inverted gaussians
   staticGaus->SetParLimits(1,-60.,-30.);//center must be on the left somewhere
   staticGaus->SetParLimits(2,0.,80.);//width isn't too wide
@@ -121,7 +123,14 @@ void ParseIoLabs(const char * title, int wheelNumber, int lightNumber, int surve
   if (wheelNumber==123507) {
   }
 
-  }  
+  }
+   if (date>20210506) {
+    staticGaus->SetParLimits(0,0.,9);//no inverted gaussians
+    staticGaus->SetParLimits(1,-50.,100.);//center must be in the middle
+    staticGaus->SetParLimits(2,0.,800.);//width isn't too wide
+    staticGaus->SetParLimits(3,0.035,0.075);//ambient light isn't negative, nor too bright.
+    staticGaus->SetParLimits(4,0.85,3.5);//supergaussian can be strong.
+  }
 
   
   //break this up into its different passes, based on whether it seems to be going up or down on average

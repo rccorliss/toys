@@ -21,7 +21,7 @@ void showRosseggerDivergencePhi();
 void showRosseggerDivergenceR();
 
 
-void scrap(){
+void studyRosseggerBehavior(){
 
   // proveRosseggersAreEqual(); return;
   //sumRosseggerPhiLoops(); return;

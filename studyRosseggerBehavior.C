@@ -1,5 +1,6 @@
 //#include "FieldSim.h"
-
+#include "TTree.h" //this prevents a lazy binding issue and/or is a magic spell.
+#include "TCanvas.h" //this prevents a lazy binding issue and/or is a magic spell.
 /*
 digital_current_macro_alice started as code to model the alice-specific TPC properties, to match to work the ALICE group did.  
 it turned out to be a convenient point to compare sPHENIX performance, so it became ill-named.
@@ -12,7 +13,7 @@ This code loads an AnnularFieldSim model of the TPC, computing spacecharge disto
 #include "AnnularFieldSim.h"
 #include "Rossegger.h"
 
-R__LOAD_LIBRARY(.libs/libfieldsim)
+R__LOAD_LIBRARY(build/.libs/libfieldsim)
 
 
 void proveRosseggersAreEqual();
@@ -22,6 +23,8 @@ void showRosseggerDivergenceR();
 
 
 void studyRosseggerBehavior(){
+
+  //TTree *tree; //magic spell
 
   // proveRosseggersAreEqual(); return;
   //sumRosseggerPhiLoops(); return;

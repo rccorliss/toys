@@ -1,6 +1,8 @@
 
 void subtract_average_th3(const char * inputpattern="./evgeny/*.root", const char *outputdir="./output/", const char *averagefilename="average.out.root"){
 
+  //subtracts averagefilename's histograms from their matching partners in every file matching the input pattern.  results go in the output dir, file by file
+  
   //const int nHists=6; //3 differential, 3 integral.
   
   TFile *avefile=TFile::Open(averagefilename,"READ");
@@ -11,7 +13,7 @@ void subtract_average_th3(const char * inputpattern="./evgeny/*.root", const cha
   for (int i=0;i<nAveKeys;i++){
     TObject *avetobj=avefile->Get(avefile->GetListOfKeys()->At(i)->GetName());
     if (avetobj->InheritsFrom("TH3")){
-      avehist[i]=(TH3D*)(avetobj); //get the ith hist from the average file.
+      avehist[nHists]=(TH3D*)(avetobj); //get the ith hist from the average file.
       nHists++;
     }
   }
@@ -48,16 +50,19 @@ void subtract_average_th3(const char * inputpattern="./evgeny/*.root", const cha
     TList *keys=infile->GetListOfKeys();
     //keys->Print();
     int nKeys=infile->GetNkeys();
+    int nInputHists=0;//number of valid histograms in the input file, skipping ones we can't th3 subtract
     if (nKeys<nHists) continue;//assert (1==2); //file doesn't have enough histograms in it.  Something's wrong.
     for (int j=0;j<nKeys;j++){
       TObject *tobj=infile->Get(keys->At(j)->GetName());
       if (!tobj->InheritsFrom("TH3")) continue;
       printf("  obj %d: getname: %s  inherits from TH3D:%d , matching to %s\n",j,tobj->GetName(),tobj->InheritsFrom("TH3"),avehist[j]->GetName());
-      if(j>nHists) printf(">>CAREFUL! Asked for hist %d, but average set only has %d hist.  Getting hist mod nhist to be safe...\n",j,nHists);
       outfile->cd();
       outhist=new TH3D(*(TH3D*)tobj);
-      outhist->Add((TH3D*)tobj,avehist[j%nHists],1,-1);
+      outhist->Add((TH3D*)tobj,avehist[nInputHists],1,-1);
       outhist->Write();
+      nInputHists++;
+      if(nInputHists>nHists) printf(">>CAREFUL! Asked for hist %d, but average set only has %d hist.  Getting hist mod nhist to be safe...\n",j,nHists);
+
       //break;
     }
     outfile->Close();

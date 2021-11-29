@@ -9,10 +9,6 @@ This is a little toy to rename histograms and only save a subset from one file t
 vector<std::pair<std::string,std::string>> fileName;
 vector<std::pair<std::string,std::string>> histName;
 
-int main(){
-  renameHistograms();
-  return 0;
-}
 
 void renameHistograms(){
   histName.push_back(std::make_pair("hIntDistortionNegR","hIntDistortionR_negz"));
@@ -40,7 +36,7 @@ void renameHistograms(){
   TH1* hin;
   TH1* hout;
 
-  for (int f=0;f<fileName.size(),f++){
+  for (int f=0;f<fileName.size();f++){
 
     infile=TFile::Open(fileName[f].first(),"READ");
     outfile=TFile::Open(fileName[f].second(),"RECREATE");
@@ -58,4 +54,9 @@ void renameHistograms(){
     infile->Close();
   }
     return;
+}
+
+int main(){
+  renameHistograms();
+  return 0;
 }

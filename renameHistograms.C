@@ -40,12 +40,12 @@ void renameHistograms(){
   TH1* hin;
   TH1* hout;
 
-  for (int f=0;f<fileName.length(),f++){
+  for (int f=0;f<fileName.size(),f++){
 
     infile=TFile::Open(fileName[f].first(),"READ");
     outfile=TFile::Open(fileName[f].second(),"RECREATE");
     
-    for (int i=0;i<histName.length();i++){
+    for (int i=0;i<histName.size();i++){
       hin=(TH1*)infile->Get(histName[i].first());
       hout=(TH1*)hin->Clone(histName[i].second());
     }

@@ -38,16 +38,16 @@ void renameHistograms(){
 
   for (int f=0;f<fileName.size();f++){
 
-    infile=TFile::Open(fileName[f].first(),"READ");
-    outfile=TFile::Open(fileName[f].second(),"RECREATE");
+    infile=TFile::Open(fileName[f].first().data(),"READ");
+    outfile=TFile::Open(fileName[f].second().data(),"RECREATE");
     
     for (int i=0;i<histName.size();i++){
-      hin=(TH1*)infile->Get(histName[i].first());
-      hout=(TH1*)hin->Clone(histName[i].second());
+      hin=(TH1*)infile->Get(histName[i].first().data());
+      hout=(TH1*)hin->Clone(histName[i].second().data());
     }
     
     outfile->cd();  
-    for (int i=0;i<histName.length();i++){
+    for (int i=0;i<histName.size();i++){
       hout->Write();
     }
     outfile->Close();

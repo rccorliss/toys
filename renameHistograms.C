@@ -34,8 +34,8 @@ void renameHistograms(){
   */
 
   
-  TFile *infile;=TFile::Open(infileName,"READ");
-  TFile *outfile;=TFile::Open(outfileName,"RECREATE");
+  TFile *infile;
+  TFile *outfile;
 
   TH1* hin,hout;
 

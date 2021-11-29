@@ -37,7 +37,8 @@ void renameHistograms(){
   TFile *infile;
   TFile *outfile;
 
-  TH1* hin,hout;
+  TH1* hin;
+  TH1* hout;
 
   for (int f=0;f<fileName.length(),f++){
 

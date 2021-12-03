@@ -45,7 +45,9 @@ void invertHistograms(){
       hout[i]->Write();
     }
     CheckClosure(hin,hout);
+        outfile->Close();
 
+    return;
     hin.clear();
     hout.clear();
     
@@ -143,7 +145,7 @@ void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
 	int global_bin=hin[0]->FindBin(distorted_pos[0],distorted_pos[1],distorted_pos[2]);
 	float global_content=hhits->GetBinContent(global_bin);
 	if (global_content<1.0){
-	  printf("(%2.2f,%2.2f,%2.2f) has %1.2f entries\n",distorted_pos[0],distorted_pos[1],distorted_pos[2],global_content);
+	  printf("(%2.2f,%2.2f,%2.2f)(glob=%d) has %1.2f entries\n",distorted_pos[0],distorted_pos[1],distorted_pos[2],globtal_bin,global_content);
 	}
 	for (int m=0;m<3;m++){
 	  hout[m]->SetBinContent(global_bin,hout[m]->GetBinContent(global_bin)/global_content);

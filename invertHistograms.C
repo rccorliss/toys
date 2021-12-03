@@ -124,8 +124,8 @@ void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
 		distorted_pos[m]=sample_pos[m]+distortion[m];
 		if (m==0){
 		  //handle wrap-around?
-		  if (distorted_pos[m]>6.28) distortion_pos[m]-=6.28;
-		  if (distorted_pos[m]<0) distortion_pos[m]+=6.28;
+		  if (distorted_pos[m]>6.28) distorted_pos[m]-=6.28;
+		  if (distorted_pos[m]<0) distorted_pos[m]+=6.28;
 		}
 		hdist->Fill(distortion[m]);
 	      }
@@ -236,8 +236,8 @@ void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect){
        		distorted_pos[m]=sample_pos[m]+distortion[m];
 		if (m==0){
 		  //handle wrap-around?
-		  if (distorted_pos[m]>6.28) distortion_pos[m]-=6.28;
-		  if (distorted_pos[m]<0) distortion_pos[m]+=6.28;
+		  if (distorted_pos[m]>6.28) distorted_pos[m]-=6.28;
+		  if (distorted_pos[m]<0) distorted_pos[m]+=6.28;
 		}
 		
 	      }

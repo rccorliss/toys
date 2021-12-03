@@ -67,7 +67,8 @@ void invertHistograms(){
 
 void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
   TH3* hhits=(TH3*)hin[0]->Clone("hhits"); //number of elements in each output bin, for normalization purposes.
-
+  hhits->Reset();
+  
   TAxis *ax[3]={nullptr,nullptr,nullptr};
   ax[0]=hhits->GetXaxis();
   ax[1]=hhits->GetYaxis();
@@ -113,7 +114,7 @@ void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
 	      }
 
 	      //histogram the distortion in the distorted position.
-	      hhits->Fill(distorted_pos[0],distorted_pos[1],distorted_pos[2],1);
+	      hhits->Fill(distorted_pos[0],distorted_pos[1],distorted_pos[2],1.);
 	      for (int m=0;m<3;m++){
 		hout[m]->Fill(distorted_pos[0],distorted_pos[1],distorted_pos[2],distortion[m]);
 	      }
@@ -159,9 +160,9 @@ void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect){
   ncalls++;
   for(int i=0;i<3;i++){
     hclosure[i]=(TH3*)hdistort[0]->Clone(Form("hclosure%d_%d",i,ncalls));
+    hclosure[i]->Reset();
     hresidual[i]=new TH1F(Form("hresidual%d_%d",i,ncalls),Form("residual in axis %d",i),200,-0.1,0.1);
   }
-  TH3* hhits=(TH3*)hdistort[0]->Clone("hhits"); //number of elements in each output bin, for normalization purposes.
 
   TAxis *ax[3]={nullptr,nullptr,nullptr};
   ax[0]=hdistort[0]->GetXaxis();

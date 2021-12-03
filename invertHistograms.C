@@ -2,7 +2,7 @@
 vector<std::pair<std::string,std::string>> fileName;
 vector<std::string> histName;
 
-const int resample_factor=3; //how many samples, evenly spaced but centered in the bin boundaries so that they're never on the edge unless n=inf, to resample.  may have aliasing issues if we're not careful.
+const int resample_factor=5; //how many samples, evenly spaced but centered in the bin boundaries so that they're never on the edge unless n=inf, to resample.  may have aliasing issues if we're not careful.
 
 void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout);
 void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect);
@@ -47,7 +47,6 @@ void invertHistograms(){
     CheckClosure(hin,hout);
         outfile->Close();
 
-    return;
     hin.clear();
     hout.clear();
     
@@ -72,7 +71,7 @@ void invertHistograms(){
 
 void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
   TH3* hhits=(TH3*)hin[0]->Clone("hhits"); //number of elements in each output bin, for normalization purposes.
-  TH1* hnhits=new TH1F("hnhits","number of hits in each output bin",resample_factor+1,-0.5,resample_factor+0.5);
+  TH1* hnhits=new TH1F("hnhits","number of hits in each output bin",resample_factor*resample_factor+1,-0.5,resample_factor*resample_factor+0.5);
   TH1* hdist=new TH1F("hdist","distortion sanity check",1000,-1,1);
   hhits->Reset();
   

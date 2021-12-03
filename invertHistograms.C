@@ -117,7 +117,16 @@ void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
 	      //get the distorted position
 	      for (int m=0;m<3;m++){
 		distortion[m]=hin[m]->Interpolate(sample_pos[0],sample_pos[1],sample_pos[2]);
+		if (m==0){
+		  //get the phi coordinate distortion, not the phi-hat distortion:
+		  distortion[m]=distortion[m]/sample_pos[1];
+		}
 		distorted_pos[m]=sample_pos[m]+distortion[m];
+		if (m==0){
+		  //handle wrap-around?
+		  if (distorted_pos[m]>6.28) distortion_pos[m]-=6.28;
+		  if (distorted_pos[m]<0) distortion_pos[m]+=6.28;
+		}
 		hdist->Fill(distortion[m]);
 	      }
 
@@ -220,12 +229,31 @@ void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect){
 	      //get the distorted position
 	      for (int m=0;m<3;m++){
 		distortion[m]=hdistort[m]->GetBinContent(hdistort[m]->FindBin(sample_pos[0],sample_pos[1],sample_pos[2]));
-		distorted_pos[m]=sample_pos[m]+distortion[m];
+		if (m==0){
+		  //get the phi coordinate distortion, not the phi-hat distortion:
+		  distortion[m]=distortion[m]/sample_pos[1];
+		}
+       		distorted_pos[m]=sample_pos[m]+distortion[m];
+		if (m==0){
+		  //handle wrap-around?
+		  if (distorted_pos[m]>6.28) distortion_pos[m]-=6.28;
+		  if (distorted_pos[m]<0) distortion_pos[m]+=6.28;
+		}
+		
 	      }
 	      //get the corrected position
 	      for (int m=0;m<3;m++){
 		correction[m]=hcorrect[m]->GetBinContent(hcorrect[m]->FindBin(distorted_pos[0],distorted_pos[1],distorted_pos[2]));
-		corrected_pos[m]=distorted_pos[m]-correction[m];
+		if (m==0){
+		  //get the phi coordinate distortion, not the phi-hat distortion:
+		  correction[m]=correction[m]/distorted_pos[1];
+		}
+       		corrected_pos[m]=distorted_pos[m]+correction[m];
+		if (m==0){
+		  //handle wrap-around?
+		  if (corrected_pos[m]>6.28) corrected_pos[m]-=6.28;
+		  if (corrected_pos[m]<0) corrected_pos[m]+=6.28;
+		}
 	      }
 
 	      //get the position residual

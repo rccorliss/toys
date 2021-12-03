@@ -73,6 +73,7 @@ void invertHistograms(){
 void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
   TH3* hhits=(TH3*)hin[0]->Clone("hhits"); //number of elements in each output bin, for normalization purposes.
   TH1* hnhits=new TH1F("hnhits","number of hits in each output bin",resample_factor+1,-0.5,resample_factor+0.5);
+  TH1* hdist=new TH1F("hdist","distortion sanity check",1000,-1,1);
   hhits->Reset();
   
   TAxis *ax[3]={nullptr,nullptr,nullptr};
@@ -88,7 +89,7 @@ void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
   float low[3],high[3], step[3], sample_pos[3];
   float distortion[3], distorted_pos[3];
   int a=0;
-  for (int i=0;i<nbins[0];i++){
+  for (int i=1;i<nbins[0]-1;i++){
     a=0;
     low[a]=ax[a]->GetBinLowEdge(i+1);
     high[a]=ax[a]->GetBinUpEdge(i+1);
@@ -96,7 +97,7 @@ void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
     for (int isub=0;isub<resample_factor;isub++){
       a=0;
       sample_pos[a]=step[a]*(isub+0.5);
-      for (int j=0;j<nbins[1];j++){
+      for (int j=1;j<nbins[1]-1;j++){
 	a=1;
 	low[a]=ax[a]->GetBinLowEdge(j+1);
 	high[a]=ax[a]->GetBinUpEdge(j+1);
@@ -104,7 +105,7 @@ void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
 	for (int jsub=0;jsub<resample_factor;jsub++){
 	  a=1;
 	  sample_pos[a]=step[a]*(jsub+0.5);
-	  for (int k=0;k<nbins[2];k++){
+	  for (int k=1;k<nbins[2]-1;k++){
 	    a=2;
 	    low[a]=ax[a]->GetBinLowEdge(k+1);
 	    high[a]=ax[a]->GetBinUpEdge(k+1);
@@ -115,8 +116,9 @@ void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
 
 	      //get the distorted position
 	      for (int m=0;m<3;m++){
-		distortion[m]=hin[m]->GetBinContent(hin[m]->FindBin(sample_pos[0],sample_pos[1],sample_pos[2]));
+		distortion[m]=hin[m]->Interpolate(sample_pos[0],sample_pos[1],sample_pos[2]);
 		distorted_pos[m]=sample_pos[m]+distortion[m];
+		hdist->Fill(distortion[m]);
 	      }
 
 	      //histogram the distortion in the distorted position.
@@ -133,13 +135,13 @@ void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
 
 
   //normalize based on how many hits we put into each.  yell if we have less than 1/2 the sampling.
-  for (int i=0;i<nbins[0];i++){
+  for (int i=1;i<nbins[0]-1;i++){
     a=0;
     distorted_pos[a]=ax[a]->GetBinCenter(i+1);
-    for (int j=0;j<nbins[1];j++){
+    for (int j=1;j<nbins[1]-1;j++){
       a=1;
       distorted_pos[a]=ax[a]->GetBinCenter(j+1);
-      for (int k=0;k<nbins[2];k++){
+      for (int k=1;k<nbins[2]-1;k++){
 	a=2;
 	distorted_pos[a]=ax[a]->GetBinCenter(k+1);
 	//histogram the distortion in the distorted position.
@@ -157,7 +159,8 @@ void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
       }
     }
   }
-		       
+
+  hdist->Write();
   hnhits->Write();
   return;
 }
@@ -189,7 +192,7 @@ void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect){
   float distortion[3], distorted_pos[3];
   float correction[3], corrected_pos[3];
   int a=0;
-  for (int i=0;i<nbins[0];i++){
+  for (int i=1;i<nbins[0]-1;i++){
     a=0;
     low[a]=ax[a]->GetBinLowEdge(i+1);
     high[a]=ax[a]->GetBinUpEdge(i+1);
@@ -197,7 +200,7 @@ void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect){
     for (int isub=0;isub<resample_factor;isub++){
       a=0;
       sample_pos[a]=step[a]*(isub+0.5);
-      for (int j=0;j<nbins[1];j++){
+      for (int j=1;j<nbins[1]-1;j++){
 	a=1;
 	low[a]=ax[a]->GetBinLowEdge(j+1);
 	high[a]=ax[a]->GetBinUpEdge(j+1);
@@ -205,7 +208,7 @@ void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect){
 	for (int jsub=0;jsub<resample_factor;jsub++){
 	  a=1;
 	  sample_pos[a]=step[a]*(jsub+0.5);
-	  for (int k=0;k<nbins[2];k++){
+	  for (int k=1;k<nbins[2]-1;k++){
 	    a=2;
 	    low[a]=ax[a]->GetBinLowEdge(k+1);
 	    high[a]=ax[a]->GetBinUpEdge(k+1);

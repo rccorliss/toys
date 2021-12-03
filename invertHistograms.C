@@ -38,6 +38,7 @@ void invertHistograms(){
     for (int i=0;i<3;i++){
       hin.push_back((TH3*)infile->Get(histName[i].data()));
       hout.push_back((TH3*)hin[i]->Clone(histName[i].data()));
+      hout[i]->Reset();
     }
     Resample(hout,hin);
     for (int i=0;i<3;i++){
@@ -48,9 +49,11 @@ void invertHistograms(){
     hin.clear();
     hout.clear();
     
-    for (int i=3;i<6;i++){
-      hin.push_back((TH3*)infile->Get(histName[i].data()));
-      hout.push_back((TH3*)hin[i]->Clone(histName[i].data()));
+    for (int i=0;i<3;i++){
+      hin.push_back((TH3*)infile->Get(histName[i+3].data()));
+      hout.push_back((TH3*)hin[i]->Clone(histName[i+3].data()));
+      hout[i]->Reset();
+
     }
     Resample(hout,hin);
     for (int i=0;i<3;i++){

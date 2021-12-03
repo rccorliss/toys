@@ -1,6 +1,6 @@
 
 vector<std::pair<std::string,std::string>> fileName;
-vector<std::pair<std::string,std::string>> histName;
+vector<std::string> histName;
 
 const int resample_factor=3; //how many samples, evenly spaced but centered in the bin boundaries so that they're never on the edge unless n=inf, to resample.  may have aliasing issues if we're not careful.
 
@@ -38,15 +38,23 @@ void invertHistograms(){
     for (int i=0;i<3;i++){
       hin.push_back((TH3*)infile->Get(histName[i].data()));
       hout.push_back((TH3*)hin->Clone(histName[i].data()));
-      Resample(hout,hin);
-      hout->Write();
     }
+    Resample(hout,hin);
+    for (int i=0;i<3;i++){
+      hout[i]->Write();
+    }
+    CheckClosure(hin,hout);
 
+    hin.clear();
+    hout.clear();
+    
     for (int i=3;i<6;i++){
       hin.push_back((TH3*)infile->Get(histName[i].data()));
       hout.push_back((TH3*)hin->Clone(histName[i].data()));
-      Resample(hout,hin);
-      hout->Write();
+    }
+    Resample(hout,hin);
+    for (int i=0;i<3;i++){
+      hout[i]->Write();
     }
 
     CheckClosure(hin,hout);
@@ -147,10 +155,11 @@ void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
 void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect){
   TH3* hclosure[3];
   TH1F* hresidual[3];
-
+  static int ncalls=0;
+  ncalls++;
   for(int i=0;i<3;i++){
-    hclosure[i]  =(TH3*)hdistort[0]->Clone(Form("hclosure%d",i));
-    hresidual[i]=new TH1F(Form("hresidual%d",i),Form("residual in axis %d",i),200,-0.1,0.1);
+    hclosure[i]=(TH3*)hdistort[0]->Clone(Form("hclosure%d_%d",i,ncalls));
+    hresidual[i]=new TH1F(Form("hresidual%d_%d",i,ncalls),Form("residual in axis %d",i),200,-0.1,0.1);
   }
   TH3* hhits=(TH3*)hdistort[0]->Clone("hhits"); //number of elements in each output bin, for normalization purposes.
 
@@ -215,12 +224,12 @@ void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect){
       }
     }
   }
-  TFile f=TFile::Open("ClosurePlots.hist.root");
+  //TFile f=TFile::Open("ClosurePlots.hist.root");
   for (int i=0;i<3;i++){
     hclosure[i]->Write();
     hresidual[i]->Write();
   }
-  f->Close();
+  //f->Close();
   return;
 }
 

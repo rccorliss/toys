@@ -45,7 +45,6 @@ void invertHistograms(){
       hout[i]->Write();
     }
     CheckClosure(hin,hout);
-        outfile->Close();
 
     hin.clear();
     hout.clear();

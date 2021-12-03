@@ -72,6 +72,7 @@ void invertHistograms(){
 
 void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
   TH3* hhits=(TH3*)hin[0]->Clone("hhits"); //number of elements in each output bin, for normalization purposes.
+  TH1* hnhits=new TH1F("hnhits","number of hits in each output bin",resample_factor+1,-0.5,resample_factor+0.5);
   hhits->Reset();
   
   TAxis *ax[3]={nullptr,nullptr,nullptr};
@@ -144,15 +145,20 @@ void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
 	//histogram the distortion in the distorted position.
 	int global_bin=hin[0]->FindBin(distorted_pos[0],distorted_pos[1],distorted_pos[2]);
 	float global_content=hhits->GetBinContent(global_bin);
+	hnhits->Fill(global_content);
 	if (global_content<1.0){
 	  printf("(%2.2f,%2.2f,%2.2f)(glob=%d) has %1.2f entries\n",distorted_pos[0],distorted_pos[1],distorted_pos[2],global_bin,global_content);
-	}
-	for (int m=0;m<3;m++){
-	  hout[m]->SetBinContent(global_bin,hout[m]->GetBinContent(global_bin)/global_content);
+	} else {
+	  //average the contents in the bin
+	  for (int m=0;m<3;m++){
+	    hout[m]->SetBinContent(global_bin,hout[m]->GetBinContent(global_bin)/global_content);
+	  }
 	}     
       }
     }
   }
+		       
+  hnhits->Write();
   return;
 }
 

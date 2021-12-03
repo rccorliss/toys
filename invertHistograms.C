@@ -33,7 +33,10 @@ void invertHistograms(){
 
     infile=TFile::Open(fileName[f].first.data(),"READ");
     outfile=TFile::Open(fileName[f].second.data(),"RECREATE");
-    outfile->cd();  
+    outfile->cd();
+    
+    hin.clear();
+    hout.clear();
 
     for (int i=0;i<3;i++){
       hin.push_back((TH3*)infile->Get(histName[i].data()));
@@ -61,6 +64,8 @@ void invertHistograms(){
     }
 
     CheckClosure(hin,hout);
+    CheckClosure(hin,hin);
+
     
     outfile->Close();
     infile->Close();

@@ -37,7 +37,7 @@ void invertHistograms(){
 
     for (int i=0;i<3;i++){
       hin.push_back((TH3*)infile->Get(histName[i].data()));
-      hout.push_back((TH3*)hin->Clone(histName[i].data()));
+      hout.push_back((TH3*)hin[i]->Clone(histName[i].data()));
     }
     Resample(hout,hin);
     for (int i=0;i<3;i++){
@@ -50,7 +50,7 @@ void invertHistograms(){
     
     for (int i=3;i<6;i++){
       hin.push_back((TH3*)infile->Get(histName[i].data()));
-      hout.push_back((TH3*)hin->Clone(histName[i].data()));
+      hout.push_back((TH3*)hin[i]->Clone(histName[i].data()));
     }
     Resample(hout,hin);
     for (int i=0;i<3;i++){
@@ -66,7 +66,7 @@ void invertHistograms(){
 }
 
 void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
-  TH3* hhits=(TH3*)hin->Clone("hhits"); //number of elements in each output bin, for normalization purposes.
+  TH3* hhits=(TH3*)hin[0]->Clone("hhits"); //number of elements in each output bin, for normalization purposes.
 
   TAxis *ax[3]={nullptr,nullptr,nullptr};
   ax[0]=hhits->GetXaxis();

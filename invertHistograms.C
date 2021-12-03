@@ -96,7 +96,7 @@ void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
     step[a]=(high[a]-low[a])/(1.*resample_factor);
     for (int isub=0;isub<resample_factor;isub++){
       a=0;
-      sample_pos[a]=step[a]*(isub+0.5);
+      sample_pos[a]=low[a]+step[a]*(isub+0.5);
       for (int j=1;j<nbins[1]-1;j++){
 	a=1;
 	low[a]=ax[a]->GetBinLowEdge(j+1);
@@ -104,7 +104,7 @@ void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
 	step[a]=(high[a]-low[a])/(1.*resample_factor);
 	for (int jsub=0;jsub<resample_factor;jsub++){
 	  a=1;
-	  sample_pos[a]=step[a]*(jsub+0.5);
+	  sample_pos[a]=low[a]+step[a]*(jsub+0.5);
 	  for (int k=1;k<nbins[2]-1;k++){
 	    a=2;
 	    low[a]=ax[a]->GetBinLowEdge(k+1);
@@ -112,7 +112,7 @@ void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
 	    step[a]=(high[a]-low[a])/(1.*resample_factor);
 	    for (int ksub=0;ksub<resample_factor;ksub++){
 	      a=2;
-	      sample_pos[a]=step[a]*(ksub+0.5);
+	      sample_pos[a]=low[a]+step[a]*(ksub+0.5);
 
 	      //get the distorted position
 	      for (int m=0;m<3;m++){
@@ -199,7 +199,7 @@ void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect){
     step[a]=(high[a]-low[a])/(1.*resample_factor);
     for (int isub=0;isub<resample_factor;isub++){
       a=0;
-      sample_pos[a]=step[a]*(isub+0.5);
+      sample_pos[a]=low[a]+step[a]*(isub+0.5);
       for (int j=1;j<nbins[1]-1;j++){
 	a=1;
 	low[a]=ax[a]->GetBinLowEdge(j+1);
@@ -207,7 +207,7 @@ void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect){
 	step[a]=(high[a]-low[a])/(1.*resample_factor);
 	for (int jsub=0;jsub<resample_factor;jsub++){
 	  a=1;
-	  sample_pos[a]=step[a]*(jsub+0.5);
+	  sample_pos[a]=low[a]+step[a]*(jsub+0.5);
 	  for (int k=1;k<nbins[2]-1;k++){
 	    a=2;
 	    low[a]=ax[a]->GetBinLowEdge(k+1);
@@ -215,7 +215,7 @@ void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect){
 	    step[a]=(high[a]-low[a])/(1.*resample_factor);
 	    for (int ksub=0;ksub<resample_factor;ksub++){
 	      a=2;
-	      sample_pos[a]=step[a]*(ksub+0.5);
+	      sample_pos[a]=low[a]+step[a]*(ksub+0.5);
 
 	      //get the distorted position
 	      for (int m=0;m<3;m++){

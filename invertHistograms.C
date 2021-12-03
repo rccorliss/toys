@@ -40,7 +40,7 @@ void invertHistograms(){
       hout.push_back((TH3*)hin[i]->Clone(histName[i].data()));
       hout[i]->Reset();
     }
-    Resample(hout,hin);
+    Resample(hin,hout);
     for (int i=0;i<3;i++){
       hout[i]->Write();
     }
@@ -57,7 +57,7 @@ void invertHistograms(){
       hout[i]->Reset();
 
     }
-    Resample(hout,hin);
+    Resample(hin,hout);
     for (int i=0;i<3;i++){
       hout[i]->Write();
     }

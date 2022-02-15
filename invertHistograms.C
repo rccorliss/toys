@@ -433,7 +433,7 @@ void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
 
 
 
-void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect, bool rFirst{
+void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect, bool rFirst){
   TH3* hclosure[3];
   TH1F* hresidual[3];
   TH2F* hresidual2D[3][3];

@@ -1,12 +1,14 @@
 
+
 vector<std::pair<std::string,std::string>> fileName;
 vector<std::string> histName;
 
 const int resample_factor=11; //how many samples, evenly spaced but centered in the bin boundaries so that they're never on the edge unless n=inf, to resample.  may have aliasing issues if we're not careful.
 
 void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout);
-void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect);
+void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect, bool rFirst=false);//rFirst means apply rphi shift at the shifted r coord, instead of the original r coord
 void ClosureTest(const char* originalfilename, const char* invertfilename, const char* closurefilename); //opens appropriate files, then calls CHeckClosure.
+void ClosureTestBackwards(const char* originalfilename, const char* invertfilename, const char* closurefilename); //opens appropriate files, then calls CHeckClosureBackwards, which swaps the order of the r and rphi corrections (applying rphi with r_orig instead of r_new).
 
 
 void invertHistograms(){
@@ -431,7 +433,7 @@ void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){
 
 
 
-void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect){
+void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect, bool rFirst{
   TH3* hclosure[3];
   TH1F* hresidual[3];
   TH2F* hresidual2D[3][3];
@@ -479,10 +481,10 @@ void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect){
 
 
 
-
+  //calculate the total number of bins, so we can give an accurate progress bar.
+  int nWaypoints=40; //number of progress pips to display.
   unsigned long int ntotalsteps=nbins[0]*nbins[1]*nbins[2]*resample_factor*resample_factor*resample_factor;
   printf("Checking Closure.  %lu steps\n",ntotalsteps);
-  int nWaypoints=40;
   printf("|");
   for (int i=0;i<nWaypoints-2;i++) printf("-");
   printf("|\n");
@@ -544,23 +546,22 @@ void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect){
 		}
 	      }
 	      //get the distorted position
-	      for (int m=0;m<3;m++){
+	      for (int m=0;m<3;m++){//
 		//bin center:  distortion[m]=hdistort[m]->GetBinContent(hdistort[m]->FindBin(sample_pos[0],sample_pos[1],sample_pos[2]));
 		//interpolation version:
 		distortion[m]=hdistort[m]->Interpolate(sample_pos[0],sample_pos[1],sample_pos[2]);
-		if (m==0){
-		  //because the map stores the phi-hat distortion, and we want the resulting coordinate:
-		  distorted_pos[m]=sample_pos[m]+distortion[m]/sample_pos[1];
-		} else {
-		  distorted_pos[m]=sample_pos[m]+distortion[m];
-		}
-		if (m==0){
-		  //handle wrap-around in phi
-		  if (distorted_pos[m]>6.28) distorted_pos[m]-=6.28;
-		  if (distorted_pos[m]<0) distorted_pos[m]+=6.28;
-		}
-		
+		if (m!=0) distorted_pos[m]=sample_pos[m]+distortion[m];
 	      }
+	      //because the map stores the phi-hat distortion, and we want the resulting coordinate, pos[0](phi) must be done separately:
+	      if (rFirst){//distort r first, means use the distorted position to calculate the phi distorted position.
+		distorted_pos[0]=sample_pos[0]+distortion[0]/distorted_pos[1];
+	      } else {//distort r second, means use the sample position to calculate the phi distorted position.
+		distorted_pos[0]=sample_pos[0]+distortion[0]/sample_pos[1];
+	      }
+	      //handle wrap-around in phi
+	      if (distorted_pos[0]>6.28) distorted_pos[0]-=6.28;
+	      if (distorted_pos[0]<0) distorted_pos[0]+=6.28;
+		
 	      //get the corrected position
 	      //check bounds and yell if we're weird:
 	      bool within_bounds=true;
@@ -579,16 +580,19 @@ void CheckClosure(std::vector<TH3*> hdistort, std::vector<TH3*> hcorrect){
 		for (int m=0;m<3;m++){
 		  //bin center: correction[m]=hcorrect[m]->GetBinContent(hcorrect[m]->FindBin(distorted_pos[0],distorted_pos[1],distorted_pos[2]));
 		  correction[m]=hcorrect[m]->Interpolate(distorted_pos[0],distorted_pos[1],distorted_pos[2]);
-		  if (m==0){
-		    //because the map stores the phi-hat distortion, and we want the resulting coordinate:
-		    corrected_pos[m]=distorted_pos[m]-correction[m]/distorted_pos[1];//MINUS! by convention
-		    if (corrected_pos[m]>6.28) corrected_pos[m]-=6.28;
-		    if (corrected_pos[m]<0) corrected_pos[m]+=6.28;
-		  } else {
-		    corrected_pos[m]=distorted_pos[m]-correction[m];//MINUS! by convention
-		  }
-		
+		  if(m!=0)   corrected_pos[m]=distorted_pos[m]-correction[m];//MINUS! by convention
 		}
+
+	      //because the map stores the phi-hat correction, and we want the resulting coordinate, pos[0](phi) must be done separately:
+	      if (rFirst){//correct r first, means use the corrected position to calculate the phi corrected position.
+		corrected_pos[0]=distorted_pos[0]-correction[0]/corrected_pos[1];
+	      } else {//correct r second, means use the distorted position to calculate the phi corrected position.
+		corrected_pos[0]=distorted_pos[0]-correction[0]/distorted_pos[1];
+	      }
+	      //handle wrap-around in phi
+	      if (corrected_pos[0]>6.28) corrected_pos[0]-=6.28;
+	      if (corrected_pos[0]<0) corrected_pos[0]+=6.28;
+
 
 		//fill the position residual
 		for (int m=0;m<3;m++){

@@ -128,6 +128,7 @@ void invertHistograms(const char* originalfilename, const char* invertfilename, 
   ClosureTest(originalfilename,invertfilename,closurefilename);
   return;
 }
+
 void ClosureTest(const char* originalfilename, const char* invertfilename, const char* closurefilename){
   histName.push_back("hIntDistortionR_negz");
   histName.push_back("hIntDistortionP_negz");
@@ -183,6 +184,61 @@ void ClosureTest(const char* originalfilename, const char* invertfilename, const
     return;
 }
 
+
+void ClosureTestBackwards(const char* originalfilename, const char* invertfilename, const char* closurefilename){
+  histName.push_back("hIntDistortionR_negz");
+  histName.push_back("hIntDistortionP_negz");
+  histName.push_back("hIntDistortionZ_negz");
+  histName.push_back("hIntDistortionR_posz");
+  histName.push_back("hIntDistortionP_posz");
+  histName.push_back("hIntDistortionZ_posz");
+
+ 
+  TFile *infile;
+  TFile *invertfile;
+  TFile *closurefile;
+
+  std::vector<TH3*> hin;
+  std::vector<TH3*> hout;
+
+  printf("Checking Closure of Set (distort r first):  Distort:%s Correct:%s ----> Residual:%s\n",originalfilename,invertfilename,closurefilename);
+  infile=TFile::Open(originalfilename,"READ");
+  invertfile=TFile::Open(invertfilename,"READ");
+  closurefile=TFile::Open(closurefilename,"RECREATE");
+  closurefile->cd();
+    
+  hin.clear();
+  hout.clear();
+
+  for (int i=0;i<3;i++){
+    hin.push_back((TH3*)infile->Get(histName[i].data()));
+    hout.push_back((TH3*)invertfile->Get(histName[i].data()));
+  }
+  for (int i=0;i<3;i++){
+    hout[i]->Write();
+  }
+  CheckClosure(hin,hout, true);
+
+  hin.clear();
+  hout.clear();
+    
+  for (int i=0;i<3;i++){
+    hin.push_back((TH3*)infile->Get(histName[i+3].data()));
+    hout.push_back((TH3*)invertfile->Get(histName[i+3].data()));
+  }
+  for (int i=0;i<3;i++){
+    hout[i]->Write();
+  }
+
+  CheckClosure(hin,hout);
+  //CheckClosure(hin,hin);
+
+    
+    infile->Close();
+    invertfile->Close();
+    closurefile->Close();
+    return;
+}
 
 
 void Resample(std::vector<TH3*> hin, std::vector<TH3*> hout){

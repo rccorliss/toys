@@ -121,6 +121,54 @@ void invertHistograms(int flag){
 }
 
 
+void invertHistograms(const char* originalfilename, const char* invertfilename){
+  //do the inversion and save the check histogram to the invert file:
+  histName.push_back("hIntDistortionR_negz");
+  histName.push_back("hIntDistortionP_negz");
+  histName.push_back("hIntDistortionZ_negz");
+  histName.push_back("hIntDistortionR_posz");
+  histName.push_back("hIntDistortionP_posz");
+  histName.push_back("hIntDistortionZ_posz");
+
+  printf("Inverting:  %s --> %s\n",originalfilename,invertfilename);
+
+    infile=TFile::Open(originalfilename,"READ");
+    outfile=TFile::Open(invertfilename,"RECREATE");
+    outfile->cd();
+    
+    hin.clear();
+    hout.clear();
+
+    for (int i=0;i<3;i++){
+      hin.push_back((TH3*)infile->Get(histName[i].data()));
+      hout.push_back((TH3*)hin[i]->Clone(histName[i].data()));
+      hout[i]->Reset();
+    }
+    Resample(hin,hout);
+    for (int i=0;i<3;i++){
+      hout[i]->Write();
+    }
+    CheckClosure(hin,hout);
+
+    hin.clear();
+    hout.clear();
+    
+    for (int i=0;i<3;i++){
+      hin.push_back((TH3*)infile->Get(histName[i+3].data()));
+      hout.push_back((TH3*)hin[i]->Clone(histName[i+3].data()));
+      hout[i]->Reset();
+
+    }
+    Resample(hin,hout);
+    for (int i=0;i<3;i++){
+      hout[i]->Write();
+    }
+  
+
+  
+  return;
+}
+
 void invertHistograms(const char* originalfilename, const char* invertfilename, const char* closurefilename, bool rFirst){
   //to let me call this from the command line, it has to share the name of the .C macro.  with three args, we assume we're only doing the closure test.
   printf("Skipping generation of inverse map, only doing closure.\n");

@@ -131,38 +131,44 @@ void invertHistograms(const char* originalfilename, const char* invertfilename){
   histName.push_back("hIntDistortionZ_posz");
 
   printf("Inverting:  %s --> %s\n",originalfilename,invertfilename);
+  
+  TFile *infile;
+  TFile *outfile;
+  std::vector<TH3*> hin;
+  std::vector<TH3*> hout;
+  
+  infile=TFile::Open(originalfilename,"READ");
+  outfile=TFile::Open(invertfilename,"RECREATE");
+  outfile->cd();
 
-    infile=TFile::Open(originalfilename,"READ");
-    outfile=TFile::Open(invertfilename,"RECREATE");
-    outfile->cd();
+
+  hin.clear();
+  hout.clear();
+
+  for (int i=0;i<3;i++){
+    hin.push_back((TH3*)infile->Get(histName[i].data()));
+    hout.push_back((TH3*)hin[i]->Clone(histName[i].data()));
+    hout[i]->Reset();
+  }
+  Resample(hin,hout);
+  for (int i=0;i<3;i++){
+    hout[i]->Write();
+  }
+  CheckClosure(hin,hout);
+
+  hin.clear();
+  hout.clear();
     
-    hin.clear();
-    hout.clear();
+  for (int i=0;i<3;i++){
+    hin.push_back((TH3*)infile->Get(histName[i+3].data()));
+    hout.push_back((TH3*)hin[i]->Clone(histName[i+3].data()));
+    hout[i]->Reset();
 
-    for (int i=0;i<3;i++){
-      hin.push_back((TH3*)infile->Get(histName[i].data()));
-      hout.push_back((TH3*)hin[i]->Clone(histName[i].data()));
-      hout[i]->Reset();
-    }
-    Resample(hin,hout);
-    for (int i=0;i<3;i++){
-      hout[i]->Write();
-    }
-    CheckClosure(hin,hout);
-
-    hin.clear();
-    hout.clear();
-    
-    for (int i=0;i<3;i++){
-      hin.push_back((TH3*)infile->Get(histName[i+3].data()));
-      hout.push_back((TH3*)hin[i]->Clone(histName[i+3].data()));
-      hout[i]->Reset();
-
-    }
-    Resample(hin,hout);
-    for (int i=0;i<3;i++){
-      hout[i]->Write();
-    }
+  }
+  Resample(hin,hout);
+  for (int i=0;i<3;i++){
+    hout[i]->Write();
+  }
   
 
   

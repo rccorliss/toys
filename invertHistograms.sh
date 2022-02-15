@@ -22,7 +22,7 @@ do
     outputname=`echo "${basefilename/.distortion_map.hist.root/.invert.distortion_map.hist.root}"`
     outputname=${outputdir}/${outputname}
     #echo $inputname becomes $outputname
-    echo root -l invertHistograms.C\(\"$inputname\",\"hugoJan2022/static_only_inverted_10-new.root\",\"hugoJan2022/static_only_closure_test.distortion_map.hist.root\",1\)
+    echo root -l invertHistograms.C\(\"$inputname\",\"$outputname\"\)
 done
 
 exit

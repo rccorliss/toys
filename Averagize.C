@@ -9,7 +9,7 @@ void Averagize(char *sourceFileName="evgeny_apr/Summary_Average_AA_events.root",
   TH3D *hSourcePrimary=(TH3D*)(source->Get(primaryName));
 
   //set up output:
-  TFile *output=TFile::Open("newAverage.hist.root","RECREATE"); //should make this an argument.
+  TFile *output=TFile::Open("newAverage.Apr.2022.hist.root","RECREATE"); //should make this an argument.
   TH3D *hOutputIBF=new TH3D(*hSourceIBF);
   hOutputIBF->Reset();
   hOutputIBF->SetTitle("Number of IBF (ions) (smoothed)");
@@ -126,8 +126,8 @@ void Averagize(char *sourceFileName="evgeny_apr/Summary_Average_AA_events.root",
   hOutputCharge->Add(hOutputIBF);
   hOutputCharge->GetSumw2()->Set(0);
   hOutputCharge->Write();
-  //hOutputIBF->Write();
-  //hOutputPrimary->Write();
+  hOutputIBF->Write();
+  hOutputPrimary->Write();
   output->Close();
 
   return;

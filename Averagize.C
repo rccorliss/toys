@@ -1,7 +1,8 @@
 //make a smooth average out of multiple components
 
-void Averagize(char *sourceFileName="evgeny_apr/Summary_Average_AA_events.root", float scale=0.08012, char *ibfName="h_IBFCharge_evt_0", char *primaryName="h_PrimCharge_evt_0"){
-
+//void Averagize(char *sourceFileName="evgeny_apr/Summary_Average_AA_events.root", float scale=0.08012, char *ibfName="h_IBFCharge_evt_0", char *primaryName="h_PrimCharge_evt_0"){
+void Averagize(char *sourceFileName="evgeny_jan_2022.sum.hist.root", float scale=0.0417, char *ibfName="_h_SC_ibf_0", char *primaryName="_h_SC_prim_0"){
+  //scale is because there were 24 input files.
   printf("default sumw2=%d\n",TH1::GetDefaultSumw2());
   //load files
   TFile *source=TFile::Open(sourceFileName,"READ");
@@ -9,7 +10,8 @@ void Averagize(char *sourceFileName="evgeny_apr/Summary_Average_AA_events.root",
   TH3D *hSourcePrimary=(TH3D*)(source->Get(primaryName));
 
   //set up output:
-  TFile *output=TFile::Open("newAverage.Apr.2022.hist.root","RECREATE"); //should make this an argument.
+  // TFile *output=TFile::Open("newAverage.hist.root","RECREATE"); //should make this an argument.
+  TFile *output=TFile::Open("newAverage.Apr.2022.hist.root","RECREATE"); //should make this an argument.  Changed to this in Apr 2022
   TH3D *hOutputIBF=new TH3D(*hSourceIBF);
   hOutputIBF->Reset();
   hOutputIBF->SetTitle("Number of IBF (ions) (smoothed)");

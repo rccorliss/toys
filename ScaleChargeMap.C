@@ -1,23 +1,27 @@
 //this is code to scale an input charge map so we can rapidly test different gas scenarios.
 
-voic ScaleChargeMap(){
+void ScaleChargeMap(){
   //for simplicity, I am hardcoding this first pass:
 
   TFile *infile,*outfile;
-  infile=TFile::Open("","READ");
-  outfile=TFile::Open("","RECREATE");
-  TH3* original_primaries=infile->Get("");
-  TH3* original_ibf=infile->Get("");
+  infile=TFile::Open("newAverage.Apr.2022.hist.root","READ");
+  outfile=TFile::Open("scaledAverage.Apr.2022.hist.root","RECREATE");
+  TH3* original_primaries=(TH3*)infile->Get("_h_SC_prim_0");
+  TH3* original_ibf=(TH3*)infile->Get("_h_SC_ibf_0");
 
   //pertinent gas params:
-  int nGas=3;
+  int nGas=4;
   float nominal_total_gain=2000;//used for clarity of eqns, but actual value shouldn't matter so long as it's the same across all samples
   float nominal_ibf_fraction=0.0013;//used for clarity, see above.
-  TString gasName[]={"Ne:CF4 50:50 (400V/cm)","Ar:CF4 60:40 (350V/cm)","Ar:CF4 60:40 (450V/cm)"};
-  float ion_mobility[]={1.34,1.34,1.34};//[cm^2/(V*s)]
-  float drift_field[]={400,349.9,451.1};//{V/cm]
-  float gas_ions_per_cm[]={71.5,96.4,96.4};//[#]
+  TString gasName[]={"Ne:CF4 50:50 (400V/cm)","Ar:CF4 60:40 (350V/cm)","Ar:CF4 60:40 (450V/cm)","Ar:CF4 60:40 (400V/cm)};
+  float ion_mobility[]={1.34,1.34,1.34,0};//[cm^2/(V*s)]
+  float drift_field[]={400,349.9,451.1,0};//{V/cm]
+  float gas_ions_per_cm[]={71.5,96.4,96.4,0};//[#]
 
+  ion_mobility[3]=0.5*(ion_mobility[1]+ion_mobility[2]);
+  drift_field[3]=0.5*(drift_field[1]+drift_field[2]);
+  gas_ions_per_cm[3]=0.5*(gas_ions_per_cm[1]+gas_ions_per_cm[2]);
+  
   //derived quantities:
   float ion_velocity[nGas]; //ion_mobility*drift_field;
   float gem_gain[nGas];//set such that the electrons (ions) per cm and the electron gain yields a fixed value of 2e3 ('nominal_total_gain')
@@ -49,15 +53,24 @@ voic ScaleChargeMap(){
   TH3 *primarycharge[nGas];
   TH3 *ibfcharge[nGas];
   for (int i=0;i<nGas;i++){
-    primarycharge[i]=original_primaries->Clone(Form("hprim%d",i));
+    primarycharge[i]=(TH3*)original_primaries->Clone(Form("hprim%d",i));
     primarycharge[i]->SetTitle(Form("Primary Spacecharge with %s",gasName[i].Data()));
     primarycharge[i]->Scale(primary_scale[i]);
+    primarycharge[i]->Write();
     
-    ibfcharge[i]=original_ibf->Clone(Form("hibf%d",i));
+    ibfcharge[i]=(TH3*)original_ibf->Clone(Form("hibf%d",i));
     ibfcharge[i]->SetTitle(Form("IBF Spacecharge with %s",gasName[i].Data()));
     ibfcharge[i]->Scale(ibf_scale[i]);
+    ibfcharge[i]->Write();
 
-    chargemap[i]=primarycharge[i]->Clone(Form("htotalcharge%d",i));
+    chargemap[i]=(TH3*)primarycharge[i]->Clone(Form("htotalcharge%d",i));
+    ibfcharge[i]->SetTitle(Form("Total Spacecharge with %s",gasName[i].Data()));
     chargemap[i]->Add(ibfcharge[i]);
+    chargemap[i]->Write();
 
+  }
+  outfile->Close();
+  return;
+}
+  
  			   

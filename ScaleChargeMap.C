@@ -5,22 +5,38 @@ void ScaleChargeMap(){
 
   TFile *infile,*outfile;
   infile=TFile::Open("newAverage.Apr.2022.hist.root","READ");
-  outfile=TFile::Open("scaledAverage.Apr.2022.hist.root","RECREATE");
+  outfile=TFile::Open("scaledAverage.Jun.2022.hist.root","RECREATE");
   TH3* original_primaries=(TH3*)infile->Get("_h_SC_prim_0");
   TH3* original_ibf=(TH3*)infile->Get("_h_SC_ibf_0");
 
   //pertinent gas params:
-  int nGas=4;
+  /*
+		E_{d}		v_{d}		D_{T}@ No Mag	D_{T}@1.5 T	D_{T}@1.4 T	D_{L}	
+		[V/cm]		[um/ns]		[um/sqrt(cm)]	[um/sqrt(cm)]	[um/sqrt(cm)]	[um/sqrt(cm)]	
+Ar:CF4 35:65 :	400.000		80.683		135.729		36.596		38.979		108.867		
+Ar:CF4 50:50 :	400.000		83.480		138.485		36.963		38.953		111.450		
+Ar:CF4 60:40 :	400.000		86.194		143.702		36.915		39.717		113.820	
+
+   */
+  int nGas=3;
   float nominal_total_gain=2000;//used for clarity of eqns, but actual value shouldn't matter so long as it's the same across all samples
   float nominal_ibf_fraction=0.0013;//used for clarity, see above.
-  TString gasName[]={"Ne:CF4 50:50 (400V/cm)","Ar:CF4 60:40 (350V/cm)","Ar:CF4 60:40 (450V/cm)","Ar:CF4 60:40 (400V/cm)};
+  /*
+  TString gasName[]={"Ne:CF4 50:50 (400V/cm)","Ar:CF4 60:40 (350V/cm)","Ar:CF4 60:40 (450V/cm)","Ar:CF4 60:40 (400V/cm)"};
   float ion_mobility[]={1.34,1.34,1.34,0};//[cm^2/(V*s)]
   float drift_field[]={400,349.9,451.1,0};//{V/cm]
   float gas_ions_per_cm[]={71.5,96.4,96.4,0};//[#]
+  */
 
-  ion_mobility[3]=0.5*(ion_mobility[1]+ion_mobility[2]);
-  drift_field[3]=0.5*(drift_field[1]+drift_field[2]);
-  gas_ions_per_cm[3]=0.5*(gas_ions_per_cm[1]+gas_ions_per_cm[2]);
+  TString gasName[]={"Ne:CF4 50:50","Ar:CF4 60:40","Ar:CF4 35:65"};
+  float ion_mobility[]={1.65,1.34,1.18};//[cm^2/(V*s)]
+  float drift_field[]={400,400,400};//{V/cm]
+  float gas_ions_per_cm[]={71.5,96.4,97.9};//[#]
+
+  
+  // ion_mobility[3]=0.5*(ion_mobility[1]+ion_mobility[2]);
+  //drift_field[3]=0.5*(drift_field[1]+drift_field[2]);
+  //gas_ions_per_cm[3]=0.5*(gas_ions_per_cm[1]+gas_ions_per_cm[2]);
   
   //derived quantities:
   float ion_velocity[nGas]; //ion_mobility*drift_field;
@@ -52,6 +68,10 @@ void ScaleChargeMap(){
   TH3* chargemap[nGas];
   TH3 *primarycharge[nGas];
   TH3 *ibfcharge[nGas];
+
+  TCanvas *c=new TCanvas("c",600,400);
+  chargemap[1]->SetMarkerColor(kRed);
+  chargemap[2]->SetMarkerColor(kBlue);
   for (int i=0;i<nGas;i++){
     primarycharge[i]=(TH3*)original_primaries->Clone(Form("hprim%d",i));
     primarycharge[i]->SetTitle(Form("Primary Spacecharge with %s",gasName[i].Data()));

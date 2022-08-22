@@ -51,51 +51,291 @@ area88_0=8.02;area88_212=14.46;dist88=524.56;  dx88=-56.62;dy88=-222.65;dphi88=-
 area91_0=8.04;area91_212=14.49;dist91=524.55;  dx91=-56.72;dy91=-222.43;dphi91=-1.2632
 area92_0=8.21;area92_212=14.80;dist92=524.39;  dx92=-56.48;dy92=-222.52;dphi92=-1.2627
 area93_0=8.21;area93_212=14.43;dist93=524.53;  dx93=-56.77;dy93=-222.44;dphi93=-1.2635
+
+#petal 44
+set object 91 circle at   220.201,109.338 size first 5 fc rgb "orange" lw 15
+set object 123 circle at   326.657,106.244 size first 12 fc rgb "red" lw 15
+set object 123 circle at   326.657,106.244 size first 12 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal44_edges.DAT' -A 350000" u (($1+dx44)*cos(dphi44)-($2+dy44)*sin(dphi44)):(($2+dy44)*cos(dphi44)+($1+dx44)*sin(dphi44)) w l title 'petal 44'
+unset for [i=0:250] object i
+
+#petal 45
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal45_edges.DAT' -A 350000" u (($1+dx45)*cos(dphi45)-($2+dy45)*sin(dphi45)):(($2+dy45)*cos(dphi45)+($1+dx45)*sin(dphi45)) w l title 'petal 45'
+unset for [i=0:250] object i
+
+#petal 46
+set object 116 circle at   316.560,43.681 size first 12 fc rgb "red" lw 15
+set object 116 circle at   316.560,43.681 size first 12 fc rgb "orange" lw 15
+set object 138 circle at   343.060,156.350 size first 12 fc rgb "orange" lw 15
+set object 209 circle at   519.960,65.794 size first 12 fc rgb "red" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal46_edges.DAT' -A 350000" u (($1+dx46)*cos(dphi46)-($2+dy46)*sin(dphi46)):(($2+dy46)*cos(dphi46)+($1+dx46)*sin(dphi46)) w l title 'petal 46'
+unset for [i=0:250] object i
+
+#petal 47
+set object 117 circle at   313.474,66.629 size first 12 fc rgb "red" lw 15
+set object 117 circle at   313.474,66.629 size first 12 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal47_edges.DAT' -A 350000" u (($1+dx47)*cos(dphi47)-($2+dy47)*sin(dphi47)):(($2+dy47)*cos(dphi47)+($1+dx47)*sin(dphi47)) w l title 'petal 47'
+unset for [i=0:250] object i
+
+#petal 48
+set object 94 circle at   246.183,83.625 size first 5 fc rgb "orange" lw 15
+set object 138 circle at   343.060,156.350 size first 12 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal48_edges.DAT' -A 350000" u (($1+dx48)*cos(dphi48)-($2+dy48)*sin(dphi48)):(($2+dy48)*cos(dphi48)+($1+dx48)*sin(dphi48)) w l title 'petal 48'
+unset for [i=0:250] object i
+
+#petal 49
+set object 11 circle at   24.401,52.777 size first 5 fc rgb "orange" lw 15
+set object 18 circle at   37.618,47.283 size first 5 fc rgb "orange" lw 15
+set object 27 circle at   59.248,53.948 size first 5 fc rgb "orange" lw 15
+set object 45 circle at   107.590,47.059 size first 5 fc rgb "red" lw 15
+set object 57 circle at   132.176,87.868 size first 5 fc rgb "orange" lw 15
+set object 77 circle at   181.306,96.830 size first 5 fc rgb "orange" lw 15
+set object 106 circle at   274.090,138.406 size first 12 fc rgb "orange" lw 15
+set object 194 circle at   499.417,50.354 size first 12 fc rgb "red" lw 15
+set object 211 circle at   523.584,21.965 size first 12 fc rgb "red" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal49_edges.DAT' -A 350000" u (($1+dx49)*cos(dphi49)-($2+dy49)*sin(dphi49)):(($2+dy49)*cos(dphi49)+($1+dx49)*sin(dphi49)) w l title 'petal 49'
+unset for [i=0:250] object i
+
+#petal 50
+set object 11 circle at   24.401,52.777 size first 5 fc rgb "orange" lw 15
+set object 18 circle at   37.618,47.283 size first 5 fc rgb "orange" lw 15
+set object 23 circle at   57.290,-15.205 size first 5 fc rgb "red" lw 15
+set object 27 circle at   59.248,53.948 size first 5 fc rgb "orange" lw 15
+set object 41 circle at   102.449,-6.812 size first 5 fc rgb "red" lw 15
+set object 57 circle at   132.176,87.868 size first 5 fc rgb "orange" lw 15
+set object 77 circle at   181.306,96.830 size first 5 fc rgb "orange" lw 15
+set object 91 circle at   220.201,109.338 size first 5 fc rgb "orange" lw 15
+set object 106 circle at   274.090,138.406 size first 12 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal50_edges.DAT' -A 350000" u (($1+dx50)*cos(dphi50)-($2+dy50)*sin(dphi50)):(($2+dy50)*cos(dphi50)+($1+dx50)*sin(dphi50)) w l title 'petal 50'
+unset for [i=0:250] object i
+
+#petal 51
+set object 138 circle at   343.060,156.350 size first 12 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal51_edges.DAT' -A 350000" u (($1+dx51)*cos(dphi51)-($2+dy51)*sin(dphi51)):(($2+dy51)*cos(dphi51)+($1+dx51)*sin(dphi51)) w l title 'petal 51'
+unset for [i=0:250] object i
+
+#petal 52
+set object 94 circle at   246.183,83.625 size first 5 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal52_edges.DAT' -A 350000" u (($1+dx52)*cos(dphi52)-($2+dy52)*sin(dphi52)):(($2+dy52)*cos(dphi52)+($1+dx52)*sin(dphi52)) w l title 'petal 52'
+unset for [i=0:250] object i
+
+#petal 53
+set object 19 circle at   44.810,59.428 size first 5 fc rgb "orange" lw 15
+set object 91 circle at   220.201,109.338 size first 5 fc rgb "orange" lw 15
+set object 140 circle at   368.287,154.271 size first 12 fc rgb "orange" lw 15
+set object 206 circle at   509.643,130.942 size first 12 fc rgb "red" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal53_edges.DAT' -A 350000" u (($1+dx53)*cos(dphi53)-($2+dy53)*sin(dphi53)):(($2+dy53)*cos(dphi53)+($1+dx53)*sin(dphi53)) w l title 'petal 53'
+unset for [i=0:250] object i
+
+#petal 54
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal54_edges.DAT' -A 350000" u (($1+dx54)*cos(dphi54)-($2+dy54)*sin(dphi54)):(($2+dy54)*cos(dphi54)+($1+dx54)*sin(dphi54)) w l title 'petal 54'
+unset for [i=0:250] object i
+
+#petal 55
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal55_edges.DAT' -A 350000" u (($1+dx55)*cos(dphi55)-($2+dy55)*sin(dphi55)):(($2+dy55)*cos(dphi55)+($1+dx55)*sin(dphi55)) w l title 'petal 55'
+unset for [i=0:250] object i
+
+#petal 57
+set object 77 circle at   181.306,96.830 size first 5 fc rgb "red" lw 15
+set object 207 circle at   513.723,109.346 size first 12 fc rgb "red" lw 15
+set object 208 circle at   517.162,87.615 size first 12 fc rgb "red" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal57_edges.DAT' -A 350000" u (($1+dx57)*cos(dphi57)-($2+dy57)*sin(dphi57)):(($2+dy57)*cos(dphi57)+($1+dx57)*sin(dphi57)) w l title 'petal 57'
+unset for [i=0:250] object i
+
+#petal 58
+set object 91 circle at   220.201,109.338 size first 5 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal58_edges.DAT' -A 350000" u (($1+dx58)*cos(dphi58)-($2+dy58)*sin(dphi58)):(($2+dy58)*cos(dphi58)+($1+dx58)*sin(dphi58)) w l title 'petal 58'
+unset for [i=0:250] object i
+
+#petal 59
+set object 138 circle at   343.060,156.350 size first 12 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal59_edges.DAT' -A 350000" u (($1+dx59)*cos(dphi59)-($2+dy59)*sin(dphi59)):(($2+dy59)*cos(dphi59)+($1+dx59)*sin(dphi59)) w l title 'petal 59'
+unset for [i=0:250] object i
+
+#petal 60
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal60_edges.DAT' -A 350000" u (($1+dx60)*cos(dphi60)-($2+dy60)*sin(dphi60)):(($2+dy60)*cos(dphi60)+($1+dx60)*sin(dphi60)) w l title 'petal 60'
+unset for [i=0:250] object i
+
+#petal 61
+set object 19 circle at   44.810,59.428 size first 5 fc rgb "orange" lw 15
+set object 77 circle at   181.306,96.830 size first 5 fc rgb "orange" lw 15
+set object 96 circle at   255.296,41.487 size first 5 fc rgb "red" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal61_edges.DAT' -A 350000" u (($1+dx61)*cos(dphi61)-($2+dy61)*sin(dphi61)):(($2+dy61)*cos(dphi61)+($1+dx61)*sin(dphi61)) w l title 'petal 61'
+unset for [i=0:250] object i
+
+#petal 62
+set object 11 circle at   24.401,52.777 size first 5 fc rgb "orange" lw 15
+set object 18 circle at   37.618,47.283 size first 5 fc rgb "orange" lw 15
+set object 27 circle at   59.248,53.948 size first 5 fc rgb "orange" lw 15
+set object 57 circle at   132.176,87.868 size first 5 fc rgb "orange" lw 15
+set object 77 circle at   181.306,96.830 size first 5 fc rgb "orange" lw 15
+set object 106 circle at   274.090,138.406 size first 12 fc rgb "orange" lw 15
+set object 201 circle at   468.066,198.019 size first 12 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal62_edges.DAT' -A 350000" u (($1+dx62)*cos(dphi62)-($2+dy62)*sin(dphi62)):(($2+dy62)*cos(dphi62)+($1+dx62)*sin(dphi62)) w l title 'petal 62'
+unset for [i=0:250] object i
+
+#petal 63
+set object 19 circle at   44.810,59.428 size first 5 fc rgb "orange" lw 15
+set object 91 circle at   220.201,109.338 size first 5 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal63_edges.DAT' -A 350000" u (($1+dx63)*cos(dphi63)-($2+dy63)*sin(dphi63)):(($2+dy63)*cos(dphi63)+($1+dx63)*sin(dphi63)) w l title 'petal 63'
+unset for [i=0:250] object i
+
+#petal 64
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal64_edges.DAT' -A 350000" u (($1+dx64)*cos(dphi64)-($2+dy64)*sin(dphi64)):(($2+dy64)*cos(dphi64)+($1+dx64)*sin(dphi64)) w l title 'petal 64'
+unset for [i=0:250] object i
+
+#petal 65
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal65_edges.DAT' -A 350000" u (($1+dx65)*cos(dphi65)-($2+dy65)*sin(dphi65)):(($2+dy65)*cos(dphi65)+($1+dx65)*sin(dphi65)) w l title 'petal 65'
+unset for [i=0:250] object i
+
+#petal 66
+set object 18 circle at   37.618,47.283 size first 5 fc rgb "orange" lw 15
+set object 27 circle at   59.248,53.948 size first 5 fc rgb "orange" lw 15
+set object 57 circle at   132.176,87.868 size first 5 fc rgb "orange" lw 15
+set object 77 circle at   181.306,96.830 size first 5 fc rgb "orange" lw 15
+set object 91 circle at   220.201,109.338 size first 5 fc rgb "orange" lw 15
+set object 106 circle at   274.090,138.406 size first 12 fc rgb "orange" lw 15
+set object 201 circle at   468.066,198.019 size first 12 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal66_edges.DAT' -A 350000" u (($1+dx66)*cos(dphi66)-($2+dy66)*sin(dphi66)):(($2+dy66)*cos(dphi66)+($1+dx66)*sin(dphi66)) w l title 'petal 66'
+unset for [i=0:250] object i
+
+#petal 67
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal67_edges.DAT' -A 350000" u (($1+dx67)*cos(dphi67)-($2+dy67)*sin(dphi67)):(($2+dy67)*cos(dphi67)+($1+dx67)*sin(dphi67)) w l title 'petal 67'
+unset for [i=0:250] object i
+
+#petal 68
+set object 77 circle at   181.306,96.830 size first 5 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal68_edges.DAT' -A 350000" u (($1+dx68)*cos(dphi68)-($2+dy68)*sin(dphi68)):(($2+dy68)*cos(dphi68)+($1+dx68)*sin(dphi68)) w l title 'petal 68'
+unset for [i=0:250] object i
+
+#petal 69
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal69_edges.DAT' -A 350000" u (($1+dx69)*cos(dphi69)-($2+dy69)*sin(dphi69)):(($2+dy69)*cos(dphi69)+($1+dx69)*sin(dphi69)) w l title 'petal 69'
+unset for [i=0:250] object i
+
+#petal 70
+set object 19 circle at   44.810,59.428 size first 5 fc rgb "orange" lw 15
+set object 138 circle at   343.060,156.350 size first 12 fc rgb "orange" lw 15
+set object 159 circle at   394.747,184.464 size first 12 fc rgb "red" lw 15
+set object 160 circle at   410.062,167.856 size first 12 fc rgb "red" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal70_edges.DAT' -A 350000" u (($1+dx70)*cos(dphi70)-($2+dy70)*sin(dphi70)):(($2+dy70)*cos(dphi70)+($1+dx70)*sin(dphi70)) w l title 'petal 70'
+unset for [i=0:250] object i
+
+#petal 71
+set object 26 circle at   63.719,35.095 size first 5 fc rgb "red" lw 15
+set object 26 circle at   63.719,35.095 size first 5 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal71_edges.DAT' -A 350000" u (($1+dx71)*cos(dphi71)-($2+dy71)*sin(dphi71)):(($2+dy71)*cos(dphi71)+($1+dx71)*sin(dphi71)) w l title 'petal 71'
+unset for [i=0:250] object i
+
+#petal 72
+set object 18 circle at   37.618,47.283 size first 5 fc rgb "orange" lw 15
+set object 27 circle at   59.248,53.948 size first 5 fc rgb "orange" lw 15
+set object 57 circle at   132.176,87.868 size first 5 fc rgb "orange" lw 15
+set object 77 circle at   181.306,96.830 size first 5 fc rgb "orange" lw 15
+set object 106 circle at   274.090,138.406 size first 12 fc rgb "orange" lw 15
+set object 115 circle at   318.822,20.675 size first 12 fc rgb "red" lw 15
+set object 115 circle at   318.822,20.675 size first 12 fc rgb "orange" lw 15
+set object 201 circle at   468.066,198.019 size first 12 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal72_edges.DAT' -A 350000" u (($1+dx72)*cos(dphi72)-($2+dy72)*sin(dphi72)):(($2+dy72)*cos(dphi72)+($1+dx72)*sin(dphi72)) w l title 'petal 72'
+unset for [i=0:250] object i
+
+#petal 73
+set object 80 circle at   208.492,73.138 size first 5 fc rgb "red" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal73_edges.DAT' -A 350000" u (($1+dx73)*cos(dphi73)-($2+dy73)*sin(dphi73)):(($2+dy73)*cos(dphi73)+($1+dx73)*sin(dphi73)) w l title 'petal 73'
+unset for [i=0:250] object i
+
+#petal 74
+set object 88 circle at   233.747,47.413 size first 5 fc rgb "red" lw 15
+set object 88 circle at   233.747,47.413 size first 5 fc rgb "orange" lw 15
+set object 94 circle at   246.183,83.625 size first 5 fc rgb "orange" lw 15
+set object 140 circle at   368.287,154.271 size first 12 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal74_edges.DAT' -A 350000" u (($1+dx74)*cos(dphi74)-($2+dy74)*sin(dphi74)):(($2+dy74)*cos(dphi74)+($1+dx74)*sin(dphi74)) w l title 'petal 74'
+unset for [i=0:250] object i
+
+#petal 75
+set object 138 circle at   343.060,156.350 size first 12 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal75_edges.DAT' -A 350000" u (($1+dx75)*cos(dphi75)-($2+dy75)*sin(dphi75)):(($2+dy75)*cos(dphi75)+($1+dx75)*sin(dphi75)) w l title 'petal 75'
+unset for [i=0:250] object i
+
+#petal 76
+set object 159 circle at   394.747,184.464 size first 12 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal76_edges.DAT' -A 350000" u (($1+dx76)*cos(dphi76)-($2+dy76)*sin(dphi76)):(($2+dy76)*cos(dphi76)+($1+dx76)*sin(dphi76)) w l title 'petal 76'
+unset for [i=0:250] object i
+
+#petal 78
+set object 92 circle at   236.945,126.048 size first 5 fc rgb "red" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal78_edges.DAT' -A 350000" u (($1+dx78)*cos(dphi78)-($2+dy78)*sin(dphi78)):(($2+dy78)*cos(dphi78)+($1+dx78)*sin(dphi78)) w l title 'petal 78'
+unset for [i=0:250] object i
+
+#petal 79
+set object 18 circle at   37.618,47.283 size first 5 fc rgb "orange" lw 15
+set object 27 circle at   59.248,53.948 size first 5 fc rgb "orange" lw 15
+set object 57 circle at   132.176,87.868 size first 5 fc rgb "orange" lw 15
+set object 77 circle at   181.306,96.830 size first 5 fc rgb "orange" lw 15
+set object 106 circle at   274.090,138.406 size first 12 fc rgb "orange" lw 15
+set object 201 circle at   468.066,198.019 size first 12 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal79_edges.DAT' -A 350000" u (($1+dx79)*cos(dphi79)-($2+dy79)*sin(dphi79)):(($2+dy79)*cos(dphi79)+($1+dx79)*sin(dphi79)) w l title 'petal 79'
+unset for [i=0:250] object i
+
+#petal 80
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal80_edges.DAT' -A 350000" u (($1+dx80)*cos(dphi80)-($2+dy80)*sin(dphi80)):(($2+dy80)*cos(dphi80)+($1+dx80)*sin(dphi80)) w l title 'petal 80'
+unset for [i=0:250] object i
+
+#petal 81
+set object 94 circle at   246.183,83.625 size first 5 fc rgb "orange" lw 15
+set object 124 circle at   331.431,83.102 size first 12 fc rgb "red" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal81_edges.DAT' -A 350000" u (($1+dx81)*cos(dphi81)-($2+dy81)*sin(dphi81)):(($2+dy81)*cos(dphi81)+($1+dx81)*sin(dphi81)) w l title 'petal 81'
+unset for [i=0:250] object i
+
+#petal 82
+set object 19 circle at   44.810,59.428 size first 5 fc rgb "orange" lw 15
+set object 31 circle at   78.843,8.766 size first 5 fc rgb "red" lw 15
+set object 91 circle at   220.201,109.338 size first 5 fc rgb "orange" lw 15
+set object 94 circle at   246.183,83.625 size first 5 fc rgb "red" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal82_edges.DAT' -A 350000" u (($1+dx82)*cos(dphi82)-($2+dy82)*sin(dphi82)):(($2+dy82)*cos(dphi82)+($1+dx82)*sin(dphi82)) w l title 'petal 82'
+unset for [i=0:250] object i
+
+#petal 83
+set object 18 circle at   37.618,47.283 size first 5 fc rgb "orange" lw 15
+set object 27 circle at   59.248,53.948 size first 5 fc rgb "orange" lw 15
+set object 57 circle at   132.176,87.868 size first 5 fc rgb "orange" lw 15
+set object 77 circle at   181.306,96.830 size first 5 fc rgb "orange" lw 15
+set object 106 circle at   274.090,138.406 size first 12 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal83_edges.DAT' -A 350000" u (($1+dx83)*cos(dphi83)-($2+dy83)*sin(dphi83)):(($2+dy83)*cos(dphi83)+($1+dx83)*sin(dphi83)) w l title 'petal 83'
+unset for [i=0:250] object i
+
+#petal 85
+set object 91 circle at   220.201,109.338 size first 5 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal85_edges.DAT' -A 350000" u (($1+dx85)*cos(dphi85)-($2+dy85)*sin(dphi85)):(($2+dy85)*cos(dphi85)+($1+dx85)*sin(dphi85)) w l title 'petal 85'
+unset for [i=0:250] object i
+
+#petal 86
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal86_edges.DAT' -A 350000" u (($1+dx86)*cos(dphi86)-($2+dy86)*sin(dphi86)):(($2+dy86)*cos(dphi86)+($1+dx86)*sin(dphi86)) w l title 'petal 86'
+unset for [i=0:250] object i
+
+#petal 87
+set object 138 circle at   343.060,156.350 size first 12 fc rgb "orange" lw 15
+set object 153 circle at   408.520,72.287 size first 12 fc rgb "red" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal87_edges.DAT' -A 350000" u (($1+dx87)*cos(dphi87)-($2+dy87)*sin(dphi87)):(($2+dy87)*cos(dphi87)+($1+dx87)*sin(dphi87)) w l title 'petal 87'
+unset for [i=0:250] object i
+
+#petal 88
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal88_edges.DAT' -A 350000" u (($1+dx88)*cos(dphi88)-($2+dy88)*sin(dphi88)):(($2+dy88)*cos(dphi88)+($1+dx88)*sin(dphi88)) w l title 'petal 88'
+unset for [i=0:250] object i
+
+#petal 91
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal91_edges.DAT' -A 350000" u (($1+dx91)*cos(dphi91)-($2+dy91)*sin(dphi91)):(($2+dy91)*cos(dphi91)+($1+dx91)*sin(dphi91)) w l title 'petal 91'
+unset for [i=0:250] object i
+
+#petal 92
+set object 19 circle at   44.810,59.428 size first 5 fc rgb "orange" lw 15
+set object 91 circle at   220.201,109.338 size first 5 fc rgb "orange" lw 15
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal92_edges.DAT' -A 350000" u (($1+dx92)*cos(dphi92)-($2+dy92)*sin(dphi92)):(($2+dy92)*cos(dphi92)+($1+dx92)*sin(dphi92)) w l title 'petal 92'
+unset for [i=0:250] object i
+
+#petal 93
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal93_edges.DAT' -A 350000" u (($1+dx93)*cos(dphi93)-($2+dy93)*sin(dphi93)):(($2+dy93)*cos(dphi93)+($1+dx93)*sin(dphi93)) w l title 'petal 93'
+unset for [i=0:250] object i
+
 
 plot  "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal44_edges.DAT' -A 350000" u (($1+dx44)*cos(dphi44)-($2+dy44)*sin(dphi44)):(($2+dy44)*cos(dphi44)+($1+dx44)*sin(dphi44)) w l notitle,\
   "<grep 'Circle     7' '/Users/rcorliss/Desktop/Output.Files.3/petal45_edges.DAT' -A 350000" u (($1+dx45)*cos(dphi45)-($2+dy45)*sin(dphi45)):(($2+dy45)*cos(dphi45)+($1+dx45)*sin(dphi45)) w l notitle,\

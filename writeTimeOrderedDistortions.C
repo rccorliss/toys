@@ -6,7 +6,7 @@
 #include "TH2F.h"
 #include "TH1F.h"
 
-void writeTimeOrderedDistortions(char *filename="/sphenix/user/rcorliss/distortion_maps/2022.07/TimeOrderedDistortions.root", char *inputpattern="/sphenix/user/rcorliss/distortion_maps/2022.07/*.distortion_map.hist.root"){
+void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphenix/user/rcorliss/distortion_maps/2022.07/TimeOrderedDistortions.root", char *inputpattern="/sphenix/user/rcorliss/distortion_maps/2022.07/*.distortion_map.hist.root"){
 
   TFile *treefile=TFile::Open(filename,"RECREATE");
   //TTree *tree=(TTree*)(file->Get("TimeDists"));
@@ -30,6 +30,7 @@ void writeTimeOrderedDistortions(char *filename="/sphenix/user/rcorliss/distorti
   tree->Branch("xingnum",&xingnum);
   for (int i=0;i<6;i++){
     temphist[i]=new TH3F(Form("temphist%d",i),Form("temphist%d",i),10,0,10,20,0,20,30,0,30);
+    basehist[i]=new TH3F(Form("basehist%d",i),Form("basehist%d",i),10,0,10,20,0,20,30,0,30);
     tree->Branch(branchname[i].c_str(),&(temphist[i]));
   }
   printf("histograms built and branched.\n");
@@ -43,6 +44,7 @@ void writeTimeOrderedDistortions(char *filename="/sphenix/user/rcorliss/distorti
   //return;
   TFile *infile;
   bool fileIsValid=true;
+  bool isFirst=true;
   int nMaps=0;
   
 
@@ -64,7 +66,17 @@ void writeTimeOrderedDistortions(char *filename="/sphenix/user/rcorliss/distorti
 	continue; //didn't get all our hists.  move on to the next file.
     }
     xingnum=i;//temporary fix to paste something in there.
-
+    if(subtractFirst){
+      if (isFirst){
+	for (int i=0;i<6;i++){
+	  basehist[i]=(TH3F*)(temphist[i]->Clone());
+	}
+      }
+      for (int i=0;i<6;i++){
+	temphist[i]->Add(basehist[i],-1);
+      }
+    }
+    
     tree->Fill();
     nMaps++;
     infile->Close();

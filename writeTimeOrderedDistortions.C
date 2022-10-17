@@ -41,7 +41,7 @@ void writeTimeOrderedDistortions(char *filename="/sphenix/user/rcorliss/distorti
   int nMaps=0;
   
 
-  for (int i=0;i<filelist->GetNFiles() && i<10;i++){
+  for (int i=0;i<filelist->GetNFiles() && i<100;i++){
     //for each file, find all histograms in that file.
     infile=TFile::Open(((TFileInfo*)(filelist->GetList()->At(i)))->GetCurrentUrl()->GetUrl(),"READ");//gross.
     fileIsValid=true;

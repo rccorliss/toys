@@ -14,12 +14,12 @@ void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphe
   TH3F *basehist[6];
   TH3F *temphist[6];
   int xingnum=0;
-  std::string branchname[]={"IntDistortionP_negz",
-			  "IntDistortionR_negz",
-			  "IntDistortionZ_negz",
-			  "IntDistortionP_posz",
-			  "IntDistortionR_posz",
-			  "IntDistortionZ_posz"};
+  std::string branchname[]={"hIntDistortionP_negz",
+			  "hIntDistortionR_negz",
+			  "hIntDistortionZ_negz",
+			  "hIntDistortionP_posz",
+			  "hIntDistortionR_posz",
+			  "hIntDistortionZ_posz"};
   std::string histname[]={"hIntDistortionP_negz",
 			  "hIntDistortionR_negz",
 			  "hIntDistortionZ_negz",

@@ -14,18 +14,23 @@ void writeTimeOrderedDistortions(char *filename="/sphenix/user/rcorliss/distorti
   TH3F *basehist[6];
   TH3F *temphist[6];
   int xingnum=0;
-  std::string histname[]={"IntDistortionP_negz",
+  std::string branchname[]={"IntDistortionP_negz",
 			  "IntDistortionR_negz",
 			  "IntDistortionZ_negz",
 			  "IntDistortionP_posz",
 			  "IntDistortionR_posz",
 			  "IntDistortionZ_posz"};
-
+  std::string histname[]={"hIntDistortionP_negz",
+			  "hIntDistortionR_negz",
+			  "hIntDistortionZ_negz",
+			  "hIntDistortionP_posz",
+			  "hIntDistortionR_posz",
+			  "hIntDistortionZ_posz"};
   TTree *tree=new TTree("TimeDists", "TimeDists");
   tree->Branch("xingnum",&xingnum);
   for (int i=0;i<6;i++){
     temphist[i]=new TH3F(Form("temphist%d",i),Form("temphist%d",i),10,0,10,20,0,20,30,0,30);
-    tree->Branch(histname[i].c_str(),&(temphist[i]));
+    tree->Branch(branchname[i].c_str(),&(temphist[i]));
   }
   printf("histograms built and branched.\n");
 

@@ -53,7 +53,10 @@ void writeTimeOrderedDistortions(char *filename="/sphenix/user/rcorliss/distorti
 	break;
       }
     }
-    if (!fileIsValid) continue; //didn't get all our hists.  move on to the next file.
+    if (!fileIsValid) {
+      infile->Close();
+	continue; //didn't get all our hists.  move on to the next file.
+    }
     xingnum=i;//temporary fix to paste something in there.
 
     tree->Fill();

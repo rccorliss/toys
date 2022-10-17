@@ -13,6 +13,7 @@ void writeTimeOrderedDistortions(char *filename="/sphenix/user/rcorliss/distorti
 
   TH3F *basehist[6];
   TH3F *temphist[6];
+  int xingnum=0;
   std::string histname[]={"IntDistortionP_negz",
 			  "IntDistortionR_negz",
 			  "IntDistortionZ_negz",
@@ -20,7 +21,7 @@ void writeTimeOrderedDistortions(char *filename="/sphenix/user/rcorliss/distorti
 			  "IntDistortionR_posz",
 			  "IntDistortionZ_posz"};
 
-  TTree *tree=new TTree("TimeDists");
+  TTree *tree=new TTree("TimeDists", "TimeDists");
   tree->Branch("xingnum",&xingnum);
   for (int i=0;i<6;i++){
     temphist[i]=new TH3F(Form("temphist%d",i),Form("temphist%d",i),10,0,10,20,0,20,30,0,30);

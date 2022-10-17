@@ -37,7 +37,7 @@ void writeTimeOrderedDistortions(char *filename="/sphenix/user/rcorliss/distorti
 
   //return;
   TFile *infile;
-  bool isFirstHist=true;
+  bool fileIsValid=true;
   int nMaps=0;
   
 
@@ -47,7 +47,7 @@ void writeTimeOrderedDistortions(char *filename="/sphenix/user/rcorliss/distorti
     if (!infile->IsOpen()) continue; //file didn't open right.  move on to the next one.
     TList *keys=infile->GetListOfKeys();
     for (int i=0;i<6;i++){
-      temphist[i]=infile->Get<TH3F*>(histname[i].c_str());
+      temphist[i]=infile->Get<TH3F>(histname[i].c_str());
       if (!temphist[i]){
 	fileIsValid=false; //histogram doesn't exist.  don't bother loading the other hists.
 	break;

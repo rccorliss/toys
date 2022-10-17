@@ -65,5 +65,4 @@ void writeTimeOrderedDistortions(char *filename="/sphenix/user/rcorliss/distorti
   tree->Write();
   treefile->Close();
   return;
-
-  
+}

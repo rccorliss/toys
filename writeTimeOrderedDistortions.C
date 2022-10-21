@@ -74,8 +74,8 @@ void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphe
 	}
 	isFirst=false;
       }
-      for (int j=0;j<6;ji++){
-	temphistji]->Add(basehist[j],-1);
+      for (int j=0;j<6;j++){
+	temphist[j]->Add(basehist[j],-1);
       }
     }
     

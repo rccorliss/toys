@@ -71,12 +71,13 @@ void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphe
     if(subtractFirst){
       if (isFirst){
 	for (int j=0;j<6;j++){
-	  // basehist[j]=(TH3F*)(temphist[j]->Clone());
-	  temphist[j]->Copy(*(basehist[j]));
+	  basehist[j]=(TH3F*)(temphist[j]->Clone());
+	  //temphist[j]->Copy(*(basehist[j]));
 	}
 	isFirst=false;
       }
       for (int j=0;j<6;j++){
+	printf("ptr j=%d:  b:%p\tt:%p\n",j,basehist[j],temphist[j]);
 	temphist[j]->Add(basehist[j],-1);
       }
     }

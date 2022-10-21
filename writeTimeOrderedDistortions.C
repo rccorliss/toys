@@ -71,6 +71,7 @@ void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphe
     if(subtractFirst){
       if (isFirst){
 	for (int j=0;j<6;j++){
+	  treefile->cd();
 	  basehist[j]=(TH3F*)(temphist[j]->Clone());
 	  //temphist[j]->Copy(*(basehist[j]));
 	}

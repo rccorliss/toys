@@ -54,9 +54,9 @@ void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphe
     fileIsValid=true;
     if (!infile->IsOpen()) continue; //file didn't open right.  move on to the next one.
     TList *keys=infile->GetListOfKeys();
-    for (int i=0;i<6;i++){
-      temphist[i]=infile->Get<TH3F>(histname[i].c_str());
-      if (!temphist[i]){
+    for (int j=0;j<6;j++){
+      temphist[j]=infile->Get<TH3F>(histname[j].c_str());
+      if (!temphist[j]){
 	fileIsValid=false; //histogram doesn't exist.  don't bother loading the other hists.
 	break;
       }
@@ -65,16 +65,17 @@ void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphe
       infile->Close();
 	continue; //didn't get all our hists.  move on to the next file.
     }
+    printf("=====> File %d is valid\n",i);
     xingnum=i;//temporary fix to paste something in there.
     if(subtractFirst){
       if (isFirst){
-	for (int i=0;i<6;i++){
-	  basehist[i]=(TH3F*)(temphist[i]->Clone());
+	for (int j=0;j<6;j++){
+	  basehist[j]=(TH3F*)(temphist[j]->Clone());
 	}
 	isFirst=false;
       }
-      for (int i=0;i<6;i++){
-	temphist[i]->Add(basehist[i],-1);
+      for (int j=0;j<6;ji++){
+	temphistji]->Add(basehist[j],-1);
       }
     }
     

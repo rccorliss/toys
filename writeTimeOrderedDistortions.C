@@ -52,6 +52,7 @@ void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphe
     //for each file, find all histograms in that file.
     infile=TFile::Open(((TFileInfo*)(filelist->GetList()->At(i)))->GetCurrentUrl()->GetUrl(),"READ");//gross.
     fileIsValid=true;
+    printf("=====> Trying File %d\n",i);
     if (!infile->IsOpen()) continue; //file didn't open right.  move on to the next one.
     TList *keys=infile->GetListOfKeys();
     for (int j=0;j<6;j++){

@@ -61,10 +61,15 @@ void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphe
       if (!temphist[j]){
 	fileIsValid=false; //histogram doesn't exist.  don't bother loading the other hists.
 	break;
+	int nbins=temphist[j]->GetNcells();
+	printf("=======> \"%s\" has %d cells\n",histname[j].c_str(),nbins);
+
       }
     }
     if (!fileIsValid) {
       infile->Close();
+          printf("=====> File %d is NOT valid <=======\n",i);
+
 	continue; //didn't get all our hists.  move on to the next file.
     }
     printf("=====> File %d is valid\n",i);

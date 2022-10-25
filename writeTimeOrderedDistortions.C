@@ -53,7 +53,10 @@ void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphe
     infile=TFile::Open(((TFileInfo*)(filelist->GetList()->At(i)))->GetCurrentUrl()->GetUrl(),"READ");//gross.
     fileIsValid=true;
     printf("=====> Trying File %d\n",i);
-    if (!infile->IsOpen()) continue; //file didn't open right.  move on to the next one.
+    if (!infile->IsOpen()) {
+          printf("=====> File %d is NOT openable <=======\n",i);
+      continue; //file didn't open right.  move on to the next one.
+    }
     //TList *keys=infile->GetListOfKeys();
     for (int j=0;j<6;j++){
       temphist[j]=NULL;
@@ -61,10 +64,10 @@ void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphe
       if (!temphist[j]){
 	fileIsValid=false; //histogram doesn't exist.  don't bother loading the other hists.
 	break;
-	int nbins=temphist[j]->GetNcells();
-	printf("=======> \"%s\" has %d cells\n",histname[j].c_str(),nbins);
-
       }
+      int nbins=temphist[j]->GetNcells();
+      printf("=======> \"%s\" has %d cells\n",histname[j].c_str(),nbins);
+
     }
     if (!fileIsValid) {
       infile->Close();

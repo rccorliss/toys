@@ -16,8 +16,8 @@ void readTimeOrderedDistortions(char *filename="TimeOrderedDistortions.root"){
 
   //don't forget you have to make those histogram objects.  It assumes they exist!
   // std::string histname[]={"hIntDistortionZ","hIntDistortionY","hIntDistortionX"};
-  std::string histname[]={"IntDistortionZ_negz","IntDistortionR_negz","IntDistortionP_negz"};
-  //  std::string histname[]={"hIntDistortionZ_negz","hIntDistortionR_negz","hIntDistortionP_negz"};
+  // std::string histname[]={"IntDistortionZ_negz","IntDistortionR_negz","IntDistortionP_negz"};
+    std::string histname[]={"hIntDistortionZ_negz","hIntDistortionR_negz","hIntDistortionP_negz"};
 
   for (int i=0;i<3;i++){
     basehist[i]=new TH3F(Form("basehist%d",i),Form("basehist%d",i),10,0,10,20,0,20,30,0,30);
@@ -47,9 +47,14 @@ void readTimeOrderedDistortions(char *filename="TimeOrderedDistortions.root"){
   //now loop over the others and see what the subtraction looks like:
   TH2F *baseVsTempHist[3];
   TH1F *baseRatioHist[3];
+  TH1F *histProfile[3];
+  
   for (int i=0;i<3;i++){
     baseVsTempHist[i]=new TH2F(Form("baseVsTempHist%d",i),Form("bin(i,xingj) vs bin(i,xing0)(from hist%d)",i),100,-1*edge[i],edge[i],100,-1*edge[i],edge[i]);
     baseRatioHist[i]=new TH1F(Form("baseRatioHist%d",i),Form("Ratio of bin(i,xingj)/bin(i,xing0)(from hist%d)",i),200,-2,3);
+    histProfile[i]=new TH1F(Form("histProfile%d",i),Form(" bin(i,xingj)-bin(i,xing0) contents of hist %d across all events",i),500,-2*edge[i],2*edge[i]);
+    //histProfile[i]=new TH1F(Form("histProfile%d",i),Form("bin contents of hist %d across all events",i),500,-edge[i],edge[i]);
+
   }
   printf("comparison histograms built.\n");
 
@@ -66,6 +71,7 @@ void readTimeOrderedDistortions(char *filename="TimeOrderedDistortions.root"){
 	float b=basehist[j]->GetBinContent(k);
 	float t=temphist[j]->GetBinContent(k);
 	baseVsTempHist[j]->Fill(b,t);
+	histProfile[j]->Fill(t-b);
 	if (b!=0) {
 	  baseRatioHist[j]->Fill(t/b);
 	} else {
@@ -79,7 +85,7 @@ void readTimeOrderedDistortions(char *filename="TimeOrderedDistortions.root"){
   printf("comparison histograms filled.\n");
 
   TCanvas* c=new TCanvas();
-  c->Divide(3,2);
+  c->Divide(3,3);
   for (int i=0;i<3;i++){
     c->cd(1+i);
     baseVsTempHist[i]->Draw("colz");
@@ -87,6 +93,10 @@ void readTimeOrderedDistortions(char *filename="TimeOrderedDistortions.root"){
    for (int i=0;i<3;i++){
     c->cd(4+i);
     baseRatioHist[i]->Draw("colz");
+  }
+   for (int i=0;i<3;i++){
+     c->cd(7+i)->SetLogy();
+    histProfile[i]->Draw("colz");
   }
 
    return;

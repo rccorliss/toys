@@ -56,6 +56,7 @@ void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphe
     if (!infile->IsOpen()) continue; //file didn't open right.  move on to the next one.
     //TList *keys=infile->GetListOfKeys();
     for (int j=0;j<6;j++){
+      temphist[j]=NULL;
       temphist[j]=infile->Get<TH3F>(histname[j].c_str());
       if (!temphist[j]){
 	fileIsValid=false; //histogram doesn't exist.  don't bother loading the other hists.
@@ -86,6 +87,7 @@ void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphe
 	  doube diff=t-b;
 	  temphist[j]->SetBinContent(k,diff);
 	  //temphist[j]->Add(basehist[j],-1);
+	}
       }
     }
     

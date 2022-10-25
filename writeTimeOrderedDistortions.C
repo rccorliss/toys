@@ -54,7 +54,7 @@ void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphe
     fileIsValid=true;
     printf("=====> Trying File %d\n",i);
     if (!infile->IsOpen()) continue; //file didn't open right.  move on to the next one.
-    TList *keys=infile->GetListOfKeys();
+    //TList *keys=infile->GetListOfKeys();
     for (int j=0;j<6;j++){
       temphist[j]=infile->Get<TH3F>(histname[j].c_str());
       if (!temphist[j]){
@@ -79,7 +79,13 @@ void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphe
       }
       for (int j=0;j<6;j++){
 	printf("ptr j=%d:  b:%p\tt:%p\n",j,basehist[j],temphist[j]);
-	temphist[j]->Add(basehist[j],-1);
+	int nbins=temphist[j]->GetNcells();
+	for (int k=0;k<nbins;k++){
+	  double b=basehist[j]->GetBinContent(k);
+	  double t=temphist[j]->GetBinContent(k);
+	  doube diff=t-b;
+	  temphist[j]->SetBinContent(k,diff);
+	  //temphist[j]->Add(basehist[j],-1);
       }
     }
     

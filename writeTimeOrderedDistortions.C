@@ -96,6 +96,8 @@ void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphe
 	  temphist[j]->SetBinContent(k,diff);
 	  //temphist[j]->Add(basehist[j],-1);
 	}
+	printf("=======> \"%s\" has %d cells when writing diff\n",histname[j].c_str(),nbins);
+
       }
     }
     

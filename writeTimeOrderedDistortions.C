@@ -84,7 +84,7 @@ void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphe
 	for (int k=0;k<nbins;k++){
 	  double b=basehist[j]->GetBinContent(k);
 	  double t=temphist[j]->GetBinContent(k);
-	  doube diff=t-b;
+	  double diff=t-b;
 	  temphist[j]->SetBinContent(k,diff);
 	  //temphist[j]->Add(basehist[j],-1);
 	}

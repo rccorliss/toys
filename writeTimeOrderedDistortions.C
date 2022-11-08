@@ -11,24 +11,30 @@ void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphe
   TFile *treefile=TFile::Open(filename,"RECREATE");
   //TTree *tree=(TTree*)(file->Get("TimeDists"));
 
-  TH3F *basehist[6];
-  TH3F *temphist[6];
+  int nhists=8;
+  TH3F *basehist[nhists];
+  TH3F *temphist[nhists];
   int xingnum=0;
+  //note that we match the histogram RPhi to the branch P, and the histogram P to the branch Phi, to maintain backwards compatibility with older sets... for now.
   std::string branchname[]={"hIntDistortionP_negz",
+			    "hIntDistortionPhi_negz",
 			    "hIntDistortionR_negz",
 			    "hIntDistortionZ_negz",
 			    "hIntDistortionP_posz",
+			    "hIntDistortionPhi_posz",
 			    "hIntDistortionR_posz",
 			    "hIntDistortionZ_posz"};
-  std::string histname[]={"hIntDistortionP_negz",
+  std::string histname[]={"hIntDistortionRPhi_negz",
+			  "hIntDistortionP_negz",
 			  "hIntDistortionR_negz",
 			  "hIntDistortionZ_negz",
-			  "hIntDistortionP_posz",
+			  "hIntDistortionRPhi_posz",
+			  "hIntDistortionP_posz"
 			  "hIntDistortionR_posz",
 			  "hIntDistortionZ_posz"};
   TTree *tree=new TTree("TimeDists", "TimeDists");
   tree->Branch("xingnum",&xingnum);
-  for (int i=0;i<6;i++){
+  for (int i=0;i<nhists;i++){
     temphist[i]=new TH3F(Form("temphist%d",i),Form("temphist%d",i),10,0,10,20,0,20,30,0,30);
     basehist[i]=new TH3F(Form("basehist%d",i),Form("basehist%d",i),10,0,10,20,0,20,30,0,30);
     tree->Branch(branchname[i].c_str(),&(temphist[i]));
@@ -58,7 +64,7 @@ void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphe
       continue; //file didn't open right.  move on to the next one.
     }
     //TList *keys=infile->GetListOfKeys();
-    for (int j=0;j<6;j++){
+    for (int j=0;j<nhists;j++){
       temphist[j]=NULL;
       temphist[j]=infile->Get<TH3F>(histname[j].c_str());
       if (!temphist[j]){
@@ -79,14 +85,14 @@ void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphe
     xingnum=i;//temporary fix to paste something in there.
     if(subtractFirst){
       if (isFirst){
-	for (int j=0;j<6;j++){
+	for (int j=0;j<nhists;j++){
 	  treefile->cd();
 	  basehist[j]=(TH3F*)(temphist[j]->Clone());
 	  //temphist[j]->Copy(*(basehist[j]));
 	}
 	isFirst=false;
       }
-      for (int j=0;j<6;j++){
+      for (int j=0;j<nhists;j++){
 	printf("ptr j=%d:  b:%p\tt:%p\n",j,basehist[j],temphist[j]);
 	int nbins=temphist[j]->GetNcells();
 	for (int k=0;k<nbins;k++){

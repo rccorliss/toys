@@ -29,7 +29,7 @@ void writeTimeOrderedDistortions(bool subtractFirst=false, char *filename="/sphe
 			  "hIntDistortionR_negz",
 			  "hIntDistortionZ_negz",
 			  "hIntDistortionRPhi_posz",
-			  "hIntDistortionP_posz"
+			  "hIntDistortionP_posz",
 			  "hIntDistortionR_posz",
 			  "hIntDistortionZ_posz"};
   TTree *tree=new TTree("TimeDists", "TimeDists");

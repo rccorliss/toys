@@ -43,11 +43,12 @@ void generate_bare_rossegger(int nr, int nphi, int nz){
   int nz_roi_max=nz_roi_min+nz_roi;
 
  
+ 
   //look for the greens functions:
-  char lookup_string[200];
   sprintf(lookup_string,"ross_phi1_%s_phislice_lookup_r%dxp%dxz%d",detgeoname,nr,nphi,nz);
-  char lookupFilename[200];
-  sprintf(lookupFilename,"%s.root",lookup_string);
+  char lookupFilename[300];
+  //sprintf(lookupFilename,"%s.root",lookup_string);
+  sprintf(lookupFilename,"/sphenix/user/rcorliss/rossegger/%s.root",lookup_string); //hardcoded for racf
   TFile *fileptr=TFile::Open(lookupFilename,"READ");
 
   if (fileptr){

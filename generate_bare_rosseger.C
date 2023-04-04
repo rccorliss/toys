@@ -80,7 +80,7 @@ void generate_bare_rossegger(int nr, int nphi, int nz){
     tpc->save_phislice_lookup(lookupFilename);
     printf("saved greens functions to %s\n",lookupFilename);
  
-
+  }
 
   
   

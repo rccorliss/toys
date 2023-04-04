@@ -808,8 +808,11 @@ void AnnularFieldSim::loadEfield(const char *filename, const char *treename, int
   //phi would go here if we had it.
   phi=fphi=0; //no phi components yet.
   phi+=1;phi=0;//satisfy picky racf compiler
-  loadField(&Eexternal,fTree,&r,0,&z,&fr,&fphi,&fz,V/cm,zsign);
-  fieldFile.Close();
+  for(phi=0;phi<1;phi+=2){
+
+    loadField(&Eexternal,fTree,&r,0,&z,&fr,&fphi,&fz,V/cm,zsign);
+    fieldFile.Close();
+  }
   return;
   
 }
@@ -827,9 +830,11 @@ void AnnularFieldSim::loadBfield(const char *filename, const char *treename){
   fTree->SetBranchAddress("bz",&fz);
   //phi would go here if we had it.
   phi=fphi=0; //no phi components yet.
-  phi+=1;phi=0;//satisfy picky racf compiler
+  //phi+=1;phi=0;//satisfy picky racf compiler
+  for(phi=0;phi<1;phi+=2){
   loadField(&Bfield,fTree,&r,0,&z,&fr,&fphi,&fz,Tesla,1);
     fieldFile.Close();
+  }
 
   return;
   

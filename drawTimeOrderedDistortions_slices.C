@@ -5,10 +5,10 @@ void drawTimeOrderedDistortions_slices(const char* filebase, int event=0, float 
   const float MAX_PLOT_DISTORTION=0.05;
   std::vector<TString> histname;
  histname.push_back("hIntDistortionR_negz");
-  histname.push_back("hIntDistortionP_negz");
+  histname.push_back("hIntDistortionPhi_negz");
   histname.push_back("hIntDistortionZ_negz");
   histname.push_back("hIntDistortionR_posz");
-  histname.push_back("hIntDistortionP_posz");
+  histname.push_back("hIntDistortionPhi_posz");
   histname.push_back("hIntDistortionZ_posz");
   
   TString distortionFilename;
@@ -158,7 +158,7 @@ void drawTimeOrderedDistortions_slices(const char* filebase, int event=0, float 
 	//printf("iz=%d, zcoord=%2.2f, bin=%d\n",iz,partZ,  hIntDist[0][0]->GetYaxis()->FindBin(partZ));
 
 	//printf("part=(rpz)(%f,%f,%f),distortP=%f\n",partP,partR,partZ,distortP);
-	int offset=(partZ>0)?1:0;
+	int offset=(partZ>0)?3:0;
 	int tempbin=hFullDist[offset+0]->FindBin(partP,partR,partZ);
 	distort[0]=distortR=hFullDist[offset+0]->GetBinContent(tempbin);
 	distort[1]=distortP=hFullDist[offset+1]->GetBinContent(tempbin);

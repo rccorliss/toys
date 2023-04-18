@@ -50,10 +50,12 @@ void shuffleDistortions(char *inputFileName="TimeOrderedDistortions.root", char 
   
 
   for (int i=0;i<nRequested;i++){
-    printf("i=%d\n",i);
     //    if ((i)%(nRequested/10)==0) printf(".");
     //select a random event:
-    tree->GetEntry(rand->Integer(tree->GetEntries()));
+    int event=rand->Integer(tree->GetEntries());
+    printf("i=%d getting event %d of %d\n",i,event,tree->GetEntries());
+
+    tree->GetEntry(event);
     xingnum=i;
     for (int j=0;j<nhists;j++){
       outhist[i]=inhist[i];//probably unnecessary to clone.

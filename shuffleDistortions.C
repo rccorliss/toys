@@ -46,8 +46,6 @@ void shuffleDistortions(char *inputFileName="TimeOrderedDistortions.root", char 
   }
   printf("histograms built and branches set.\n");
 
-  return;
-
   TRandom *rand=new TRandom3();
   
 

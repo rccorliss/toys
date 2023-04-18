@@ -68,7 +68,9 @@ void shuffleDistortions(char *inputFileName="TimeOrderedDistortions.root", char 
     }
     outtree->Fill();
   }
-  
+
+   outtree->Write();
+  outfile->Close();
   return;
 }
 

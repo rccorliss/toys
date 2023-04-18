@@ -16,7 +16,8 @@ void Averagize(char *sourceFileName="evgeny_jan_2022.sum.hist.root", float scale
 
   //set up output:
   // TFile *output=TFile::Open("newAverage.hist.root","RECREATE"); //should make this an argument.
-  TFile *output=TFile::Open("newAverage.Apr.2022.hist.root","RECREATE"); //should make this an argument.  Changed to this in Apr 2022
+  //TFile *output=TFile::Open("newAverage.Apr.2022.hist.root","RECREATE"); //should make this an argument.  Changed to this in Apr 2022
+  TFile *output=TFile::Open(outputFileName,"RECREATE"); //should make this an argument.  Changed to this in Apr 2022
   TH3D *hOutputIBF=new TH3D(*hSourceIBF);
   hOutputIBF->Reset();
   hOutputIBF->SetTitle("Number of IBF (ions) (smoothed)");

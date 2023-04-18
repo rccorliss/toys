@@ -50,7 +50,8 @@ void shuffleDistortions(char *inputFileName="TimeOrderedDistortions.root", char 
   
 
   for (int i=0;i<nRequested;i++){
-    if ((i)%(nRequested/10)==0) printf(".");
+    printf("i=%d\n",i);
+    //    if ((i)%(nRequested/10)==0) printf(".");
     //select a random event:
     tree->GetEntry(rand->Integer(tree->GetEntries()));
     xingnum=i;

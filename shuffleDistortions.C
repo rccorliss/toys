@@ -14,7 +14,7 @@ void shiftPhiWithGuardBins(TH3 *hist, int phiShift);
 void shuffleDistortions(char *inputFileName="TimeOrderedDistortions.root", char *outputFileName="temp.hist.root", int nRequested=1, bool doRotation=false){
 
 
-  printf("loading %s and outputing to %s\n", inputFileName,outputFileName);
+  printf("loading %s.  Drawing %d random events%s and outputing to %s\n", inputFileName,nRequested,doRotation?", rotating them,":"",outputFileName);
   TFile *file=TFile::Open(inputFileName,"READ");
   TTree *tree=(TTree*)(file->Get("TimeDists"));
 

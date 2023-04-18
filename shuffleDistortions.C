@@ -58,12 +58,12 @@ void shuffleDistortions(char *inputFileName="TimeOrderedDistortions.root", char 
     tree->GetEntry(event);
     xingnum=i;
     for (int j=0;j<nhists;j++){
-      outhist[i]=inhist[i];//probably unnecessary to clone.
+      outhist[j]=inhist[j];//probably unnecessary to clone.
     }
     if (doRotation){
       int phiShift=rand->Integer(outhist[0]->GetXaxis()->GetNbins()-2);
       for (int j=0;j<nhists;j++){
-	shiftPhiWithGuardBins(outhist[i],phiShift);
+	shiftPhiWithGuardBins(outhist[j],phiShift);
       }
     }
     outtree->Fill();

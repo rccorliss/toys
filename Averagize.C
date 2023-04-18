@@ -1,7 +1,12 @@
 //make a smooth average out of multiple components
+//This code is designed to ingest a root file containing two histograms (ibf, prim)
+//It then averages the IBF in phi and z, and the prim in phi, to produce their smoothed versions
+//and saves the result to the hard-coded file.
+//if you wish to average across multiple events, a step is needed before this, to sum
+//and average all the events into a single pair of histograms.
 
 //void Averagize(char *sourceFileName="evgeny_apr/Summary_Average_AA_events.root", float scale=0.08012, char *ibfName="h_IBFCharge_evt_0", char *primaryName="h_PrimCharge_evt_0"){
-void Averagize(char *sourceFileName="evgeny_jan_2022.sum.hist.root", float scale=0.0417, char *ibfName="_h_SC_ibf_0", char *primaryName="_h_SC_prim_0"){
+void Averagize(char *sourceFileName="evgeny_jan_2022.sum.hist.root", float scale=0.0417, char *ibfName="_h_SC_ibf_0", char *primaryName="_h_SC_prim_0", char *outputFileName="smoothed.hist.root"){
   //scale is because there were 24 input files.
   printf("default sumw2=%d\n",TH1::GetDefaultSumw2());
   //load files

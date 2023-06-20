@@ -82,18 +82,28 @@ TH3 * GetMaskedHist(float rmin, float rmax, float phimin, float phimax, int z, T
   ax[2]= output->GetZaxis();
 
   int zbins[]={0,ax[2]->GetNbins()/2,ax[2]->GetLast()};
+
+  int minbin[3],maxbin[3];
+  minbin[0]=ax[0]->FindBin(phimin);
+  maxbin[0]=ax[0]->FindBin(phimax);
+  minbin[1]=ax[1]->FindBin(rmin);
+  maxbin[1]=ax[1]->FindBin(rmax);
   int zminbin,zmaxbin;
   if (z<0){
-    zminbin=zbins[0];
-    zmaxbin=zbins[1];
+    minbin[2]=zbins[0];
+    maxbin[2]=zbins[1];
   } else {
-    zminbin=zbins[1];
-    zmaxbin=zbins[2];
+    minbin[2]=zbins[1];
+    maxbin[2]=zbins[2];
   }
+
+  printf("masking entries from (%d,%d,%d) to (%d,%d,%d)\n",
+	 minbin[0],minbin[1],minbin[2],
+	 maxbin[0],maxbin[1],maxbin[1]);
   
-  for (int i=ax[0]->FindBin(phimin);i<=ax[0]->FindBin(phimax);i++){
-    for (int j=ax[1]->FindBin(rmin);j<=ax[1]->FindBin(rmax);j++){
-      for (int k=zminbin;k<=zmaxbin;k++){
+  for (int i=minbin[0];i<=maxbin[0];i++){
+    for (int j=minbin[1];j<=maxbin[1];j++){
+      for (int k=minbin[2];k<=maxbin[2];k++){
 	int glob=output->GetBin(i,j,k);
 	output->SetBinContent(glob,0);
       }

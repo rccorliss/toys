@@ -73,7 +73,7 @@ const char* GetFileBase(const char* filename) {
 }
 
 TH3 * GetMaskedHist(float rmin, float rmax, float phimin, float phimax, int z, TH3* input){
-  TH3 *output=(TH3*)input.Clone(); //copy
+  TH3 *output=(TH3*)input->Clone(); //copy
   //go through all the bins in the range, and zero the contents
 
   TAxis* ax[3];
@@ -81,7 +81,7 @@ TH3 * GetMaskedHist(float rmin, float rmax, float phimin, float phimax, int z, T
   ax[1]= output->GetYaxis();
   ax[2]= output->GetZaxis();
 
-  float zbins[]={0,ax[2]->GetNBins()/2,ax[2]->GetLast};
+  float zbins[]={0,ax[2]->GetNbins()/2,ax[2]->GetLast};
   float zminbin,zmaxbin;
   if (z<0){
     zminbin=zbins[0];

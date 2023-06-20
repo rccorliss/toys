@@ -81,8 +81,8 @@ TH3 * GetMaskedHist(float rmin, float rmax, float phimin, float phimax, int z, T
   ax[1]= output->GetYaxis();
   ax[2]= output->GetZaxis();
 
-  float zbins[]={0,ax[2]->GetNbins()/2,ax[2]->GetLast};
-  float zminbin,zmaxbin;
+  int zbins[]={0,ax[2]->GetNbins()/2,ax[2]->GetLast()};
+  int zminbin,zmaxbin;
   if (z<0){
     zminbin=zbins[0];
     zmaxbin=zbins[1];

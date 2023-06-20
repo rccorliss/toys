@@ -33,7 +33,7 @@ void MaskRegion(float rmin, float rmax, float phimin, float phimax, int z=1, cha
     printf("Masking key %d (%s)\n",keynum, key->GetTitle());
     keynum++;
     TObject* obj = key->ReadObj();
-    if (obj->IsA() == TH3::Class()) {
+    if (obj->InheritsFrom(TH3::Class())) {
       TH3* th3 = dynamic_cast<TH3*>(obj);
       outfile->cd();
       TH3* outhist=GetMaskedHist(rmin,rmax,phimin,phimax,z,th3);

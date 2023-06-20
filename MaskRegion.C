@@ -37,7 +37,7 @@ void MaskRegion(float rmin, float rmax, float phimin, float phimax, int z=1, cha
       TH3* th3 = dynamic_cast<TH3*>(obj);
       outfile->cd();
       TH3* outhist=GetMaskedHist(rmin,rmax,phimin,phimax,z,th3);
-      outfile->Write();
+      outhist->Write();
     }
     delete obj;
   }

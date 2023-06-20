@@ -27,8 +27,11 @@ void MaskRegion(float rmin, float rmax, float phimin, float phimax, int z=1, cha
 
   TKey* key;
   TIter nextkey(file->GetListOfKeys());
-
+  printf("found %d entries\n",file->GetListOfKeys()->GetEntries());
+  int keynum=0;
   while ((key = dynamic_cast<TKey*>(nextkey()))) {
+    printf("Trying key %d (%s)",keynum, key->GetTitle());
+    keynum++;
     TObject* obj = key->ReadObj();
     if (obj->IsA() == TH3::Class()) {
       TH3* th3 = dynamic_cast<TH3*>(obj);
@@ -89,7 +92,7 @@ TH3 * GetMaskedHist(float rmin, float rmax, float phimin, float phimax, int z, T
   
   for (int i=ax[0]->FindBin(phimin);i<=ax[0]->FindBin(phimax);i++){
     for (int j=ax[1]->FindBin(rmin);j<=ax[1]->FindBin(rmax);j++){
-      for (int k=zminbin,k<=zmaxbin;k++){
+      for (int k=zminbin;k<=zmaxbin;k++){
 	int glob=output->GetBin(i,j,k);
 	output->SetBinContent(glob,0);
       }

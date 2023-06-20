@@ -5,7 +5,7 @@ const char* GetFileExtension(const char* filename);
 const char* GetFileBase(const char* filename);
 TH3 * GetMaskedHist(float rmin, float rmax, float phimin, float phimax, int z, TH3* input);
   
-void MaskRegion(float rmin, float rmax, float phimin, float phimax, int z=1, char *filename){
+void MaskRegion(float rmin, float rmax, float phimin, float phimax, int z=1, char *filename="nope"){
   //take in a TH3, and mask out all bins corresponding to r0<r<r1 + phi0<phi<phi1, then write it to the provided output filename?
 
   //char *dirname=TSystem::DirName(filename);
@@ -73,15 +73,16 @@ const char* GetFileBase(const char* filename) {
 }
 
 TH3 * GetMaskedHist(float rmin, float rmax, float phimin, float phimax, int z, TH3* input){
-  TH3 *output=new TH3F(input); //copy
+  TH3 *output=(TH3*)input.Clone(); //copy
   //go through all the bins in the range, and zero the contents
 
   TAxis* ax[3];
-  ax[0]= hist->GetXaxis();
-  ax[1]= hist->GetYaxis();
-  ax[2]= hist->GetZaxis();
+  ax[0]= output->GetXaxis();
+  ax[1]= output->GetYaxis();
+  ax[2]= output->GetZaxis();
 
   float zbins[]={0,ax[2]->GetNBins()/2,ax[2]->GetLast};
+  float zminbin,zmaxbin;
   if (z<0){
     zminbin=zbins[0];
     zmaxbin=zbins[1];

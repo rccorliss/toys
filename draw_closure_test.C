@@ -4,11 +4,14 @@ void draw_closure_test(const char* filebase, float zin=1e8){
   //reads in a triplet of 3D integral distortion maps, and writes lots of plots, as well as some summary histograms to various output files.
 
   const float MAX_PLOT_DISTORTION=0.02;//2 cm.  huge!  0.0200;//200um.
-  
+
+  //distortion:
   TString distortionFilename;
   distortionFilename=filebase;
   TString basename=filebase;
   basename.ReplaceAll(".distortion_map.hist.root","");
+
+  //outputs:
   TString summaryFilename;
   summaryFilename.Form("%s.z1.0.separate_closure_summary.pdf",basename.Data());
   TString gifFilename=Form("%s.z1.0.separate_closure_summary.gif",basename.Data());

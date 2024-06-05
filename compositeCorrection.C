@@ -1,14 +1,30 @@
-bool checkBounds(float phi, float r, float z, TH3* hDPint){
-    if (phi<hDPint->GetXaxis()->GetXmin() || phi>hDPint->GetXaxis()->GetXmax()) {
-    printf("phi out of bounds: %f not within [%f,%f]\n",phi,hDPint->GetXaxis()->GetXmin(),hDPint->GetXaxis()->GetXmax());
+bool checkAxisInterpolationBounds(float val, TAxis* axis){
+    //get the middle point of the first bin on the axis:
+    float lowerBound = axis->GetBinLowEdge(1)+axis->GetBinWidth(1)/2;
+
+    //get the lower edge of the last bin
+    int lastbin=axis->GetNbins();
+    float upperBound = axis->GetBinLowEdge(lastbin)+axis->GetBinWidth(lastbin)/2;
+
+    if (val<lowerBound || val>upperBound) {
+        printf("value out of interpolation bounds: %f not within [%f,%f]\n",val,lowerBound,upperBound);
         return false;
     }
-    if (r<hDPint->GetYaxis()->GetXmin() || r>hDPint->GetYaxis()->GetXmax()) {
-    printf("r out of bounds: %f not within [%f,%f]\n",r,hDPint->GetYaxis()->GetXmin(),hDPint->GetYaxis()->GetXmax());
+
+    return true;
+}
+
+bool checkBounds(float phi, float r, float z, TH3* h){
+    if (!checkAxisInterpolationBounds(phi, h->GetXaxis())) {
+        printf("failed phi bounds check\n");
         return false;
     }
-    if (z<hDPint->GetZaxis()->GetXmin() || z>hDPint->GetZaxis()->GetXmax()) {
-    printf("z out of bounds: %f not within [%f,%f]\n",z,hDPint->GetZaxis()->GetXmin(),hDPint->GetZaxis()->GetXmax());
+    if (!checkAxisInterpolationBounds(r, h->GetYaxis())) {
+        printf("failed r bounds check\n");
+        return false;
+    }
+    if (!checkAxisInterpolationBounds(z, h->GetZaxis())) {
+        printf("failed z bounds check\n");
         return false;
     }
     return true;

@@ -3,6 +3,7 @@ printf("histogram: %s pos: %f %f %f\n", pos.Phi(), pos.Perp(), pos.Z(),hDPint->G
     // Interpolate the distortion
     float phi=pos.Phi();
     if (phi<0) phi+=2*TMath::Pi();
+    assert(checkBounds(phi, pos.Perp(), pos.Z(), hDPint));
     double dp = hDPint->Interpolate(phi, pos.Perp(), pos.Z());
     double dr = hDRint->Interpolate(phi, pos.Perp(), pos.Z());
     double dz = hDZint->Interpolate(phi, pos.Perp(), pos.Z());
@@ -18,6 +19,24 @@ printf("histogram: %s pos: %f %f %f\n", pos.Phi(), pos.Perp(), pos.Z(),hDPint->G
     pos.SetZ(pos.Z() - dz);
     return pfinal;
 }
+
+bool checkBounds(float phi, float r, float z, TH3* hDPint){
+    if (phi<hDPint->GetXaxis()->GetXmin() || phi>hDPint->GetXaxis()->GetXmax()) {
+    printf("phi out of bounds: %f not within [%f,%f]\n",phi,hDPint->GetXaxis()->GetXmin(),hDPint->GetXaxis()->GetXmax());
+        return false;
+    }
+    if (r<hDPint->GetYaxis()->GetXmin() || r>hDPint->GetYaxis()->GetXmax()) {
+    printf("r out of bounds: %f not within [%f,%f]\n",r,hDPint->GetYaxis()->GetXmin(),hDPint->GetYaxis()->GetXmax());
+        return false;
+    }
+    if (z<hDPint->GetZaxis()->GetXmin() || z>hDPint->GetZaxis()->GetXmax()) {
+    printf("z out of bounds: %f not within [%f,%f]\n",z,hDPint->GetZaxis()->GetXmin(),hDPint->GetZaxis()->GetXmax());
+        return false;
+    }
+    return true;
+}
+
+
 
 void compositeCorrection(std::string firstfile, std::string secondfile){
     // Open the first correction in order:
@@ -92,7 +111,7 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
     for (int i=1; i<=hDPcomposite[0]->GetNbinsY(); i++){
  
         float rpos=hDPcomposite[0]->GetYaxis()->GetBinCenter(i);
-        if (i==1) rpos=hDRcomposite[0]->GetYaxis()->GetBinCenter(i+1);
+        if (i==1) rpos=hDPcomposite[0]->GetYaxis()->GetBinCenter(i+1);
         if (i==hDPcomposite[0]->GetNbinsY()) rpos=hDPcomposite[0]->GetYaxis()->GetBinCenter(i-1);
         TVector3 pos(rpos,0,0);
         for (int j=1; j<=hDPcomposite[0]->GetNbinsX(); j++){

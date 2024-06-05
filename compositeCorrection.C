@@ -101,7 +101,8 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
 
 
 //copy the static correction histograms to new histograms in the new file, in preparation for the composite correction
-    TFile *f = new TFile("compositeCorrection.static.and.module.root","recreate");
+    //TFile *f = new TFile("compositeCorrection.static.and.module.root","recreate");
+    TFile *f = new TFile("static_correction.1.00.radians.root","recreate");
     TH3* hDPcomposite[2], *hDRcomposite[2], *hDZcomposite[2];
 
     for (int j = 0; j < 2; ++j)
@@ -143,9 +144,9 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
                     if (side>0)zpos*=-1;//swap signs
                     pos.SetZ(zpos);
                     //get the module edge correction at the raw position
-                    TVector3 pos1 = correctPosition(pos, hDPmod[side], hDRmod[side], hDZmod[side], true);
+                    //TVector3 pos1 = correctPosition(pos, hDPmod[side], hDRmod[side], hDZmod[side], true);
                     //get the static correction at the corrected position
-                    TVector3 pos2 = correctPosition(pos1, hDPint[side], hDRint[side], hDZint[side], false);
+                    TVector3 pos2 = correctPosition(pos, hDPint[side], hDRint[side], hDZint[side], false);
                     //get the total correction, in terms of r, phi, and z
                     float dphi = pos2.Phi()-pos.Phi();//might have a twopi anomaly here...
                     if (dphi>TMath::Pi()) dphi-=2*TMath::Pi();

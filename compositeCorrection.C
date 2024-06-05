@@ -38,6 +38,8 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
     }
 
     // get the module boundary correction:
+        const std::array<const std::string, 2> extension = {{"_negz", "_posz"}};
+
     TH2* hDPmod[2], *hDRmod[2], *hDZmod[2];
  for (int j = 0; j < 2; ++j)
     {
@@ -51,7 +53,6 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
 
     // Get the static correction:
     TH3* hDPint[2], *hDRint[2], *hDZint[2];
-    const std::array<const std::string, 2> extension = {{"_negz", "_posz"}};
     for (int j = 0; j < 2; ++j)
     {
         hDPint[j] = dynamic_cast<TH3*>(distortion_tfile->Get((std::string("hIntDistortionP")+extension[j]).c_str()));
@@ -64,7 +65,7 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
 
 
 //copy the static correction histograms to new histograms in the new file, in preparation for the composite correction
-    TFile *f = new TFile("compositeCorrection.root","recreate");
+    TFile *f = new TFile("compositeCorrection.static.and.module.root","recreate");
     TH3* hDPcomposite[2], *hDRcomposite[2], *hDZcomposite[2];
 
     for (int j = 0; j < 2; ++j)
@@ -80,12 +81,12 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
         TVector3 pos(rpos,0,0);
         for (int j=1; j<=hDPcomposite[0]->GetNbinsX(); j++){
             float phipos=hDPcomposite[0]->GetXaxis()->GetBinCenter(j);
-            rpos.SetPhi(phipos);
+            pos.SetPhi(phipos);
             for (int k=1; k<=hDPcomposite[0]->GetNbinsZ(); k++){
                 float zpos=hDPcomposite[0]->GetZaxis()->GetBinCenter(k);
                 for (int side=0;side<2;side++){
                     zpos*=-1;//start negative.
-                    rpos.SetZ(zpos);
+                    pos.SetZ(zpos);
                     //get the module edge correction at the raw position
                     TVector3 pos1 = correctPosition(pos, hDPmod[side], hDRmod[side], hDZmod[side], true);
                     //get the static correction at the corrected position

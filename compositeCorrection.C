@@ -101,8 +101,8 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
 
 
 //copy the static correction histograms to new histograms in the new file, in preparation for the composite correction
-    //TFile *f = new TFile("compositeCorrection.static.and.module.root","recreate");
-    TFile *f = new TFile("static_correction.1.00.radians.root","recreate");
+    TFile *f = new TFile("compositeCorrection.static.and.module.radians.root","recreate");
+    //TFile *f = new TFile("static_correction.1.00.radians.root","recreate");
     TH3* hDPcomposite[2], *hDRcomposite[2], *hDZcomposite[2];
 
     for (int j = 0; j < 2; ++j)

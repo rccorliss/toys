@@ -79,11 +79,11 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
     TH3* hDPmod[2], *hDRmod[2], *hDZmod[2];
  for (int j = 0; j < 2; ++j)
     {
-        hDPmod[j] = dynamic_cast<TH3*>(distortion_tfile->Get((std::string("hIntDistortionP")+extension[j]).c_str()));
+        hDPmod[j] = dynamic_cast<TH3*>(modulecorr_tfile->Get((std::string("hIntDistortionP")+extension[j]).c_str()));
         assert(hDPmod[j]);
-        hDRmod[j] = dynamic_cast<TH3*>(distortion_tfile->Get((std::string("hIntDistortionR")+extension[j]).c_str()));
+        hDRmod[j] = dynamic_cast<TH3*>(modulecorr_tfile->Get((std::string("hIntDistortionR")+extension[j]).c_str()));
         assert(hDRmod[j]);
-        hDZmod[j] = dynamic_cast<TH3*>(distortion_tfile->Get((std::string("hIntDistortionZ")+extension[j]).c_str()));
+        hDZmod[j] = dynamic_cast<TH3*>(modulecorr_tfile->Get((std::string("hIntDistortionZ")+extension[j]).c_str()));
         assert(hDZmod[j]);   
     }
 
@@ -136,7 +136,7 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
             pos.SetPhi(phipos);
             for (int k=1; k<=hDPcomposite[0]->GetNbinsZ(); k++){
                 float zpos=hDPcomposite[0]->GetZaxis()->GetBinCenter(k);
-                if (k==1) zpos=hDRcomposite[0]->GetZaxis()->GetBinCenter(k+1);
+                if (k==1) zpos=hDPcomposite[0]->GetZaxis()->GetBinCenter(k+1);
                 if (k==hDPcomposite[0]->GetNbinsZ()) zpos=hDPcomposite[0]->GetZaxis()->GetBinCenter(k-1);
 
                 for (int side=0;side<2;side++){
@@ -148,6 +148,8 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
                     TVector3 pos2 = correctPosition(pos1, hDPint[side], hDRint[side], hDZint[side], false);
                     //get the total correction, in terms of r, phi, and z
                     float dphi = pos2.Phi()-pos.Phi();//might have a twopi anomaly here...
+                    if (dphi>TMath::Pi()) dphi-=2*TMath::Pi();
+                    if (dphi<-TMath::Pi()) dphi+=2*TMath::Pi();
                     float dr = pos2.Perp()-pos.Perp();
                     float dz = pos2.Z()-pos.Z();
 

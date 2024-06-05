@@ -90,13 +90,19 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
 
     //loop over the bin centers of the static correction histograms
     for (int i=1; i<=hDPcomposite[0]->GetNbinsY(); i++){
+ 
         float rpos=hDPcomposite[0]->GetYaxis()->GetBinCenter(i);
+        if (i==1) rpos=hDRcomposite[0]->GetYaxis()->GetBinCenter(i+1);
+        if (i==hDPcomposite[0]->GetNbinsY()) rpos=hDPcomposite[0]->GetYaxis()->GetBinCenter(i-1);
         TVector3 pos(rpos,0,0);
         for (int j=1; j<=hDPcomposite[0]->GetNbinsX(); j++){
             float phipos=hDPcomposite[0]->GetXaxis()->GetBinCenter(j);
             pos.SetPhi(phipos);
             for (int k=1; k<=hDPcomposite[0]->GetNbinsZ(); k++){
                 float zpos=hDPcomposite[0]->GetZaxis()->GetBinCenter(k);
+                if (k==1) zpos=hDRcomposite[0]->GetZaxis()->GetBinCenter(k+1);
+                if (k==hDPcomposite[0]->GetNbinsZ()) zpos=hDPcomposite[0]->GetZaxis()->GetBinCenter(k-1);
+
                 for (int side=0;side<2;side++){
                     zpos*=-1;//start negative.
                     pos.SetZ(zpos);

@@ -153,9 +153,9 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
 
                     //set the correction in the composite histograms
                     //nb this is in radians not cm units for phi.
-                    hDPcomposite[side]->SetBinContent(j,i,k,dphi);
-                    hDRcomposite[side]->SetBinContent(j,i,k,dr);
-                    hDZcomposite[side]->SetBinContent(j,i,k,dz);
+                    hDPcomposite[side]->SetBinContent(j,i,k,-dphi);
+                    hDRcomposite[side]->SetBinContent(j,i,k,-dr);
+                    hDZcomposite[side]->SetBinContent(j,i,k,-dz);
                 }
             }
         }

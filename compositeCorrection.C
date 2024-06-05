@@ -40,7 +40,7 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
     // get the module boundary correction:
         const std::array<const std::string, 2> extension = {{"_negz", "_posz"}};
 
-    TH2* hDPmod[2], *hDRmod[2], *hDZmod[2];
+    TH3* hDPmod[2], *hDRmod[2], *hDZmod[2];
  for (int j = 0; j < 2; ++j)
     {
         hDPmod[j] = dynamic_cast<TH3*>(distortion_tfile->Get((std::string("hIntDistortionP")+extension[j]).c_str()));

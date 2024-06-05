@@ -20,17 +20,33 @@ TVector3 correctPosition(TVector3 pos, TH3* hDPint, TH3* hDRint, TH3* hDZint, bo
 }
 
 void compositeCorrection(std::string firstfile, std::string secondfile){
-    // Open the first file
-    TFile *distortion_tfile = new TFile(firstfile.c_str());
-    if (!distortion_tfile->IsOpen()) {
+    // Open the first correction in order:
+    TFile *modulecorr_tfile = new TFile(firstfile.c_str());
+    if (!f2->IsOpen())
+    {
         std::cout << "Error: could not open file " << firstfile << std::endl;
         return;
     }
-    // Open the second file
-    TFile *modulecorr_tfile = new TFile(secondfile.c_str());
-    if (!f2->IsOpen()) {
+
+    // Open the second correction in order:
+
+    TFile *distortion_tfile = new TFile(secondfile.c_str());
+    if (!distortion_tfile->IsOpen())
+    {
         std::cout << "Error: could not open file " << secondfile << std::endl;
         return;
+    }
+
+    // get the module boundary correction:
+    TH2* hDPmod[2], *hDRmod[2], *hDZmod[2];
+ for (int j = 0; j < 2; ++j)
+    {
+        hDPmod[j] = dynamic_cast<TH3*>(distortion_tfile->Get((std::string("hIntDistortionP")+extension[j]).c_str()));
+        assert(hDPmod[j]);
+        hDRmod[j] = dynamic_cast<TH3*>(distortion_tfile->Get((std::string("hIntDistortionR")+extension[j]).c_str()));
+        assert(hDRmod[j]);
+        hDZmod[j] = dynamic_cast<TH3*>(distortion_tfile->Get((std::string("hIntDistortionZ")+extension[j]).c_str()));
+        assert(hDZmod[j]);   
     }
 
     // Get the static correction:
@@ -46,17 +62,6 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
         assert(hDZint[j]);   
     }
 
-    // get the module boundary correction:
-    TH2* hDPmod[2], *hDRmod[2], *hDZmod[2];
- for (int j = 0; j < 2; ++j)
-    {
-        hDPmod[j] = dynamic_cast<TH3*>(distortion_tfile->Get((std::string("hIntDistortionP")+extension[j]).c_str()));
-        assert(hDPmod[j]);
-        hDRmod[j] = dynamic_cast<TH3*>(distortion_tfile->Get((std::string("hIntDistortionR")+extension[j]).c_str()));
-        assert(hDRmod[j]);
-        hDZmod[j] = dynamic_cast<TH3*>(distortion_tfile->Get((std::string("hIntDistortionZ")+extension[j]).c_str()));
-        assert(hDZmod[j]);   
-    }
 
 //copy the static correction histograms to new histograms in the new file, in preparation for the composite correction
     TFile *f = new TFile("compositeCorrection.root","recreate");

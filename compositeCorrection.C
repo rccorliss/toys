@@ -31,9 +31,9 @@ bool checkBounds(float phi, float r, float z, TH3* h){
 }
 
 TVector3 correctPosition(TVector3 pos, TH3* hDPint, TH3* hDRint, TH3* hDZint, bool isRadians){
-    printf("histogram: %s pos: %f %f %f\n", pos.Phi(), pos.Perp(), pos.Z(),hDPint->GetName());
-    printf("second bin midpoints: %f %f %f\n", hDPint->GetXaxis()->GetBinCenter(2), hDPint->GetYaxis()->GetBinCenter(2), hDPint->GetZaxis()->GetBinCenter(2));
-    printf("second to last bin midpoints: %f %f %f\n", hDPint->GetXaxis()->GetBinCenter(hDPint->GetNbinsX()-1), hDPint->GetYaxis()->GetBinCenter(hDPint->GetNbinsY()-1), hDPint->GetZaxis()->GetBinCenter(hDPint->GetNbinsZ()-1));
+    //printf("histogram: %s pos: %f %f %f\n", pos.Phi(), pos.Perp(), pos.Z(),hDPint->GetName());
+    //printf("second bin midpoints: %f %f %f\n", hDPint->GetXaxis()->GetBinCenter(2), hDPint->GetYaxis()->GetBinCenter(2), hDPint->GetZaxis()->GetBinCenter(2));
+    //printf("second to last bin midpoints: %f %f %f\n", hDPint->GetXaxis()->GetBinCenter(hDPint->GetNbinsX()-1), hDPint->GetYaxis()->GetBinCenter(hDPint->GetNbinsY()-1), hDPint->GetZaxis()->GetBinCenter(hDPint->GetNbinsZ()-1));
     // Interpolate the distortion
     float phi=pos.Phi();
     if (phi<0) phi+=2*TMath::Pi();
@@ -48,9 +48,9 @@ TVector3 correctPosition(TVector3 pos, TH3* hDPint, TH3* hDRint, TH3* hDZint, bo
         dp/=pos.Perp();
     }
     TVector3 pfinal = pos;
-    pos.SetPhi(pos.Phi() - dp);
-    pos.SetPerp(pos.Perp() - dr);
-    pos.SetZ(pos.Z() - dz);
+    pfinal.SetPhi(pos.Phi() - dp);
+    pfinal.SetPerp(pos.Perp() - dr);
+    pfinal.SetZ(pos.Z() - dz);
     return pfinal;
 }
 

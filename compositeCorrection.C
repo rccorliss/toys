@@ -140,7 +140,7 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
                 if (k==hDPcomposite[0]->GetNbinsZ()) zpos=hDPcomposite[0]->GetZaxis()->GetBinCenter(k-1);
 
                 for (int side=0;side<2;side++){
-                    zpos*=-1;//start negative.
+                    if (side>0)zpos*=-1;//swap signs
                     pos.SetZ(zpos);
                     //get the module edge correction at the raw position
                     TVector3 pos1 = correctPosition(pos, hDPmod[side], hDRmod[side], hDZmod[side], true);

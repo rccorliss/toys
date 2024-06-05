@@ -22,7 +22,7 @@ TVector3 correctPosition(TVector3 pos, TH3* hDPint, TH3* hDRint, TH3* hDZint, bo
 void compositeCorrection(std::string firstfile, std::string secondfile){
     // Open the first correction in order:
     TFile *modulecorr_tfile = new TFile(firstfile.c_str());
-    if (!f2->IsOpen())
+    if (!modulecorr_tfile->IsOpen())
     {
         std::cout << "Error: could not open file " << firstfile << std::endl;
         return;
@@ -69,9 +69,9 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
 
     for (int j = 0; j < 2; ++j)
     {
-        hDPcomposite[i] = dynamic_cast<TH3*>(hDPint[j]->Clone());
-        hDRcomposite[i] = dynamic_cast<TH3*>(hDRint[j]->Clone());
-        hDZcomposite[i] = dynamic_cast<TH3*>(hDZint[j]->Clone());
+        hDPcomposite[j] = dynamic_cast<TH3*>(hDPint[j]->Clone());
+        hDRcomposite[j] = dynamic_cast<TH3*>(hDRint[j]->Clone());
+        hDZcomposite[j] = dynamic_cast<TH3*>(hDZint[j]->Clone());
     }
 
     //loop over the bin centers of the static correction histograms

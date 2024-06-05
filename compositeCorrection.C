@@ -126,39 +126,37 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
 
 
     //loop over the bin centers of the static correction histograms
-    for (int i=1; i<=hDPcomposite[0]->GetNbinsY(); i++){
- 
-        float rpos=hDPcomposite[0]->GetYaxis()->GetBinCenter(i);
-        if (i==1) rpos=hDPcomposite[0]->GetYaxis()->GetBinCenter(i+1);
-        if (i==hDPcomposite[0]->GetNbinsY()) rpos=hDPcomposite[0]->GetYaxis()->GetBinCenter(i-1);
-        TVector3 pos(rpos,0,0);
-        for (int j=1; j<=hDPcomposite[0]->GetNbinsX(); j++){
-            float phipos=hDPcomposite[0]->GetXaxis()->GetBinCenter(j);
-            pos.SetPhi(phipos);
-            for (int k=1; k<=hDPcomposite[0]->GetNbinsZ(); k++){
-                float zpos=hDPcomposite[0]->GetZaxis()->GetBinCenter(k);
-                if (k==1) zpos=hDPcomposite[0]->GetZaxis()->GetBinCenter(k+1);
-                if (k==hDPcomposite[0]->GetNbinsZ()) zpos=hDPcomposite[0]->GetZaxis()->GetBinCenter(k-1);
-
-                for (int side=0;side<2;side++){
-                    if (side>0)zpos*=-1;//swap signs
+    for (int side=0;side<2;side++){
+        for (int i=1; i<=hDPcomposite[side]->GetNbinsY(); i++){
+            float rpos=hDPcomposite[side]->GetYaxis()->GetBinCenter(i);
+            if (i==1) rpos=hDPcomposite[side]->GetYaxis()->GetBinCenter(i+1);
+            if (i==hDPcomposite[side]->GetNbinsY()) rpos=hDPcomposite[side]->GetYaxis()->GetBinCenter(i-1);
+            TVector3 pos(rpos,0,0);
+            for (int j=1; j<=hDPcomposite[side]->GetNbinsX(); j++){
+                float phipos=hDPcomposite[side]->GetXaxis()->GetBinCenter(j);
+                pos.SetPhi(phipos);
+                for (int k=1; k<=hDPcomposite[side]->GetNbinsZ(); k++){
+                    float zpos=hDPcomposite[side]->GetZaxis()->GetBinCenter(k);
+                    if (k==1) zpos=hDPcomposite[side]->GetZaxis()->GetBinCenter(k+1);
+                    if (k==hDPcomposite[side]->GetNbinsZ()) zpos=hDPcomposite[side]->GetZaxis()->GetBinCenter(k-1);
                     pos.SetZ(zpos);
                     //get the module edge correction at the raw position
-                    //TVector3 pos1 = correctPosition(pos, hDPmod[side], hDRmod[side], hDZmod[side], true);
+                    TVector3 pos1 = correctPosition(pos, hDPmod[side], hDRmod[side], hDZmod[side], true);
                     //get the static correction at the corrected position
-                    TVector3 pos2 = correctPosition(pos, hDPint[side], hDRint[side], hDZint[side], false);
+                    TVector3 pos2 = correctPosition(pos1, hDPint[side], hDRint[side], hDZint[side], false);
                     //get the total correction, in terms of r, phi, and z
-                    float dphi = pos2.Phi()-pos.Phi();//might have a twopi anomaly here...
+                    float dphi = pos.Phi()-pos2.Phi();//might have a twopi anomaly here...
                     if (dphi>TMath::Pi()) dphi-=2*TMath::Pi();
                     if (dphi<-TMath::Pi()) dphi+=2*TMath::Pi();
-                    float dr = pos2.Perp()-pos.Perp();
-                    float dz = pos2.Z()-pos.Z();
+                    float dr = pos.Perp()-pos2.Perp();
+                    float dz = pos.Z()-pos2.Z();
 
                     //set the correction in the composite histograms
+                    //the correction is the total 'measured' position minus the fully-corrected 'true' position
                     //nb this is in radians not cm units for phi.
-                    hDPcomposite[side]->SetBinContent(j,i,k,-dphi);
-                    hDRcomposite[side]->SetBinContent(j,i,k,-dr);
-                    hDZcomposite[side]->SetBinContent(j,i,k,-dz);
+                    hDPcomposite[side]->SetBinContent(j,i,k,dphi);
+                    hDRcomposite[side]->SetBinContent(j,i,k,dr);
+                    hDZcomposite[side]->SetBinContent(j,i,k,dz);
                 }
             }
         }

@@ -147,11 +147,12 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
                     //get the static correction at the corrected position
                     TVector3 pos2 = correctPosition(pos1, hDPint[side], hDRint[side], hDZint[side], false);
                     //get the total correction, in terms of r, phi, and z
-                    float dphi = pos2.Phi()-pos.Phi();
+                    float dphi = pos2.Phi()-pos.Phi();//might have a twopi anomaly here...
                     float dr = pos2.Perp()-pos.Perp();
                     float dz = pos2.Z()-pos.Z();
 
                     //set the correction in the composite histograms
+                    //nb this is in radians not cm units for phi.
                     hDPcomposite[side]->SetBinContent(j,i,k,dphi);
                     hDRcomposite[side]->SetBinContent(j,i,k,dr);
                     hDZcomposite[side]->SetBinContent(j,i,k,dz);

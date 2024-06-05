@@ -81,9 +81,9 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
                 for (int side=0;side<2;side++){
                     zpos*=-1;//start negative.
                     rpos.SetZ(zpos);
-                    //get the module edge correction at that position
+                    //get the module edge correction at the raw position
                     TVector3 pos1 = correctPosition(pos, hDPmod[side], hDRmod[side], hDZmod[side], true);
-                    //get the correction at the corrected position
+                    //get the static correction at the corrected position
                     TVector3 pos2 = correctPosition(pos1, hDPint[side], hDRint[side], hDZint[side], false);
                     //get the total correction, in terms of r, phi, and z
                     float dphi = pos2.Phi()-pos.Phi();
@@ -91,9 +91,9 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
                     float dz = pos2.Z()-pos.Z();
 
                     //set the correction in the composite histograms
-                    hDPcomposite[side]->SetBinContent(i,j,k,dphi);
-                    hDRcomposite[side]->SetBinContent(i,j,k,dr);
-                    hDZcomposite[side]->SetBinContent(i,j,k,dz);
+                    hDPcomposite[side]->SetBinContent(j,i,k,dphi);
+                    hDRcomposite[side]->SetBinContent(j,i,k,dr);
+                    hDZcomposite[side]->SetBinContent(j,i,k,dz);
                 }
             }
         }

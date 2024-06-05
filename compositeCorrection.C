@@ -1,5 +1,21 @@
+bool checkBounds(float phi, float r, float z, TH3* hDPint){
+    if (phi<hDPint->GetXaxis()->GetXmin() || phi>hDPint->GetXaxis()->GetXmax()) {
+    printf("phi out of bounds: %f not within [%f,%f]\n",phi,hDPint->GetXaxis()->GetXmin(),hDPint->GetXaxis()->GetXmax());
+        return false;
+    }
+    if (r<hDPint->GetYaxis()->GetXmin() || r>hDPint->GetYaxis()->GetXmax()) {
+    printf("r out of bounds: %f not within [%f,%f]\n",r,hDPint->GetYaxis()->GetXmin(),hDPint->GetYaxis()->GetXmax());
+        return false;
+    }
+    if (z<hDPint->GetZaxis()->GetXmin() || z>hDPint->GetZaxis()->GetXmax()) {
+    printf("z out of bounds: %f not within [%f,%f]\n",z,hDPint->GetZaxis()->GetXmin(),hDPint->GetZaxis()->GetXmax());
+        return false;
+    }
+    return true;
+}
+
 TVector3 correctPosition(TVector3 pos, TH3* hDPint, TH3* hDRint, TH3* hDZint, bool isRadians){
-printf("histogram: %s pos: %f %f %f\n", pos.Phi(), pos.Perp(), pos.Z(),hDPint->GetName());
+    printf("histogram: %s pos: %f %f %f\n", pos.Phi(), pos.Perp(), pos.Z(),hDPint->GetName());
     // Interpolate the distortion
     float phi=pos.Phi();
     if (phi<0) phi+=2*TMath::Pi();
@@ -19,23 +35,6 @@ printf("histogram: %s pos: %f %f %f\n", pos.Phi(), pos.Perp(), pos.Z(),hDPint->G
     pos.SetZ(pos.Z() - dz);
     return pfinal;
 }
-
-bool checkBounds(float phi, float r, float z, TH3* hDPint){
-    if (phi<hDPint->GetXaxis()->GetXmin() || phi>hDPint->GetXaxis()->GetXmax()) {
-    printf("phi out of bounds: %f not within [%f,%f]\n",phi,hDPint->GetXaxis()->GetXmin(),hDPint->GetXaxis()->GetXmax());
-        return false;
-    }
-    if (r<hDPint->GetYaxis()->GetXmin() || r>hDPint->GetYaxis()->GetXmax()) {
-    printf("r out of bounds: %f not within [%f,%f]\n",r,hDPint->GetYaxis()->GetXmin(),hDPint->GetYaxis()->GetXmax());
-        return false;
-    }
-    if (z<hDPint->GetZaxis()->GetXmin() || z>hDPint->GetZaxis()->GetXmax()) {
-    printf("z out of bounds: %f not within [%f,%f]\n",z,hDPint->GetZaxis()->GetXmin(),hDPint->GetZaxis()->GetXmax());
-        return false;
-    }
-    return true;
-}
-
 
 
 void compositeCorrection(std::string firstfile, std::string secondfile){

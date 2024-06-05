@@ -55,7 +55,7 @@ TVector3 correctPosition(TVector3 pos, TH3* hDPint, TH3* hDRint, TH3* hDZint, bo
 }
 
 
-void compositeCorrection(std::string firstfile, std::string secondfile){
+void compositeCorrection(std::string firstfile, std::string secondfile, std::string outputfile){
     // Open the first correction in order:
     TFile *modulecorr_tfile = new TFile(firstfile.c_str());
     if (!modulecorr_tfile->IsOpen())
@@ -100,8 +100,9 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
     }
 
 
-//copy the static correction histograms to new histograms in the new file, in preparation for the composite correction
-    TFile *f = new TFile("compositeCorrection.static.and.module.radians.root","recreate");
+    //copy the static correction histograms to new histograms in the new file, in preparation for the composite correction
+    TFile *f = new TFile(outputfile.c_str(),"recreate");
+    //TFile *f = new TFile("compositeCorrection.static.and.module.radians.root","recreate");
     //TFile *f = new TFile("static_correction.1.00.radians.root","recreate");
     TH3* hDPcomposite[2], *hDRcomposite[2], *hDZcomposite[2];
 

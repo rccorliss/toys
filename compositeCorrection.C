@@ -1,5 +1,5 @@
 TVector3 correctPosition(TVector3 pos, TH3* hDPint, TH3* hDRint, TH3* hDZint, bool isRadians){
-//printf("pos: %f %f %f\n", pos.Phi(), pos.Perp(), pos.Z());
+printf("histogram: %s pos: %f %f %f\n", pos.Phi(), pos.Perp(), pos.Z(),hDPint->GetName());
     // Interpolate the distortion
     float phi=pos.Phi();
     if (phi<0) phi+=2*TMath::Pi();
@@ -74,6 +74,19 @@ void compositeCorrection(std::string firstfile, std::string secondfile){
         hDRcomposite[j] = dynamic_cast<TH3*>(hDRint[j]->Clone());
         hDZcomposite[j] = dynamic_cast<TH3*>(hDZint[j]->Clone());
     }
+
+//then rename the original histograms for easy identification
+    for (int j = 0; j < 2; ++j)
+    {
+        hDPint[j]->SetName((std::string("staticP")+extension[j]).c_str());
+        hDRint[j]->SetName((std::string("staticR")+extension[j]).c_str());
+        hDZint[j]->SetName((std::string("staticZ")+extension[j]).c_str());
+        hDPmod[j]->SetName((std::string("moduleP")+extension[j]).c_str());
+        hDRmod[j]->SetName((std::string("moduleR")+extension[j]).c_str());
+        hDZmod[j]->SetName((std::string("moduleZ")+extension[j]).c_str());
+
+    }
+
 
     //loop over the bin centers of the static correction histograms
     for (int i=1; i<=hDPcomposite[0]->GetNbinsY(); i++){

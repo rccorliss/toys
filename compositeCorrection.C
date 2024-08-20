@@ -142,9 +142,9 @@ void compositeCorrection(std::string firstfile, std::string secondfile, std::str
                     if (k==hDPcomposite[side]->GetNbinsZ()) zpos=hDPcomposite[side]->GetZaxis()->GetBinCenter(k-1);
                     pos.SetZ(zpos);
                     //get the module edge correction at the raw position
-                    TVector3 pos1 = correctPosition(pos, hDPmod[side], hDRmod[side], hDZmod[side], true);
+                    TVector3 pos1 = correctPosition(pos, hDPmod[side], hDRmod[side], hDZmod[side], isRadians=true);
                     //get the static correction at the corrected position
-                    TVector3 pos2 = correctPosition(pos1, hDPint[side], hDRint[side], hDZint[side], false);
+                    TVector3 pos2 = correctPosition(pos1, hDPint[side], hDRint[side], hDZint[side], isRadians=false);
                     //get the total correction, in terms of r, phi, and z
                     float dphi = pos.Phi()-pos2.Phi();//might have a twopi anomaly here...
                     if (dphi>TMath::Pi()) dphi-=2*TMath::Pi();

@@ -148,7 +148,7 @@
   clustrhi->Draw("2*(side-0.5)*layer>>clusterSumAdcVsLayerHigh","adc*(layer>=7&&layer<55)","");
   evtrhi->Draw("1>>nEventsHigh","run>0");
 
-  clusterMaxAdcVsLayerHigh->Scale(1.0/nEventsHigh>GetEntries());
+  clusterMaxAdcVsLayerHigh->Scale(1.0/nEventsHigh->GetEntries());
   clusterSumAdcVsLayerHigh->Scale(1.0/nEventsHigh->GetEntries());
   clusterSumAdcVsLayerHigh->Draw();
 

@@ -185,10 +185,10 @@
   */
 
   TLegend *t3=new TLegend(0.35,0.83,0.75,0.63);
-  t3->AddEntry(clusterSumAdcVsLayerHigh,"All clusters, maxadc weighted","");
-  t3->AddEntry(clusterSumAdcVsLayerHigh,"run 52856 <nclus> = 66179","P");
+  t3->AddEntry(clusterMaxAdcVsLayerHigh,"All clusters, maxadc weighted","");
+  t3->AddEntry(clusterMaxAdcVsLayerHigh,"run 52856 <nclus> = 66179","P");
   t3->AddEntry(clusterMaxAdcVsLayerMid,"run 52577 <nclus> = 30512","P");
-  t3->AddEntry(nhitslaylo,"run 52321 <nclus> = 18091","P");
+  t3->AddEntry(clusterMaxAdcVsLayerLow,"run 52321 <nclus> = 18091","P");
   //  t3->AddEntry(hcent_4o12,"May Modular","P");
   t3->SetFillColor(0);
   t3->SetBorderSize(0);

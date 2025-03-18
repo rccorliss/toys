@@ -19,7 +19,7 @@ do
     #echo processing file $i
     inputname=${!i}
     basefilename=`basename $inputname`
-    outputname=`echo "${basefilename/.distortion_map.hist.root/.invert.distortion_map.hist.root}"`
+    outputname=`echo "${basefilename/.distortion_map.hist.root/.correction_map.hist.root}"`
     outputname=${outputdir}/${outputname}
     #echo $inputname becomes $outputname
     root -l invertHistograms.C\(\"$inputname\",\"$outputname\"\)

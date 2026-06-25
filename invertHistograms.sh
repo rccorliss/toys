@@ -4,7 +4,7 @@
 
 #check arguments:
 if [ $# -lt 2 ]
-   then echo "usage: ./invertHistograms.sh [searchstring] [outputdir]"
+   then echo "usage: ./invertHistograms.sh [list of files (wildcards okay)] [outputdir]"
 fi
 
 #echo $# minus 1 is `expr $# - 1`
@@ -22,7 +22,7 @@ do
     outputname=`echo "${basefilename/.distortion_map.hist.root/.correction_map.hist.root}"`
     outputname=${outputdir}/${outputname}
     #echo $inputname becomes $outputname
-    root -l invertHistograms.C\(\"$inputname\",\"$outputname\"\)
+    root -b -q invertHistograms.C\(\"$inputname\",\"$outputname\"\)
 done
 
 exit

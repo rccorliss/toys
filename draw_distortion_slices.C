@@ -2,13 +2,13 @@
 
 void draw_distortion_slices(const char* filebase, float zin=1e8){
   //reads in a triplet of 3D integral distortion maps, and writes lots of plots, as well as some summary histograms to various output files.
-  const float MAX_PLOT_DISTORTION=2.;
+  const float MAX_PLOT_DISTORTION=0;
   std::vector<TString> histname;
  histname.push_back("hIntDistortionR_negz");
-  histname.push_back("hIntDistortionP_negz");
+  histname.push_back("hIntDistortionRPhi_negz");
   histname.push_back("hIntDistortionZ_negz");
   histname.push_back("hIntDistortionR_posz");
-  histname.push_back("hIntDistortionP_posz");
+  histname.push_back("hIntDistortionRPhi_posz");
   histname.push_back("hIntDistortionZ_posz");
   
   TString distortionFilename;

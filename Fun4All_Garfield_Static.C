@@ -223,7 +223,7 @@ void Fun4All_Garfield_Static()
   
   // Register Tom's Garfield analysis module.
   PHGarfield *phg = new PHGarfield();
-  phg->MoveMagnet(0,0,20);
+  phg->MoveMagnet(0,0,28);
   phg->RotateMagnet(0,0.003,0);
   se->registerSubsystem(phg);
 
@@ -335,8 +335,8 @@ void Fun4All_Garfield_Static()
             const double dr_val = r_actual - r_launch;
             //const double rdphi_val = r_launch * dphi_val;
 
-            hDistR[s]->Fill(phi_launch, r_launch, z_center, dr_val);
-            hDistP[s]->Fill(phi_launch, r_launch, z_center, dphi_val);
+            hDistR[s]->Fill(phi_launch, r_launch, z_center, -dr_val);
+            hDistP[s]->Fill(phi_launch, r_launch, z_center, -dphi_val);
             hDistZ[s]->Fill(phi_launch, r_launch, z_center, 0.0);
           }
 

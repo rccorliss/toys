@@ -241,17 +241,17 @@ void Fun4All_Garfield_Static()
   const double r1 = phg->GetRadius(1);
   const double r_last = phg->GetRadius(nR - 1);
   const double r_prev = phg->GetRadius(nR - 2);
-  const double half_first = 0.5 * (r1 - r0);
-  const double half_last = 0.5 * (r_last - r_prev);
+  const double first_gap = (r1 - r0);
+  const double last_gap = (r_last - r_prev);
 
-  r_edges[1] = r0 - half_first;
+  r_edges[1] = r0 - 0.5*(first_gap);
   for (int i = 1; i < nR; ++i)
   {
     r_edges[i + 1] = 0.5 * (phg->GetRadius(i - 1) + phg->GetRadius(i));
   }
-  r_edges[nR + 1] = r_last + half_last;
-  r_edges[0] = r_edges[1] - half_first;
-  r_edges[nR + 2] = r_edges[nR + 1] + half_last;
+  r_edges[nR + 1] = r_last + 0.5*(last_gap);
+  r_edges[0] = r_edges[1] - first_gap;
+  r_edges[nR + 2] = r_edges[nR + 1] + last_gap;
 
   const double phi_min = 0.0;
   const double phi_max = two_pi;
@@ -341,14 +341,13 @@ void Fun4All_Garfield_Static()
           delete path;
         }
       }
-
+    }
   for (int s=0;s<2;s++){
     fillGuardBins(hDistR[s]);
     fillGuardBins(hDistP[s]);
     fillGuardBins(hDistZ[s]);
   }
 
-  }
 
   // Write all histograms to output file
   TFile output_file("GarfieldStaticCorrectionMaps.root", "RECREATE");

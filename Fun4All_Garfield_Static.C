@@ -344,8 +344,8 @@ void Fun4All_Garfield_Static()
 
   for (int s=0;s<2;s++){
     fillGuardBins(hDistR[s]);
-    fillGuardBins(hDistRPhi[s]);
-    fillGuardBins(hDistDz[s]);
+    fillGuardBins(hDistP[s]);
+    fillGuardBins(hDistZ[s]);
   }
 
   }
@@ -356,8 +356,8 @@ void Fun4All_Garfield_Static()
   {
 
     hDistR[s]->Write();
-    hDistRPhi[s]->Write();
-    hDistDz[s]->Write();
+    hDistP[s]->Write();
+    hDistZ[s]->Write();
     std::cout << "Wrote " << side[s] << " histograms with " << hDistR[s]->GetEntries() << " entries for dr." << std::endl;
   }
   output_file.Close();

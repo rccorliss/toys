@@ -223,7 +223,7 @@ void Fun4All_Garfield_Static()
   
   // Register Tom's Garfield analysis module.
   PHGarfield *phg = new PHGarfield();
-  phg->MoveMagnet(0,0,-20);
+  phg->MoveMagnet(0,0,20);
   se->registerSubsystem(phg);
 
   se->run(4);

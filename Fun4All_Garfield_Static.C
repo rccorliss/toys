@@ -223,8 +223,8 @@ void Fun4All_Garfield_Static()
   
   // Register Tom's Garfield analysis module.
   PHGarfield *phg = new PHGarfield();
-  TVector3 Northxyz.SetXYZ(-0.001, -0.001,  1123.109);//mm
-  TVector3 Southxyz.SetXYZ(-3.354, -0.673, -1137.382);//mm
+  TVector3 Northxyz; Northxyz.SetXYZ(-0.001, -0.001,  1123.109);//mm
+  TVector3 Southxyz;Southxyz.SetXYZ(-3.354, -0.673, -1137.382);//mm
   TVector3 center=Northxyz+Southxyz;
   center*=0.1;
   phg->MoveTpc(center.X(),center.Y(),center.Z());

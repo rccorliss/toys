@@ -223,8 +223,15 @@ void Fun4All_Garfield_Static()
   
   // Register Tom's Garfield analysis module.
   PHGarfield *phg = new PHGarfield();
-  phg->MoveMagnet(0,0,28);
-  phg->RotateMagnet(0,0.00,0);
+  TVector3 Northxyz.SetXYZ(-0.001, -0.001,  1123.109);//mm
+  TVector3 Southxyz.SetXYZ(-3.354, -0.673, -1137.382);//mm
+  TVector3 center=Northxyz+Southxyz;
+  center*=0.1;
+  phg->MoveTpc(center.X(),center.Y(),center.Z());
+  phg->RotateTpc(0,0.001485,0);//per JohnH
+  phg->RotateTpc(0.000298,0,0);//per JohnH
+  //phg->MoveMagnet(0,0,28);
+  //phg->RotateMagnet(0,0.00,0);
   se->registerSubsystem(phg);
 
   se->run(4);
@@ -300,7 +307,7 @@ void Fun4All_Garfield_Static()
           const double phi_launch = hDistR[s]->GetXaxis()->GetBinCenter(ip);
           const double x_launch = r_launch * std::cos(phi_launch);
           const double y_launch = r_launch * std::sin(phi_launch);
-          TPolyLine3D* path = phg->ReverseDrift(x_launch, y_launch, z_launch);
+          TPolyLine3D* path = phg->ReverseDriftTpcCoords(x_launch, y_launch, z_launch);
           if (!path)
           {
             // no path came back?

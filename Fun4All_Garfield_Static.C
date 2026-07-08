@@ -186,7 +186,8 @@ void Fun4All_Garfield_Static()
 {
   recoConsts* rc = recoConsts::instance();
 
-  rc->set_StringFlag("CDB_GLOBALTAG","FieldMapTest");
+  //old one with weird offset: rc->set_StringFlag("CDB_GLOBALTAG","FieldMapTest");
+  rc->set_StringFlag("CDB_GLOBALTAG","newcdbtag");
   rc->set_uint64Flag("TIMESTAMP",1);
 
   auto cdb = CDBInterface::instance();
@@ -225,8 +226,8 @@ void Fun4All_Garfield_Static()
   PHGarfield *phg = new PHGarfield();
   TVector3 Northxyz; Northxyz.SetXYZ(-0.001, -0.001,  1123.109);//mm
   TVector3 Southxyz;Southxyz.SetXYZ(-3.354, -0.673, -1137.382);//mm
-  TVector3 center=Northxyz+Southxyz;
-  center*=0.1;
+  TVector3 center=0.5*(Northxyz+Southxyz);
+  center*=0.1; //unit conversion to cm.
   phg->MoveTpc(center.X(),center.Y(),center.Z());
   phg->RotateTpc(0,0.001485,0);//per JohnH
   phg->RotateTpc(0.000298,0,0);//per JohnH

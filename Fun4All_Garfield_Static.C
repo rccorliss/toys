@@ -268,7 +268,7 @@ void Fun4All_Garfield_Static()
 
   // Create histograms for each side
   for (int s = 0; s < 2; ++s)
-  { 
+  {
     const std::string sideName = side[s];
     const double z_launch = (s == 0) ? zRange : -zRange;
     const double z_min=(s==0)? 0:-zRange;

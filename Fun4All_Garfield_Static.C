@@ -110,7 +110,7 @@ static bool InterpolatePathAtZ(TPolyLine3D* path, double z_target, double& r_out
     return false;
   }
   float* p = path->GetP();
-  for (int i = 0; i < n - 1; ++i)
+  for (int i = 0; i < n - 1; i++)
   {
     const double x1 = p[3 * i + 0];
     const double y1 = p[3 * i + 1];
@@ -223,15 +223,6 @@ void Fun4All_Garfield_Static()
   
   // Register Tom's Garfield analysis module.
   PHGarfield *phg = new PHGarfield();
-  TVector3 Northxyz; Northxyz.SetXYZ(-0.001, -0.001,  1123.109);//mm
-  TVector3 Southxyz;Southxyz.SetXYZ(-3.354, -0.673, -1137.382);//mm
-  TVector3 center=Northxyz+Southxyz;
-  center*=0.1;
-  phg->MoveTpc(center.X(),center.Y(),center.Z());
-  phg->RotateTpc(0,0.001485,0);//per JohnH
-  phg->RotateTpc(0.000298,0,0);//per JohnH
-  //phg->MoveMagnet(0,0,28);
-  //phg->RotateMagnet(0,0.00,0);
   se->registerSubsystem(phg);
 
   se->run(4);
@@ -307,7 +298,7 @@ void Fun4All_Garfield_Static()
           const double phi_launch = hDistR[s]->GetXaxis()->GetBinCenter(ip);
           const double x_launch = r_launch * std::cos(phi_launch);
           const double y_launch = r_launch * std::sin(phi_launch);
-          TPolyLine3D* path = phg->ReverseDriftTpcCoords(x_launch, y_launch, z_launch);
+          TPolyLine3D* path = phg->ReverseDrift(x_launch, y_launch, z_launch);
           if (!path)
           {
             // no path came back?
@@ -342,8 +333,8 @@ void Fun4All_Garfield_Static()
             const double dr_val = r_actual - r_launch;
             //const double rdphi_val = r_launch * dphi_val;
 
-            hDistR[s]->Fill(phi_launch, r_launch, z_center, -dr_val);
-            hDistP[s]->Fill(phi_launch, r_launch, z_center, -dphi_val);
+            hDistR[s]->Fill(phi_launch, r_launch, z_center, dr_val);
+            hDistP[s]->Fill(phi_launch, r_launch, z_center, dphi_val);
             hDistZ[s]->Fill(phi_launch, r_launch, z_center, 0.0);
           }
 

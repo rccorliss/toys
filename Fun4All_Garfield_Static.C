@@ -309,7 +309,9 @@ void Fun4All_Garfield_Static()
           const double phi_launch = hDistR[s]->GetXaxis()->GetBinCenter(ip);
           const double x_launch = r_launch * std::cos(phi_launch);
           const double y_launch = r_launch * std::sin(phi_launch);
-          TPolyLine3D* path = phg->ReverseDriftTpcCoords(x_launch, y_launch, z_launch);
+          //TPolyLine3D* path = phg->ReverseDriftTpcCoords(x_launch, y_launch, z_launch);
+          //because Yuri is backwards. :P
+          TPolyLine3D* path = phg->ReverseDrift(x_launch, y_launch, z_launch);
           if (!path)
           {
             // no path came back?

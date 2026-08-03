@@ -30,7 +30,7 @@
 #include <phool/recoConsts.h>
 #include <GlobalVariables.C>
 
-#include <phgarfield/PHGarfield.h>
+//#include <phgarfield/PHGarfield.h>
 
 #include <TPolyLine3D.h>
 #include <TPolyLine.h>

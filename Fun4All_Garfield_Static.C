@@ -231,6 +231,7 @@ void Fun4All_Garfield_Static()
   phg->MoveTpc(center.X(),center.Y(),center.Z());
   phg->RotateTpc(0,0.001485,0);//per JohnH
   phg->RotateTpc(0.000298,0,0);//per JohnH
+  phg->SetCMVoltageDefault(380.0);
   //phg->MoveMagnet(0,0,28);
   //phg->RotateMagnet(0,0.00,0);
   se->registerSubsystem(phg);
